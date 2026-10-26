@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dalamud.Game.Inventory;
 using DalamudMCP.Mcp;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using Lumina.Excel;
@@ -20,9 +21,8 @@ namespace DalamudMCP.Tools;
 /// way for an agent to change job, and the only place that knows which sets exist and what job
 /// each one is for.
 ///
-/// The module keeps a fixed array of 100 slots. <c>NumGearsets</c> is the character's real count —
-/// slots past it keep stale names from deleted sets — so every listing is bounded by that count
-/// and every gearset id is validated before it is used.
+/// The module keeps 100 slots with potentially sparse IDs. Only Exists entries are returned;
+/// NumGearsets is a count rather than an upper bound on occupied slot IDs.
 ///
 /// Native pointer work is confined to the synchronous <c>unsafe</c> helpers. The equip handler
 /// awaits while the client applies the switch, and C# forbids an await in an unsafe context
@@ -46,8 +46,9 @@ internal static class GearsetTools
             "Lists the character's saved gearsets with gearset id, slot index, name, class/job row id and " +
             "abbreviation, item level, linked glamour plate and the gearset flags the gearset list shows " +
             "(missing main hand, missing gear). Marks the set the client currently has active and reports the " +
-            "current class/job, so an agent can pick the id to equip. Bounded to the module's real gearset " +
-            "count; slots past it are stale and are not reported. Read-only: it never equips a set.",
+            "current class/job, so an agent can pick the id to equip. Scans all 100 slots and checks Exists, " +
+            "including sparse IDs. The active row includes equipmentMatches for item IDs/HQ (null if unavailable). " +
+            "Read-only: it never equips a set.",
             Json.Schema(),
             _ => GetGearsets(svc));
 
@@ -58,7 +59,9 @@ internal static class GearsetTools
             "gear. Address the set with gearsetId from get_gearsets or by name; an exact (case-insensitive) " +
             "name wins, a unique substring is accepted, and an ambiguous or unknown name is refused with the " +
             "candidates listed. Validates the id, calls the client's EquipGearset and waits up to 3000ms for " +
-            "the switch to appear before reporting the resulting gearset and class/job. success=false with " +
+            "the gearset, job and equipped item IDs (including HQ) to match. Always reapplies the saved set, " +
+            "even if its index is already active; alreadyActive describes the prior index only. " +
+            "Confirmation does not compare materia, dyes or glamour. success=false with " +
             "equipResultCode means the client refused (in combat, in a cutscene, during a duty or zone " +
             "transition, or the set's gear is unavailable); equipResultCode 0 with success=false means the " +
             "request was accepted but the switch was not observed in time.",
@@ -79,12 +82,12 @@ internal static class GearsetTools
         var module = RequireModule();
         var jobs = svc.Sheet<ClassJob>();
 
-        // NumGearsets is authoritative; the array itself is always 100 slots with stale tails.
         var total = Math.Clamp((int)module->NumGearsets, 0, GearsetCapacity);
         var current = module->CurrentGearsetIndex;
+        var equippedIds = ReadEquippedIds(svc);
 
         var rows = new JArray();
-        for (var index = 0; index < total; index++)
+        foreach (var index in ExistingSlots(module))
         {
             var entry = module->Entries[index];
             // An empty slot inside the used range has no name or job worth reporting.
@@ -101,6 +104,8 @@ internal static class GearsetTools
                 ["itemLevel"] = entry.ItemLevel,
                 ["glamourPlateId"] = entry.GlamourSetLink,
                 ["isActive"] = entry.Id == current,
+                ["equipmentMatches"] = entry.Id == current && equippedIds is not null
+                    ? EquipmentMatches(SavedItemIds(entry), equippedIds) : (bool?)null,
                 ["mainHandMissing"] = (entry.Flags & RaptureGearsetModule.GearsetFlag.MainHandMissing) != RaptureGearsetModule.GearsetFlag.None,
                 ["gearMissing"] = HasMissingGear(entry),
             });
@@ -126,7 +131,7 @@ internal static class GearsetTools
         string TargetName,
         int TargetJobId,
         bool AlreadyActive,
-        bool Equipped,
+        uint[] ItemIds,
         int EquipResultCode);
 
     /// <summary>
@@ -168,38 +173,22 @@ internal static class GearsetTools
             };
         }
 
-        if (!plan.Equipped)
-        {
-            return new JObject
-            {
-                ["success"] = true,
-                ["confirmed"] = true,
-                ["equipResultCode"] = 0,
-                ["alreadyActive"] = true,
-                ["waitedMs"] = 0,
-                ["gearset"] = TargetJson(jobs, plan.TargetGearsetId, plan.TargetName, plan.TargetJobId),
-                ["before"] = StateJson(jobs, plan.BeforeGearsetIndex, plan.BeforeJobId),
-                ["after"] = StateJson(jobs, plan.BeforeGearsetIndex, plan.BeforeJobId),
-            };
-        }
-
         // The client performs the switch on a later frame, so neither the active gearset index nor
         // the player's job changes inside the EquipGearset call itself.
         var watch = Stopwatch.StartNew();
         var afterGearsetIndex = plan.BeforeGearsetIndex;
         var afterJobId = plan.BeforeJobId;
         var confirmed = false;
+        var equipmentMatches = false;
         while (true)
         {
-            var (observedGearsetIndex, observedJobId) = await svc.Framework.RunOnFrameworkThread(() => ReadGearsetState(svc));
+            var (observedGearsetIndex, observedJobId, itemIds) = await svc.Framework.RunOnFrameworkThread(() => ReadGearsetState(svc));
             afterGearsetIndex = observedGearsetIndex;
             afterJobId = observedJobId;
 
-            // The active gearset index is the primary signal. A job that changed to the target
-            // gearset's job is the fallback for the cases where the client leaves no active
-            // gearset index behind (for example when no set is marked equipped).
-            confirmed = observedGearsetIndex == plan.TargetGearsetId ||
-                        (observedJobId == plan.TargetJobId && observedJobId != plan.BeforeJobId);
+            equipmentMatches = EquipmentMatches(plan.ItemIds, itemIds);
+            confirmed = observedGearsetIndex == plan.TargetGearsetId &&
+                        observedJobId == plan.TargetJobId && equipmentMatches;
             if (confirmed || watch.ElapsedMilliseconds >= EquipConfirmMs) break;
             await Task.Delay(EquipPollMs).ConfigureAwait(false);
         }
@@ -208,6 +197,7 @@ internal static class GearsetTools
         {
             ["success"] = confirmed,
             ["confirmed"] = confirmed,
+            ["equipmentMatches"] = equipmentMatches,
             ["equipResultCode"] = plan.EquipResultCode,
             ["alreadyActive"] = plan.AlreadyActive,
             ["waitedMs"] = watch.ElapsedMilliseconds,
@@ -218,7 +208,7 @@ internal static class GearsetTools
         if (!confirmed)
         {
             result["reason"] = $"the client accepted the equip (EquipGearset returned 0) but the switch to gearset {plan.TargetGearsetId} was not observed within " +
-                               $"{EquipConfirmMs}ms, so 'after' still shows the previous state. Call get_gearsets to re-check: the client can accept a " +
+                               $"{EquipConfirmMs}ms with matching item IDs. 'after' is the last observed state. Call get_gearsets to re-check: the client can accept a " +
                                "request and then drop it while in combat, in a cutscene, or during a duty or zone transition";
         }
 
@@ -226,13 +216,14 @@ internal static class GearsetTools
     }
 
     /// <summary>
-    /// Validates one gearset and equips it unless it is already the active set for the current job.
+    /// Validates and always reapplies a gearset, including the active set after manual gear edits.
     /// Synchronous and unsafe on purpose: it runs on the framework thread, and keeping it out of the
     /// awaiting handler is what keeps that handler's awaits in a safe context (CS4004).
     /// </summary>
     private static unsafe EquipPlan PrepareEquip(GameServices svc, int? requestedId, string? requestedName)
     {
         EnsureLoggedIn(svc);
+        if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled");
         var module = RequireModule();
         var beforeGearsetIndex = module->CurrentGearsetIndex;
         var beforeJobId = (int)svc.PlayerState.ClassJob.RowId;
@@ -255,24 +246,53 @@ internal static class GearsetTools
         var targetJobId = entry->ClassJob;
         var alreadyActive = targetId == beforeGearsetIndex;
 
-        // Nothing to do when the set is already the active one and the job already matches.
-        if (alreadyActive && targetJobId == beforeJobId)
-        {
-            return new EquipPlan(beforeGearsetIndex, beforeJobId, targetId, targetName, targetJobId,
-                AlreadyActive: true, Equipped: false, EquipResultCode: 0);
-        }
+        var itemIds = SavedItemIds(*entry);
 
         // glamourPlateId 0 means "use the plate linked to this gearset, if any".
         var equipResult = module->EquipGearset(targetId, 0);
         return new EquipPlan(beforeGearsetIndex, beforeJobId, targetId, targetName, targetJobId,
-            alreadyActive, Equipped: true, EquipResultCode: equipResult);
+            alreadyActive, itemIds, EquipResultCode: equipResult);
     }
 
     /// <summary>The active gearset index and class/job row id, read on the framework thread.</summary>
-    private static unsafe (int GearsetIndex, int JobId) ReadGearsetState(GameServices svc)
+    private static unsafe (int GearsetIndex, int JobId, uint[]? ItemIds) ReadGearsetState(GameServices svc)
     {
+        EnsureLoggedIn(svc);
         var module = RequireModule();
-        return (module->CurrentGearsetIndex, (int)svc.PlayerState.ClassJob.RowId);
+        return (module->CurrentGearsetIndex, (int)svc.PlayerState.ClassJob.RowId, ReadEquippedIds(svc));
+    }
+
+    private static uint[] SavedItemIds(RaptureGearsetModule.GearsetEntry entry)
+    {
+        var ids = new uint[entry.Items.Length];
+        for (var i = 0; i < ids.Length; i++) ids[i] = entry.Items[i].ItemId;
+        return ids;
+    }
+
+    private static uint[]? ReadEquippedIds(GameServices svc)
+    {
+        var items = svc.GameInventory.GetInventoryItems(GameInventoryType.EquippedItems);
+        uint[]? ids = items.Length >= 14 ? new uint[14] : null;
+        if (ids is not null)
+            foreach (var item in items)
+                if (item.InventorySlot < ids.Length) ids[item.InventorySlot] = item.ItemId;
+        return ids;
+    }
+
+    private static bool EquipmentMatches(uint[] expected, uint[]? actual)
+    {
+        if (actual is null || expected.Length != 14 || actual.Length != 14) return false;
+        for (var i = 0; i < 14; i++)
+            if (i != (int)RaptureGearsetModule.GearsetItemIndex.Belt && expected[i] != actual[i]) return false;
+        return true;
+    }
+
+    private static unsafe List<int> ExistingSlots(RaptureGearsetModule* module)
+    {
+        var slots = new List<int>();
+        for (var i = 0; i < GearsetCapacity; i++)
+            if ((module->Entries[i].Flags & RaptureGearsetModule.GearsetFlag.Exists) != 0) slots.Add(i);
+        return slots;
     }
 
     /// <summary>
@@ -282,10 +302,9 @@ internal static class GearsetTools
     /// </summary>
     private static unsafe int ResolveByName(RaptureGearsetModule* module, string name)
     {
-        var total = Math.Clamp((int)module->NumGearsets, 0, GearsetCapacity);
         var exact = new List<(int Id, string Name)>();
         var partial = new List<(int Id, string Name)>();
-        for (var index = 0; index < total; index++)
+        foreach (var index in ExistingSlots(module))
         {
             var entry = module->Entries[index];
             if ((entry.Flags & RaptureGearsetModule.GearsetFlag.Exists) == RaptureGearsetModule.GearsetFlag.None) continue;
@@ -300,7 +319,7 @@ internal static class GearsetTools
         if (partial.Count == 1) return partial[0].Id;
         if (partial.Count > 1) throw Ambiguous(name, partial);
 
-        var known = KnownGearsets(module, total);
+        var known = KnownGearsets(module);
         throw new ToolException(known.Length == 0
             ? $"no gearset is named '{name}', and the character has no gearsets"
             : $"no gearset is named '{name}'. Known gearsets: {known}");
@@ -310,10 +329,10 @@ internal static class GearsetTools
         new($"gearset name '{name}' matches {matches.Count} gearsets; pass gearsetId instead. Matches: " +
             string.Join(", ", matches.Select(match => $"{match.Id}='{match.Name}'")));
 
-    private static unsafe string KnownGearsets(RaptureGearsetModule* module, int total)
+    private static unsafe string KnownGearsets(RaptureGearsetModule* module)
     {
         var names = new List<string>();
-        for (var index = 0; index < total; index++)
+        foreach (var index in ExistingSlots(module))
         {
             var entry = module->Entries[index];
             if ((entry.Flags & RaptureGearsetModule.GearsetFlag.Exists) == RaptureGearsetModule.GearsetFlag.None) continue;
@@ -400,6 +419,7 @@ internal static class GearsetTools
     private static int? ReadInt(JObject args, string name)
     {
         if (!args.TryGetValue(name, out var token) || token.Type == JTokenType.Null) return null;
+        if (token.Type != JTokenType.Integer) throw new ToolException($"{name} must be an integer");
         try { return checked((int)token.Value<long>()); }
         catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
         {

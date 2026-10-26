@@ -300,7 +300,7 @@ Tools that require a loaded character report an unavailable state and reason whe
 | Tool | Description | Notable parameters |
 | --- | --- | --- |
 | `get_gearsets` | Every saved gearset with gearset id, slot index, name, class/job (row id, name, abbreviation), item level, glamour plate link, whether it is the active gearset, and the missing-main-hand/missing-gear validity flags. Also reports the entry count, the current gearset index and the current job. | none |
-| `get_cooldowns` | Abilities of the current job that are not ready yet: action id, name, recast group, remaining and total recast seconds, current/maximum charges. Sorted by remaining time, capped at 100 rows, and states explicitly when nothing is on cooldown. The GCD group is excluded, so a job that only just used a weaponskill can legitimately report an empty list. | none |
+| `get_cooldowns` | Job, inherited class and role actions with active recharge, including partially available charges. Distinguishes time until usable, next charge and full recovery, plus current/maximum charges and cooldown readiness. Uses effective level and excludes GCD-only actions. See [cooldown/gearset state](docs/ability-gearset-state.md). | none |
 
 ### Game data (Excel)
 
@@ -402,7 +402,7 @@ Before submission, the tools wait up to two seconds for a draw frame and return 
 | Tool | Description | Notable parameters |
 | --- | --- | --- |
 | `execute_action` | Casts an action through `ActionManager.UseAction`. Resolve the action by id, or by exact name from the Action sheet. Without `targetObjectId` it targets the current hard target and falls back to the self target id (`0xE0000000`) only when nothing is targeted; the response reports the object used and which rule chose it (`targetName`, `targetSource`). A refused cast carries the game's `status` code plus a plain-language cause instead of a bare `success: false`. With `dryRun` it only asks the game whether the action could be used right now. Optional job/territory guards refuse the call when the character does not match. | `actionId`, `actionName`, `targetObjectId`, `dryRun`, `requiredClassJobId`, `requiredTerritoryId` |
-| `equip_gearset` | Switches class/job by equipping a saved gearset through `RaptureGearsetModule.EquipGearset`, addressed by `gearsetId` or by `name` (exact match first, then a unique case-insensitive substring; ambiguity is refused with the candidate list). Validates the gearset, then polls until the switch is observable and reports the before/after gearset index and job rather than a dispatch. | `gearsetId`, `name` |
+| `equip_gearset` | Equips or reapplies a saved gearset by strict integer `gearsetId` or unique name, including sparse IDs. Always invokes the equip operation; confirms index, job and equipped item IDs/HQ. Reports before/after state and `equipmentMatches`. See [confirmation limits](docs/ability-gearset-state.md). | `gearsetId`, `name` |
 | `use_duty_action` | Fires one of the two duty actions (the extra buttons a duty grants), addressed as slot 1 or 2. Refused when the duty grants none. | `slot` (required: 1 or 2) |
 | `use_general_action` | Fires a general action by id (sprint, jump, auto-run, dismount, accept raise, ...). | `actionId` (required) |
 | `set_target` | Sets the hard target by object id, or by name (exact match first, then contains). | `targetObjectId`, `targetName` |

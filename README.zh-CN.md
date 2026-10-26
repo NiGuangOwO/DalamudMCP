@@ -17,6 +17,10 @@ Dalamud 与插件运行日志可用只读工具 `get_dalamud_log` 查询，支�
 使用 `streamId` 和 `nextAfterId` 增量轮询，未登录角色时也可使用。
 缓存、分页与日志级别限制见[运行日志说明](docs/dalamud-logs.md)；游戏聊天记录使用 `get_chat_log`。
 
+`get_cooldowns` 包含基础职业继承技能，区分可用、下一层恢复与全部回满的时间。
+配装查询支持不连续编号；`equip_gearset` 会重新应用当前配装，并核对物品 ID（含 HQ）。
+参数与确认范围见[冷却和配装状态说明](docs/ability-gearset-state.md)。
+
 > **验证范围：** 离线检查覆盖协议、schema、插件加载及部分原生内存操作。
 > 游戏内验证范围以[工具审计记录](docs/tool-audit-2026-10-17.md)和[截图说明](docs/screenshots.md)为准，
 > 相关结果不代表全部工具在所有客户端版本和游戏状态下均可正常使用。

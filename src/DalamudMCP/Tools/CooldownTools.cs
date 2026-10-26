@@ -25,7 +25,7 @@ internal static unsafe class CooldownTools
     /// The recast group every GCD action shares. Its members are only blocked for one global
     /// cooldown, so listing them would bury the real cooldowns under a dozen idle weaponskills.
     /// </summary>
-    private const int GcdRecastGroup = 58;
+    private const int GcdSheetGroup = 58;
 
     /// <summary>Rows per call, capped so one poll cannot flood a caller's context.</summary>
     private const int MaxRows = 100;
@@ -44,10 +44,11 @@ internal static unsafe class CooldownTools
         registry.Add(
             "get_cooldowns",
             "Get cooldowns",
-            "Lists the current job's abilities that are unavailable right now: action id, name, " +
-            "recast group, remaining and total recast seconds, and charges. Rows come from the " +
-            "Action sheet for the current ClassJob at or below the player's level; actions sharing " +
-            "the global cooldown are omitted. The tool only reads recast state and never casts.",
+            "Lists the current job's abilities with an active recharge, including inherited class and role actions. " +
+            "remainingSeconds is the time until a charge is available (zero if one remains); " +
+            "nextChargeInSeconds and fullRechargeSeconds distinguish the next charge from full recovery. " +
+            "cooldownReady only describes cooldown/charges, not resources, targets or other use conditions. " +
+            "totalRecastSeconds is one charge's recharge interval. Uses effective level; GCD-only actions are omitted. Read-only.",
             Json.Schema(),
             _ => GetCooldowns(svc));
     }
@@ -65,39 +66,38 @@ internal static unsafe class CooldownTools
             throw new ToolException("the action manager is not available yet");
 
         var jobId = svc.PlayerState.ClassJob.RowId;
-        var level = svc.PlayerState.Level;
+        var level = svc.PlayerState.EffectiveLevel;
         var inPvP = svc.ClientState.IsPvP;
         var job = svc.Sheet<LuminaClassJob>().GetRowOrDefault(jobId);
         var jobAbbreviation = job?.Abbreviation.ExtractText();
         var categories = svc.Sheet<LuminaClassJobCategory>();
 
-        var rows = new List<(uint ActionId, string Name, int Group, float Remaining, float Total,
-            uint Charges, ushort MaxCharges)>();
+        var rows = new List<(uint ActionId, string Name, int Group, RecastState State)>();
 
         foreach (var action in svc.Sheet<LuminaAction>())
         {
             if (action.IsPvP != inPvP) continue;
             if (!inPvP && (action.ClassJobLevel == 0 || action.ClassJobLevel > level)) continue;
             if (!IsJobAbility(action, jobId, jobAbbreviation, categories)) continue;
-            if (action.CooldownGroup == 0) continue;
+            // Sheet groups are one-based, unlike the runtime array indices.
+            if (action.CooldownGroup is 0 or GcdSheetGroup) continue;
 
             // The runtime recast group is authoritative: the sheet column is the starting value,
             // and charge-based or combo actions can be moved to a different group.
             var group = manager->GetRecastGroup((int)ActionType.Action, action.RowId);
             if (group is < 0 or >= RecastGroupCount) continue;
-            if (group == GcdRecastGroup) continue;
 
             var detail = manager->GetRecastGroupDetail(group);
             if (detail == null || !detail->IsActive) continue;
 
-            var remaining = detail->Total - detail->Elapsed;
-            if (remaining <= 0) continue;
-
-            rows.Add((action.RowId, action.Name.ExtractText(), group, remaining, detail->Total,
-                manager->GetCurrentCharges(action.RowId), ActionManager.GetMaxCharges(action.RowId, 0)));
+            var state = DescribeRecast(detail->Elapsed,
+                ActionManager.GetAdjustedRecastTime(ActionType.Action, action.RowId) / 1000f,
+                manager->GetCurrentCharges(action.RowId), ActionManager.GetMaxCharges(action.RowId, 0));
+            if (state is null || state.FullRecharge <= 0) continue;
+            rows.Add((action.RowId, action.Name.ExtractText(), group, state));
         }
 
-        rows.Sort(static (left, right) => right.Remaining.CompareTo(left.Remaining));
+        rows.Sort(static (left, right) => right.State.FullRecharge.CompareTo(left.State.FullRecharge));
         var listed = rows.Count > MaxRows ? rows.GetRange(0, MaxRows) : rows;
 
         var cooldowns = new JArray();
@@ -108,10 +108,13 @@ internal static unsafe class CooldownTools
                 ["actionId"] = row.ActionId,
                 ["name"] = row.Name,
                 ["recastGroup"] = row.Group,
-                ["remainingSeconds"] = Conv.Round(row.Remaining, 1),
-                ["totalRecastSeconds"] = Conv.Round(row.Total, 1),
-                ["currentCharges"] = row.Charges,
-                ["maxCharges"] = row.MaxCharges,
+                ["remainingSeconds"] = Conv.Round(row.State.AvailableIn, 1),
+                ["totalRecastSeconds"] = Conv.Round(row.State.Interval, 1),
+                ["nextChargeInSeconds"] = Conv.Round(row.State.NextCharge, 1),
+                ["fullRechargeSeconds"] = Conv.Round(row.State.FullRecharge, 1),
+                ["cooldownReady"] = row.State.Charges > 0,
+                ["currentCharges"] = row.State.Charges,
+                ["maxCharges"] = row.State.MaxCharges,
             });
         }
 
@@ -127,14 +130,14 @@ internal static unsafe class CooldownTools
         };
 
         if (cooldowns.Count == 0)
-            result["note"] = "nothing is on cooldown: every ability this job can use at this level is ready";
+            result["note"] = "no active non-GCD recharge found; this does not establish that every action is usable";
 
         return result;
     }
 
     /// <summary>
     /// True when the action belongs to the current job: job-bound actions carry the class/job id
-    /// directly, while shared role actions leave it unset and flag their jobs in the category row.
+    /// directly. Categories also cover inherited class actions, not just role actions.
     /// </summary>
     private static bool IsJobAbility(LuminaAction action, uint jobId, string? jobAbbreviation,
         ExcelSheet<LuminaClassJobCategory> categories)
@@ -142,7 +145,7 @@ internal static unsafe class CooldownTools
         if (action.ClassJob.IsValid && action.ClassJob.RowId == jobId)
             return true;
 
-        if (!action.IsRoleAction || string.IsNullOrEmpty(jobAbbreviation))
+        if (string.IsNullOrEmpty(jobAbbreviation))
             return false;
 
         var category = categories.GetRowOrDefault(action.ClassJobCategory.RowId);
@@ -154,5 +157,24 @@ internal static unsafe class CooldownTools
         return flag is not null
             && flag.PropertyType == typeof(bool)
             && flag.GetValue(category.Value) is true;
+    }
+
+    private sealed record RecastState(float AvailableIn, float NextCharge, float FullRecharge,
+        float Interval, uint Charges, uint MaxCharges);
+
+    /// <summary>
+    /// Elapsed is a charge-resource gauge: unspent charges give whole intervals of credit.
+    /// Its modulo gives the next recharge, while the native current-charge count accounts for
+    /// level-sync caps. Never divide the raw Total by the current cap (Total can use a higher cap).
+    /// </summary>
+    private static RecastState? DescribeRecast(float elapsed, float interval, uint charges, ushort maxCharges)
+    {
+        if (!float.IsFinite(elapsed) || !float.IsFinite(interval) || elapsed < 0 || interval <= 0) return null;
+        var cap = Math.Max(1u, maxCharges);
+        charges = Math.Min(charges, cap);
+        if (charges == cap) return new RecastState(0, 0, 0, interval, charges, cap);
+        var next = interval - elapsed % interval;
+        var full = next + (cap - charges - 1) * interval;
+        return new RecastState(charges > 0 ? 0 : next, next, full, interval, charges, cap);
     }
 }
