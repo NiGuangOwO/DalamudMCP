@@ -11,6 +11,7 @@ using Dalamud.Plugin.Services;
 using DalamudMCP.Chat;
 using DalamudMCP.Events;
 using DalamudMCP.Ipc;
+using DalamudMCP.Logging;
 using DalamudMCP.Mcp;
 using DalamudMCP.Tools;
 using DalamudMCP.Windows;
@@ -52,6 +53,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ConfigWindow configWindow;
     private readonly EventHub eventHub = new();
     private readonly ChatLogHub chatLogHub = new();
+    private readonly DalamudLogHub dalamudLogHub = new();
     private readonly IpcHub ipcHub;
 
     // Recreated whenever the listener restarts so a changed port or framework timeout
@@ -167,6 +169,7 @@ public sealed class Plugin : IDalamudPlugin
         EventTools.Register(registry, services, eventHub);
         combatRecorder = new CombatRecorder(registry, services);
         ChatLogTools.Register(registry, chatLogHub);
+        DalamudLogTools.Register(registry, dalamudLogHub);
         CallbackProbe.Initialize(interop, sigScanner);
 
         configWindow = new ConfigWindow(this, textureProvider);
@@ -375,6 +378,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        dalamudLogHub.Dispose();
         itemHoldings.Dispose();
         combatRecorder.Dispose();
         screenshots.Dispose();

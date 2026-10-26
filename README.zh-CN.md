@@ -9,9 +9,13 @@ DalamudMCP 是适用于 FINAL FANTASY XIV 的 [Dalamud](https://github.com/goatc
 
 插件运行于游戏进程内部，通过 Dalamud 服务和 [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)
 提供角色、游戏对象、小队、物品栏、游戏数据及界面状态访问，并支持经过校验的原始内存读取、事件采集、截图和插件间通信。
-当前工具目录包含 **129 个工具，其中 77 个只读、52 个可变更**。可变更工具需在配置中显式启用。
+当前工具目录包含 **138 个工具，其中 81 个只读、57 个可变更**。可变更工具需在配置中显式启用。
 
 默认 MCP 地址为 `http://127.0.0.1:18777/mcp`。支持 HTTP 的 MCP 客户端可直接连接；仅支持 stdio 的客户端可使用仓库附带的桥接程序。
+
+Dalamud 与插件运行日志可用只读工具 `get_dalamud_log` 查询，支持级别、来源、关键字筛选，
+使用 `streamId` 和 `nextAfterId` 增量轮询，未登录角色时也可使用。
+缓存、分页与日志级别限制见[运行日志说明](docs/dalamud-logs.md)；游戏聊天记录使用 `get_chat_log`。
 
 > **验证范围：** 离线检查覆盖协议、schema、插件加载及部分原生内存操作。
 > 游戏内验证范围以[工具审计记录](docs/tool-audit-2026-10-17.md)和[截图说明](docs/screenshots.md)为准，
@@ -227,7 +231,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## 工具参考
 
-当前目录包含 129 个工具：77 个只读、52 个可变更。下表按功能列出主要工具及参数摘要；
+当前目录包含 138 个工具：81 个只读、57 个可变更。下表按功能列出主要工具及参数摘要；
 完整目录和参数约束以服务器返回的 `tools/list` schema 为准，可变更工具在 `AllowMutatingTools` 启用后开放。
 
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。

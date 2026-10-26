@@ -638,6 +638,8 @@ public sealed class McpServer : IDisposable
                         "for the development workflow. Start with get_client_state and get_local_player; when the client " +
                         "is unavailable, continue independent source/build work and report the live-validation gap. " +
                         "Read tool schemas and follow tools/list nextCursor before concluding a capability is absent. " +
+                        "Use get_dalamud_log for runtime diagnostics (get_chat_log is game chat); poll with streamId and nextAfterId as afterId, " +
+                        "check hasMore/historyLost, and remember coverage begins at plugin load and respects Dalamud's logging level. " +
                         "Discover target-plugin features using list_plugin_commands and open_plugin_ui, then runtime help/UI; " +
                         "do not read target-plugin local source to find test entry points. Read get_tribal_quest_state for tribal quota/reputation. " +
                         "Use search_item_holdings for bags, equipment, armoury, saddlebags and visited retainers; read coverage/source/complete " +
