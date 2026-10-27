@@ -155,6 +155,7 @@ MCP 连接配置与 Skill 安装为独立步骤。
 
 [开发工具说明](docs/addon-probes-and-dev-loader.md)介绍逐帧界面采样、条件输入、节点定位和开发插件加载。
 工具参数以已连接服务器提供的 schema 为准。`tools/list` 支持分页，应持续读取 `nextCursor` 至全部页面返回完毕。
+紧凑 JSON、显式工具错误和桥接会话恢复的行为见 [Agent 响应效率](docs/agent-efficiency.md)。
 
 所有端点均绑定 `127.0.0.1`：
 

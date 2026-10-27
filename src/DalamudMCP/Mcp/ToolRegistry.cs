@@ -82,10 +82,6 @@ public sealed class ToolRegistry
         Func<JObject, object?> handler,
         bool mutating = false)
     {
-        var args = schema["properties"] as JObject;
-        if (args is not null)
-            description = BuildDescription(description, args);
-
         return Add(new McpTool
         {
             Name = name,
@@ -110,10 +106,6 @@ public sealed class ToolRegistry
         Func<JObject, Task<object?>> handler,
         bool mutating = false)
     {
-        var args = schema["properties"] as JObject;
-        if (args is not null)
-            description = BuildDescription(description, args);
-
         return Add(new McpTool
         {
             Name = name,
@@ -123,32 +115,6 @@ public sealed class ToolRegistry
             AsyncHandler = handler,
             Mutating = mutating,
         });
-    }
-
-    private static string BuildDescription(string description, JObject args)
-    {
-        if (args.Count == 0) return description;
-
-        var lines = new List<string>();
-        foreach (var prop in args.Properties())
-        {
-            // "type" may be a single string or an array of strings (union types like
-            // "integer or array of integer"); both must render, neither may throw.
-            var typeToken = prop.Value["type"];
-            var type = typeToken switch
-            {
-                null => "any",
-                JArray arr => string.Join(" | ", arr.Select(v => v.Value<string>())),
-                _ => typeToken.Value<string>() ?? "any",
-            };
-            var desc = prop.Value["description"]?.Value<string>();
-            var enumValues = prop.Value["enum"] is JArray e
-                ? " (" + string.Join(" | ", e.Select(v => v.Value<string>())) + ")"
-                : string.Empty;
-            lines.Add($"  - {prop.Name} ({type}{enumValues}){(string.IsNullOrEmpty(desc) ? string.Empty : ": " + desc)}");
-        }
-
-        return description + "\n\nParameters:\n" + string.Join("\n", lines);
     }
 
     public McpTool? Find(string name) => byName.TryGetValue(name, out var t) ? t : null;

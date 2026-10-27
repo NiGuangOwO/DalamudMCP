@@ -159,6 +159,9 @@ public static class Program
         var echoTool = (listJson["result"]?["tools"] as JArray)?.FirstOrDefault(t => t["name"]?.Value<string>() == "echo");
         Check("tool schema is exposed", echoTool?["inputSchema"]?["properties"]?["text"] is not null);
         Check("tool annotations mark read-only", echoTool?["annotations"]?["readOnlyHint"]?.Value<bool>() == true);
+        Check("tool descriptions do not duplicate schema parameters",
+            echoTool?["description"]?.Value<string>() == "Returns the text you send it." &&
+            echoTool?["inputSchema"]?["properties"]?["text"]?["description"]?.Value<string>() == "Text to echo back.");
 
         // ------------------------------------------------------ tools/call
         var callResponse = await Post(http, "/mcp", Request("tools/call", 3, new JObject
@@ -170,6 +173,18 @@ public static class Program
         var text = callJson["result"]?["content"]?[0]?["text"]?.Value<string>() ?? string.Empty;
         Check("tools/call returns content", text.Contains("hello protocol"));
         Check("tools/call result is not flagged as an error", callJson["result"]?["isError"]?.Value<bool>() != true);
+        Check("JSON tool content is compact without changing its values",
+            text == JObject.Parse(text).ToString(Newtonsoft.Json.Formatting.None) &&
+            JObject.Parse(text).Value<string>("echoed") == "hello protocol");
+
+        const string whitespaceText = "  中文\n\t\"quoted\"  ";
+        var whitespaceResponse = await Post(http, "/mcp", Request("tools/call", 30, new JObject
+        {
+            ["name"] = "echo", ["arguments"] = new JObject { ["text"] = whitespaceText },
+        }), sid);
+        var whitespaceJson = await ReadJson(whitespaceResponse);
+        Check("compact serialization preserves Unicode and whitespace inside values",
+            JObject.Parse(whitespaceJson["result"]!["content"]![0]!["text"]!.Value<string>()!).Value<string>("echoed") == whitespaceText);
 
         // ------------------------------------------------- with arguments
         var addResponse = await Post(http, "/mcp", Request("tools/call", 4, new JObject
@@ -209,6 +224,48 @@ public static class Program
         Check("ToolException surfaces as isError", toolErrorJson["result"]?["isError"]?.Value<bool>() == true);
         Check("ToolException message reaches the client",
             toolErrorJson["result"]?["content"]?[0]?["text"]?.Value<string>()?.Contains("deliberate failure") == true);
+
+        registry.Add("returned_error", "Returned error", "Returns an explicit tool error.", Json.Schema(),
+            _ => Json.ToolError("returned failure"));
+        var asyncErrorTool = registry.AddAsync("returned_async_error", "Returned async error", "Returns an asynchronous tool error.",
+            Json.Schema(("context", "string", "Optional error context.", false)),
+            _ => Task.FromResult<object?>(Json.ToolError("returned async failure")));
+        Check("async tool descriptions keep parameter documentation only in the schema",
+            asyncErrorTool.Description == "Returns an asynchronous tool error." &&
+            asyncErrorTool.InputSchema["properties"]?["context"]?["description"]?.Value<string>() == "Optional error context.");
+
+        foreach (var errorName in new[] { "returned_error", "returned_async_error" })
+        {
+            var returnedError = await Post(http, "/mcp", Request("tools/call", 50, new JObject
+            {
+                ["name"] = errorName, ["arguments"] = new JObject(),
+            }), sid);
+            var returnedJson = await ReadJson(returnedError);
+            Check($"{errorName} surfaces as an outer tool error, without nested JSON",
+                returnedJson["result"]?["isError"]?.Value<bool>() == true &&
+                returnedJson["result"]?["content"]?[0]?["text"]?.Value<string>()?.StartsWith("returned ", StringComparison.Ordinal) == true);
+        }
+
+        // Ordinary game/plugin data may contain these keys. Only explicitly typed MCP
+        // results may bypass serialization; a structural match would misclassify data.
+        var lookalike = new JObject
+        {
+            ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = "business data" } },
+            ["isError"] = true,
+        };
+        registry.Add("lookalike_data", "Lookalike data", "Returns ordinary data resembling an MCP result.", Json.Schema(),
+            _ => lookalike);
+        var lookalikeResponse = await Post(http, "/mcp", Request("tools/call", 51, new JObject
+        {
+            ["name"] = "lookalike_data", ["arguments"] = new JObject(),
+        }), sid);
+        var lookalikeJson = await ReadJson(lookalikeResponse);
+        Check("ordinary content/isError fields remain data rather than becoming a tool error",
+            lookalikeJson["result"]?["isError"]?.Value<bool>() != true &&
+            JToken.DeepEquals(lookalike, JObject.Parse(lookalikeJson["result"]!["content"]![0]!["text"]!.Value<string>()!)));
+        var explicitText = Json.JsonResult(Json.TextResult("  native text\n"));
+        Check("explicit text content is not serialized again or whitespace-trimmed",
+            explicitText["content"]?[0]?["text"]?.Value<string>() == "  native text\n" && explicitText["isError"] is null);
 
         var boomError = await Post(http, "/mcp", Request("tools/call", 6, new JObject
         {
@@ -306,7 +363,7 @@ public static class Program
         var listedNow = await Post(http, "/mcp", Request("tools/list", 11, new JObject()), sid);
         var listedNowJson = await ReadJson(listedNow);
         Check("opening the gate reveals the tool in tools/list",
-            ((listedNowJson["result"]?["tools"] as JArray)?.Count ?? 0) == 6);
+            ((listedNowJson["result"]?["tools"] as JArray)?.Count ?? 0) == 9);
 
         gate = false;
 

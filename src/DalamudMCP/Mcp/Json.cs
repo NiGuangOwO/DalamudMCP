@@ -9,6 +9,15 @@ namespace DalamudMCP.Mcp;
 /// <summary>Explicit opt-in image content, distinct from ordinary tool JSON data.</summary>
 public sealed record McpPngResult(object Metadata, byte[] Png);
 
+/// <summary>
+/// Explicit MCP content, distinct from ordinary tool data even when that data has
+/// fields named content or isError. Inherits JObject to preserve handler contracts.
+/// </summary>
+internal sealed class McpToolResult : JObject
+{
+    internal McpToolResult() { }
+}
+
 /// <summary>Helpers for building MCP JSON payloads.</summary>
 public static class Json
 {
@@ -46,14 +55,15 @@ public static class Json
     }
 
     /// <summary>Wraps a plain string as an MCP text content block result.</summary>
-    public static JObject TextResult(string text) => new()
+    public static JObject TextResult(string text) => new McpToolResult
     {
         ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = text } },
     };
 
-    /// <summary>Wraps a serialized payload as pretty-printed MCP text content.</summary>
+    /// <summary>Preserves explicit MCP results; wraps ordinary data as compact JSON text.</summary>
     public static JObject JsonResult(object? payload)
     {
+        if (payload is McpToolResult content) return content;
         if (payload is McpPngResult image)
         {
             var result = JsonResult(image.Metadata);
@@ -63,18 +73,13 @@ public static class Json
             });
             return result;
         }
-        var text = payload is string s ? s : JsonConvert.SerializeObject(payload, new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-            Formatting = Formatting.Indented,
-            DateFormatHandling = DateFormatHandling.IsoDateFormat,
-        });
+        var text = payload is string s ? s : Serialize(payload);
 
         return TextResult(text);
     }
 
     /// <summary>Marks a result as an MCP tool error (model-visible, not a protocol error).</summary>
-    public static JObject ToolError(string message) => new()
+    public static JObject ToolError(string message) => new McpToolResult
     {
         ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = message } },
         ["isError"] = true,

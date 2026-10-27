@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -85,6 +86,7 @@ namespace BridgeSmokeTest
             // This runs against the SAME live server with its TokenProvider switched on, which is
             // the closest thing to a real authenticated setup available out of game.
             await RunAuthChecksAsync(bridgePath, server, port).ConfigureAwait(false);
+            await RunRecoveryChecksAsync(bridgePath).ConfigureAwait(false);
 
             Console.WriteLine();
             Console.WriteLine($"{checks - failures}/{checks} checks passed");
@@ -249,6 +251,109 @@ namespace BridgeSmokeTest
 
             Check("pipelined requests each get their own reply",
                 seen.SequenceEqual(batchIds));
+
+            // A legacy-protocol result exposes the session ID, allowing the test to
+            // expire the real server session without reflection into the bridge.
+            var legacy = await ExchangeAsync(bridge,
+                """{"jsonrpc":"2.0","id":30,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}""",
+                expectReply: true).ConfigureAwait(false);
+            var sessionId = legacy?["result"]?["sessionId"]?.GetValue<string>();
+            Check("recovery test obtains a real session", !string.IsNullOrEmpty(sessionId));
+            using var http = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
+            using var drop = new HttpRequestMessage(HttpMethod.Delete, "/mcp");
+            drop.Headers.Add("Mcp-Session-Id", sessionId);
+            using var dropped = await http.SendAsync(drop).ConfigureAwait(false);
+            Check("recovery test expires the real server session", dropped.IsSuccessStatusCode);
+            var recovered = await ExchangeAsync(bridge,
+                """{"jsonrpc":"2.0","id":31,"method":"tools/call","params":{"name":"echo","arguments":{"message":"after session expired"}}}""",
+                expectReply: true).ConfigureAwait(false);
+            Check("session_not_found transparently re-handshakes and preserves the original request ID",
+                recovered?["id"]?.GetValue<int>() == 31 &&
+                recovered?["result"]?["content"]?[0]?["text"]?.GetValue<string>()?.Contains("after session expired") == true);
+        }
+
+        private static async Task RunRecoveryChecksAsync(string bridgePath)
+        {
+            // Only explicit pre-dispatch session rejections are safe to replay. In
+            // particular, an arbitrary HTTP failure mentioning a session code is not.
+            var cases = new[]
+            {
+                (Name: "session_required", Status: 400, Body: "{\"error\":\"session_required\"}", Recover: true, FailHandshake: false, FailAck: false, RepeatRejection: false),
+                (Name: "unrelated 404", Status: 404, Body: "{\"error\":\"not_found\",\"message\":\"session_required\"}", Recover: false, FailHandshake: false, FailAck: false, RepeatRejection: false),
+                (Name: "non-JSON rejection", Status: 404, Body: "session_required", Recover: false, FailHandshake: false, FailAck: false, RepeatRejection: false),
+                (Name: "malformed error shape", Status: 400, Body: "{\"error\":{\"code\":\"session_required\"}}", Recover: false, FailHandshake: false, FailAck: false, RepeatRejection: false),
+                (Name: "server failure", Status: 500, Body: "{\"error\":\"session_required\"}", Recover: false, FailHandshake: false, FailAck: false, RepeatRejection: false),
+                (Name: "failed re-handshake", Status: 400, Body: "{\"error\":\"session_required\"}", Recover: false, FailHandshake: true, FailAck: false, RepeatRejection: false),
+                (Name: "failed initialized acknowledgment", Status: 400, Body: "{\"error\":\"session_required\"}", Recover: false, FailHandshake: false, FailAck: true, RepeatRejection: false),
+                (Name: "repeated session rejection", Status: 404, Body: "{\"error\":\"session_not_found\"}", Recover: true, FailHandshake: false, FailAck: false, RepeatRejection: true),
+            };
+            foreach (var test in cases)
+            {
+                var handshakes = 0;
+                var calls = 0;
+                using var fake = new MiniHttpServer(async ctx =>
+                {
+                    if (ctx.Path == "/health")
+                    {
+                        await ctx.WriteJsonAsync("{\"status\":\"ok\"}").ConfigureAwait(false);
+                        return true;
+                    }
+                    var request = JsonNode.Parse(ctx.BodyText)!;
+                    var method = request["method"]?.GetValue<string>();
+                    if (method == "initialize")
+                    {
+                        handshakes++;
+                        if (test.FailHandshake && handshakes > 1)
+                            await ctx.WriteJsonAsync("{\"error\":\"unavailable\"}", 503, "Service Unavailable").ConfigureAwait(false);
+                        else
+                            await ctx.WriteResponseAsync(200, "OK", "application/json", Encoding.UTF8.GetBytes(new JsonObject
+                            {
+                                ["jsonrpc"] = "2.0", ["id"] = request["id"]?.DeepClone(),
+                                ["result"] = new JsonObject { ["protocolVersion"] = "2025-06-18", ["capabilities"] = new JsonObject() },
+                            }.ToJsonString()), new Dictionary<string, string> { ["Mcp-Session-Id"] = $"test-session-{handshakes}" }).ConfigureAwait(false);
+                    }
+                    else if (method == "notifications/initialized")
+                    {
+                        if (test.FailAck && handshakes > 1)
+                            await ctx.WriteJsonAsync("{\"error\":\"unavailable\"}", 503, "Service Unavailable").ConfigureAwait(false);
+                        else
+                            await ctx.WriteEmptyAsync(202, "Accepted").ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        calls++;
+                        if (calls == 1 || test.RepeatRejection)
+                            await ctx.WriteJsonAsync(test.Body, test.Status, "Rejected").ConfigureAwait(false);
+                        else
+                            await ctx.WriteJsonAsync(new JsonObject
+                            {
+                                ["jsonrpc"] = "2.0", ["id"] = request["id"]?.DeepClone(),
+                                ["result"] = new JsonObject { ["content"] = new JsonArray() },
+                            }.ToJsonString()).ConfigureAwait(false);
+                    }
+                    return true;
+                }, _ => { });
+                fake.Start(0);
+                using var bridge = StartBridge(bridgePath, fake.Port);
+                var stderr = bridge.StandardError.ReadToEndAsync();
+                await ExchangeAsync(bridge,
+                    """{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}""",
+                    expectReply: true).ConfigureAwait(false);
+                var reply = await ExchangeAsync(bridge,
+                    """{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"once","arguments":{}}}""",
+                    expectReply: true).ConfigureAwait(false);
+                bridge.StandardInput.Close();
+                var exited = await WaitForExitAsync(bridge, TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+                _ = await stderr.ConfigureAwait(false);
+                var recoveryAttempted = test.Recover || test.FailHandshake || test.FailAck;
+                Check($"{test.Name}: only an acknowledged session permits one replay",
+                    calls == (test.Recover ? 2 : 1) && handshakes == (recoveryAttempted ? 2 : 1));
+                Check($"{test.Name}: original request gets exactly its result or rejection",
+                    reply?["id"]?.GetValue<int>() == 2 && (test.Recover && !test.RepeatRejection
+                        ? reply["result"] is not null && reply["error"] is null
+                        : reply["error"]?["message"]?.GetValue<string>()?.Contains(test.Body, StringComparison.Ordinal) == true));
+                Check($"{test.Name}: bridge exits cleanly", exited && bridge.ExitCode == 0);
+            }
         }
 
         // ------------------------------------------------------------------ helpers
@@ -296,12 +401,15 @@ namespace BridgeSmokeTest
             {
                 FileName = path,
                 UseShellExecute = false,
+                CreateNoWindow = true,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 StandardOutputEncoding = new UTF8Encoding(false),
                 StandardErrorEncoding = new UTF8Encoding(false),
             };
+            info.Environment.Remove("DALAMUD_MCP_URL");
+            info.Environment.Remove("DALAMUD_MCP_TOKEN");
             info.ArgumentList.Add("--port");
             info.ArgumentList.Add(port.ToString());
             if (token is not null)

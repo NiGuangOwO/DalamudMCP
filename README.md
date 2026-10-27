@@ -156,6 +156,7 @@ The [addon and development-loader guide](docs/addon-probes-and-dev-loader.md) de
 conditional input, node lookup and development-plugin loading.
 Use the connected tool schemas as the parameter reference. `tools/list` is paginated; continue with `nextCursor`
 until all pages have been retrieved.
+See [agent response efficiency](docs/agent-efficiency.md) for compact JSON, explicit tool errors and bridge session recovery.
 
 All endpoints bind to `127.0.0.1`:
 

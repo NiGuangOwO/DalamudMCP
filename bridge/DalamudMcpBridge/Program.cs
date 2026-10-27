@@ -350,24 +350,32 @@ namespace DalamudMcpBridge
             }
 
             var stale = await attempt.Content.ReadAsStringAsync().ConfigureAwait(false);
-            attempt.Dispose();
             Log($"plugin rejected the session ({Summarize(stale)}); re-handshaking");
 
-            await sessionLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                sessionId = null;
-                if (!await HandshakeAsync().ConfigureAwait(false))
+                await sessionLock.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    Log("re-handshake failed; forwarding the rejection unchanged");
-                    return await PostAsync(body).ConfigureAwait(false);
+                    sessionId = null;
+                    if (!await HandshakeAsync().ConfigureAwait(false))
+                    {
+                        Log("re-handshake failed; forwarding the original rejection");
+                        return attempt;
+                    }
+                }
+                finally
+                {
+                    sessionLock.Release();
                 }
             }
-            finally
+            catch
             {
-                sessionLock.Release();
+                attempt.Dispose();
+                throw;
             }
 
+            attempt.Dispose();
             return await PostAsync(body).ConfigureAwait(false);
         }
 
@@ -391,7 +399,8 @@ namespace DalamudMcpBridge
 
         /// <summary>
         /// True when the response says the session we sent is not one the plugin
-        /// knows. The plugin answers 400/404 with a <c>session_required</c> body.
+        /// knows. Only the plugin's explicit pre-dispatch session errors are safe
+        /// to replay; arbitrary HTTP failures and text mentions are not.
         /// </summary>
         private static async Task<bool> IsStaleSessionAsync(HttpResponseMessage response)
         {
@@ -400,7 +409,17 @@ namespace DalamudMcpBridge
                 return false;
 
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return body.Contains("session_required", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                return JsonNode.Parse(body) is JsonObject envelope
+                    && envelope["error"] is JsonValue code
+                    && code.TryGetValue<string>(out var value)
+                    && value is "session_required" or "session_not_found";
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -451,6 +470,12 @@ namespace DalamudMcpBridge
             };
 
             using var ack = await PostAsync(initialized.ToJsonString()).ConfigureAwait(false);
+            if (!ack.IsSuccessStatusCode)
+            {
+                Log($"initialized notification rejected: {(int)ack.StatusCode}");
+                sessionId = null;
+                return false;
+            }
             Log($"re-handshake established session {sessionId}");
             return true;
         }

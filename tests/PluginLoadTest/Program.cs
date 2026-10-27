@@ -757,10 +757,12 @@ internal static class Program
                     JsonSerializer.Serialize(realAddress) + "}}}").ConfigureAwait(false);
                 var (regionPayload, regionError) = UnwrapToolResult(regionText);
                 Check("query_memory_region describes a real address", !regionError, FirstLine(regionPayload ?? regionText));
+                using var regionDocument = JsonDocument.Parse(regionPayload ?? "{}");
                 Check("query_memory_region reports the address as committed and readable",
-                    regionPayload is not null &&
-                    regionPayload.Contains("\"committed\": true", StringComparison.Ordinal) &&
-                    regionPayload.Contains("\"readable\": true", StringComparison.Ordinal),
+                    regionDocument.RootElement.TryGetProperty("regions", out var regions) &&
+                    regions.ValueKind == JsonValueKind.Array && regions.GetArrayLength() > 0 &&
+                    regions[0].TryGetProperty("committed", out var committed) && committed.ValueKind == JsonValueKind.True &&
+                    regions[0].TryGetProperty("readable", out var readable) && readable.ValueKind == JsonValueKind.True,
                     FirstLine(regionPayload ?? regionText));
 
                 // THE safety check. A wild address must come back as a phrased refusal. If the
