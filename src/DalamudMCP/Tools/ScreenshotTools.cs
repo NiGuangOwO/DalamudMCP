@@ -34,6 +34,8 @@ internal sealed class ScreenshotTools : IDisposable
         session = new ScreenshotSession(CaptureFrameAsync);
         ui.Draw += ObserveViewport;
         registry.AddAsync("capture_game_screenshot", "Capture game screenshot",
+            "Use only when visual pixels are required. For readable native UI text, call read_addon_text first; " +
+            "do not screenshot merely to OCR ordinary addon labels, dialogs or lists. " +
             "Captures PNG pixels from the game's render target using Dalamud texture readback (area=client, default), " +
             "including native game UI and optionally Dalamud UI. Does not capture other desktop windows or restore/focus the game. " +
             "Background/minimized capture works when rendering continues; paused rendering times out. " +

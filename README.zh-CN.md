@@ -9,7 +9,7 @@ DalamudMCP 是适用于 FINAL FANTASY XIV 的 [Dalamud](https://github.com/goatc
 
 插件运行于游戏进程内部，通过 Dalamud 服务和 [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)
 提供角色、游戏对象、小队、物品栏、游戏数据及界面状态访问，并支持经过校验的原始内存读取、事件采集、截图和插件间通信。
-当前工具目录包含 **138 个工具，其中 81 个只读、57 个可变更**。可变更工具需在配置中显式启用。
+当前工具目录包含 **139 个工具，其中 82 个只读、57 个可变更**。可变更工具需在配置中显式启用。
 
 默认 MCP 地址为 `http://127.0.0.1:18777/mcp`。支持 HTTP 的 MCP 客户端可直接连接；仅支持 stdio 的客户端可使用仓库附带的桥接程序。
 
@@ -236,7 +236,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## 工具参考
 
-当前目录包含 138 个工具：81 个只读、57 个可变更。下表按功能列出主要工具及参数摘要；
+当前目录包含 139 个工具：82 个只读、57 个可变更。下表按功能列出主要工具及参数摘要；
 完整目录和参数约束以服务器返回的 `tools/list` schema 为准，可变更工具在 `AllowMutatingTools` 启用后开放。
 
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。
@@ -340,7 +340,7 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `get_addon_state` | 返回 `active`、`inactive`、`unknown`；背包使用实际窗口开关状态，其他条目仍为 agent 活动状态。只读。 | 无 |
 | `list_addon_elements` | 在任意已加载 addon 中先筛选再限制结果数量。普通定位使用 `detail=compact`；完整模式保留几何信息。返回可精确定位的 `componentPath`。见 [addon 查询](docs/addon-queries.md)。 | `addon` 或 `addonId`、`label`、`containsMatch`、`componentType`、`visibleOnly`、`enabledOnly`、`clickableOnly`、`detail`、`allNodes`、`maxDepth`（12）、`maxNodes`（100） |
 | `click_addon_element` | 通过 `ReceiveEvent` 派发 Atk UI 事件。支持 `click`、`doubleClick`、`buttonClick`、`buttonPress`、`buttonRelease` 和 `registered`；实际效果取决于目标节点及其监听器。 | `addon` 或 `addonId`、`nodeId` 或 `index`、`event`、`param`（高级覆盖） |
-| `get_addon_strings` | 读取 addon 的 `AtkValue` 字符串和标量值，返回索引、类型及解码后的值，并对控制字符转义。只读。 | `addon` 或 `addonId`、`maxValues`（1-500，默认 200）、`stringsOnly` |
+| `read_addon_text` | 读取原生界面文字的首选只读工具。合并可见 Text/Button/List 标签与字符串型 `AtkValue`，保留 `nodeId`/`componentPath`，支持字面筛选并明确报告截断。读取普通界面文本时不要先截图 OCR。见 [addon 文本读取](docs/addon-text.md)。 | `addon` 或 `addonId`、`contains`、`visibleOnly`（默认 true）、`includeNodeText`、`includeAtkValues`、`maxNodeTexts`（100）、`maxValueTexts`（100）、`maxTextLength`（512）、`maxDepth`（12） |
 | `select_addon_menu_item` | 按标签或索引选择菜单型 addon 的条目，并通过其回调提交选择。默认采用归一化后的精确匹配，可通过 `containsMatch` 启用包含匹配。 | `addon` 或 `addonId`、`label` 或 `index`、`containsMatch`、`dryRun` |
 | `probe_receive_event_enable` | 安装已加载 addon 的 `ReceiveEvent` 虚函数表探针，记录转发前的界面事件。配合 `probe_receive_event_dump` 比较用户输入与合成事件。 | `addon` 或 `addonId` |
 | `probe_receive_event_enable_listener` | 对指定节点的首个已注册监听器安装事件探针，用于分析组件级输入。 | `addon` 或 `addonId`、`nodeId`（必填） |
@@ -484,7 +484,7 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 
 | 工具 | 描述 | 关键参数 |
 | --- | --- | --- |
-| `capture_game_screenshot` | 默认 `client` 模式通过 Dalamud 读取游戏渲染目标；最小化后持续渲染时仍可截图。缓存结果附带年龄信息，支持原生 MCP 图片和仅返回保存路径。详见[截图说明](docs/screenshots.md)。 | `area`、`maxDimension`、`includeDalamudUi`、`timeoutMs`、`allowCached`、`maxCacheAgeMs`、`save`、`ttlSeconds`、`includeImage`、`imageContent` |
+| `capture_game_screenshot` | 仅在需要像素、布局、颜色、图标或图像文字时使用；能由 addon 节点或 `AtkValue` 读取的普通文本应先调用 `read_addon_text`，不要截图 OCR。默认 `client` 模式通过 Dalamud 读取游戏渲染目标；最小化后持续渲染时仍可截图。缓存结果附带年龄信息，支持原生 MCP 图片和仅返回保存路径。详见[截图说明](docs/screenshots.md)。 | `area`、`maxDimension`、`includeDalamudUi`、`timeoutMs`、`allowCached`、`maxCacheAgeMs`、`save`、`ttlSeconds`、`includeImage`、`imageContent` |
 | `set_game_window_state` | 显式最小化/恢复本进程游戏窗口，并报告观测结果。受变更工具开关控制，无需角色登录；恢复可能激活游戏。 | `state`（必需：`minimize`/`restore`） |
 
 ### 已安装插件

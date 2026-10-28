@@ -15,6 +15,7 @@ internal sealed class AddonElementQuery
     private readonly bool visibleOnly;
     private readonly bool enabledOnly;
     private readonly bool clickableOnly;
+    private readonly bool textOnly;
     private readonly bool compact;
     private readonly int maxNodes;
 
@@ -27,6 +28,7 @@ internal sealed class AddonElementQuery
         visibleOnly = Flag(args, "visibleOnly");
         enabledOnly = Flag(args, "enabledOnly");
         clickableOnly = Flag(args, "clickableOnly");
+        textOnly = Flag(args, "textOnly");
         var detail = Text(args, "detail") ?? "full";
         if (detail is not ("compact" or "full")) throw new ToolException("detail must be compact or full");
         compact = detail == "compact";
@@ -51,12 +53,13 @@ internal sealed class AddonElementQuery
             enabledOnly && element.Value<bool>("enabled") != true ||
             clickableOnly && element.Value<bool>("clickable") != true) return;
         if (componentType != null && !string.Equals(componentType, element.Value<string>("componentType"), StringComparison.OrdinalIgnoreCase)) return;
+        var actualLabel = element.Value<string>("label")?.Trim();
+        if (textOnly && string.IsNullOrEmpty(actualLabel)) return;
         if (label != null)
         {
-            var actual = element.Value<string>("label")?.Trim();
-            if (actual == null || (containsMatch
-                    ? !actual.Contains(label.Trim(), StringComparison.OrdinalIgnoreCase)
-                    : !string.Equals(actual, label.Trim(), StringComparison.OrdinalIgnoreCase))) return;
+            if (actualLabel == null || (containsMatch
+                    ? !actualLabel.Contains(label.Trim(), StringComparison.OrdinalIgnoreCase)
+                    : !string.Equals(actualLabel, label.Trim(), StringComparison.OrdinalIgnoreCase))) return;
         }
         // A one-match lookahead distinguishes an exact-size result from truncation.
         // Nonmatching nodes never consume the result budget.

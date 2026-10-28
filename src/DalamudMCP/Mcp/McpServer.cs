@@ -646,8 +646,11 @@ public sealed class McpServer : IDisposable
                         "because unloaded or unvisited storage is unknown and session snapshots may be stale. " +
                         "Mutating tools are hidden/refused when AllowMutatingTools is off; follow the user's scope and " +
                         "input restrictions. Locate entities with get_game_objects/find_game_object and native windows " +
-                        "with list_loaded_addons; use list_addon_elements filters and detail=compact for ordinary lookup, " +
-                        "then copy nodeId/componentPath to clicks or node snapshots. Use set_addon_text_input for native TextInput fields " +
+                        "with list_loaded_addons. When the question is native UI text, call read_addon_text first; use " +
+                        "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
+                        "controls or geometry are needed. Use capture_game_screenshot only for pixels, layout, color, " +
+                        "icons or image-only glyphs, not routine text OCR. Copy nodeId/componentPath to clicks or node snapshots. " +
+                        "Use set_addon_text_input for native TextInput fields " +
                         "and imgui_text for Dear ImGui; inspect actual text/exactMatch and verify search results separately. " +
                         "Use set_addon_numeric_input for native NumericInput fields; read live limits and actual value. Numeric edits do not confirm the surrounding dialog. " +
                         "Use get_map_state to distinguish current and selected maps and page static markers; nativeX/nativeY are raw marker coordinates, never movement coordinates. Hidden-map selection is cached. " +

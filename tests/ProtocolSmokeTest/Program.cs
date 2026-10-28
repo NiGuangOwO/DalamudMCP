@@ -138,6 +138,10 @@ public static class Program
             initJson["result"]?["serverInfo"]?["name"]?.Value<string>() == "dalamud-mcp");
         Check("initialize result advertises tools capability",
             initJson["result"]?["capabilities"]?["tools"] is not null);
+        var instructions = initJson["result"]?["instructions"]?.Value<string>() ?? string.Empty;
+        Check("initialize instructions prefer addon text and reserve screenshots for visual pixels",
+            instructions.Contains("read_addon_text first", StringComparison.Ordinal) &&
+            instructions.Contains("not routine text OCR", StringComparison.Ordinal));
 
         var sid = sessionId!;
 

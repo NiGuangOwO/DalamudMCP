@@ -4,6 +4,8 @@ For Dalamud/FFXIV runtime investigation, addon UI/callback debugging, IPC, or in
 
 Use the connected tool schemas as the parameter reference; follow `tools/list` pagination. Begin live work with `get_client_state` and `get_local_player`. If MCP is unavailable, continue independent source/build work and report the live-validation gap. Do not infer game results from a successful dispatch.
 
+When native addon text is the question, call `read_addon_text` first and use its node/value entries instead of OCR from a screenshot. Use `list_addon_elements` or `get_addon_strings` for narrower follow-up reads. Call `capture_game_screenshot` only when pixels, layout, color, icons, or image-only glyphs are actually required.
+
 For changes to this server, build `src/DalamudMCP/DalamudMCP.csproj` in Debug and Release and run the tests relevant to the changed behavior. Protocol changes use `tests/ProtocolSmokeTest`; plugin registration/load changes use `tests/PluginLoadTest`. These tests use local SDK assemblies where required; their success does not certify every game-side handler. Documentation-only changes need link/skill validation, not a client restart.
 
 If a task needs a missing capability, first check the complete catalog and mutation gate. When MCP development is in scope, implement a bounded reusable tool, verify it offline, verify the running build, then continue the original plugin task. Native pointer/hook failures require isolated reproduction before another live attempt; use the skill's debugging reference.

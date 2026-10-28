@@ -48,8 +48,24 @@ Check(full.Elements[0]["x"] != null && !full.Truncated, "default full projection
 Check(full.Elements[0]["componentPath"] is JArray { Count: 0 }, "top-level path is explicit rather than ambiguous absence");
 full.ScanIncomplete = true;
 Check(full.Truncated, "incomplete traversal is never represented as exhaustive search");
+var textOnly = new AddonElementQuery(JObject.Parse("""{"detail":"compact","textOnly":true}"""), 2);
+textOnly.Add(Node(1, "", kind: "Button"), Array.Empty<uint>());
+textOnly.Add(Node(2, "   "), Array.Empty<uint>());
+textOnly.Add(Node(3, "first"), Array.Empty<uint>());
+textOnly.Add(Node(4, "second"), Array.Empty<uint>());
+Check(textOnly.Elements.Count == 2 && !textOnly.Truncated,
+    "text-only mode ignores blank and unlabeled controls before consuming its result budget");
+textOnly.Add(Node(5, "third"), Array.Empty<uint>());
+Check(textOnly.Elements.Count == 2 && textOnly.ResultLimit,
+    "text-only mode preserves one-match lookahead and marks truncation");
+var textFiltered = new AddonElementQuery(
+    JObject.Parse("""{"detail":"compact","textOnly":true,"label":"quest","containsMatch":true}"""), 10);
+textFiltered.Add(Node(10, "Main Quest"), Array.Empty<uint>());
+textFiltered.Add(Node(11, "Settings"), Array.Empty<uint>());
+Check(textFiltered.Elements.Count == 1 && textFiltered.Elements[0].Value<int>("nodeId") == 10,
+    "text-only mode can search node text without returning non-text controls");
 foreach (var input in new[] {
-    """{"detail":"tiny"}""", """{"visibleOnly":"false"}""", """{"enabledOnly":1}""",
+    """{"detail":"tiny"}""", """{"visibleOnly":"false"}""", """{"enabledOnly":1}""", """{"textOnly":"true"}""",
     """{"label":2}""", """{"containsMatch":true}""", """{"containsMatch":true,"label":" "}""",
     """{"componentType":null}""", """{"label":null}""", """{"detail":null}""",
     new JObject { ["label"] = new string('a', 257) }.ToString(),

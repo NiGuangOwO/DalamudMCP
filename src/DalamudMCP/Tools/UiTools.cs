@@ -176,6 +176,7 @@ internal static class UiTools
             "list_addon_elements",
             "List addon (UI window) elements",
             "Read nodes in any loaded native addon; discover exact names with list_loaded_addons. " +
+            "For UI text use read_addon_text; use this tool when controls, labels, visibility or geometry are needed. " +
             "For ordinary lookup use label/componentType filters and detail=compact. Copy nodeId and " +
             "componentPath to click_addon_element or get_addon_node_snapshot; IDs alone can repeat. " +
             "Filters run before the result limit. truncated/scanIncomplete mean absence or uniqueness " +
@@ -185,6 +186,18 @@ internal static class UiTools
             "Full detail and unfiltered behavior remain the default. Read-only.",
             ElementQuerySchema(),
             args => ListAddonElements(args));
+
+        registry.Add(
+            "read_addon_text",
+            "Read text from an addon (UI window)",
+            "Preferred read-only text path for native UI. Reads visible Text/Button/List labels from the " +
+            "addon node tree and string-valued AtkValue entries in one bounded result. Use this before " +
+            "capture_game_screenshot; request a screenshot only when pixels, layout, color, or image-only " +
+            "glyphs are needed. This does not OCR textured text. visibleOnly defaults true. Node text keeps " +
+            "nodeId/componentPath for follow-up; values keep their AtkValue index. truncated or scanIncomplete " +
+            "means text coverage is incomplete.",
+            AddonTextSchema(),
+            args => ReadAddonText(args));
 
         CheckboxTools.Register(registry);
         TextInputTools.Register(registry);
@@ -219,7 +232,8 @@ internal static class UiTools
             "get_addon_strings",
             "Read an addon (UI window)'s value table",
             "Reports the string and scalar values an addon currently carries in its AtkValue " +
-            "table — the text a menu, dialog or list is displaying right now. Each entry is " +
+            "table — the text a menu, dialog or list is displaying right now. Use read_addon_text " +
+            "for a concise combined node/AtkValue text view. Each entry is " +
             "index, type and decoded value; control characters are escaped so the raw payload " +
             "is visible. Pass 'addon' or 'addonId'. Read-only.",
             Json.Schema(
@@ -520,6 +534,38 @@ internal static class UiTools
         return schema;
     }
 
+    private static JObject AddonTextSchema()
+    {
+        var schema = Json.Schema(
+            ("addon", "string", "Exact loaded addon name from list_loaded_addons; not restricted by open_addon.", false),
+            ("addonId", "integer", "Raw loaded-addon id (alternative to addon).", false),
+            ("contains", "string", "Optional case-insensitive literal text filter, up to 256 characters; returns all matches.", false),
+            ("visibleOnly", "boolean", "Only effectively visible UI text and skip AtkValue text from a hidden addon (default true).", false),
+            ("includeNodeText", "boolean", "Read Text/Button/List labels from the addon node tree (default true).", false),
+            ("includeAtkValues", "boolean", "Read string-valued AtkValue entries (default true).", false),
+            ("maxNodeTexts", "integer", "Maximum node labels returned, 1-500 (default 100).", false),
+            ("maxValueTexts", "integer", "Maximum AtkValue strings returned, 1-500 (default 100).", false),
+            ("maxTextLength", "integer", "Maximum characters retained per text item, 32-4096 (default 512).", false),
+            ("maxDepth", "integer", "Maximum component nesting depth, 1-40 (default 12).", false));
+        var props = (JObject)schema["properties"]!;
+        props["visibleOnly"]!["default"] = true;
+        props["includeNodeText"]!["default"] = true;
+        props["includeAtkValues"]!["default"] = true;
+        props["maxNodeTexts"]!["default"] = 100;
+        props["maxNodeTexts"]!["minimum"] = 1;
+        props["maxNodeTexts"]!["maximum"] = 500;
+        props["maxValueTexts"]!["default"] = 100;
+        props["maxValueTexts"]!["minimum"] = 1;
+        props["maxValueTexts"]!["maximum"] = 500;
+        props["maxTextLength"]!["default"] = 512;
+        props["maxTextLength"]!["minimum"] = 32;
+        props["maxTextLength"]!["maximum"] = 4096;
+        props["maxDepth"]!["default"] = 12;
+        props["maxDepth"]!["minimum"] = 1;
+        props["maxDepth"]!["maximum"] = 40;
+        return schema;
+    }
+
     private static unsafe object ListAddonElements(JObject args)
     {
         var addonName = args["addon"]?.Value<string>();
@@ -573,6 +619,262 @@ internal static class UiTools
             ["returned"] = query.Elements.Count,
             ["elements"] = query.Elements,
         };
+    }
+
+    private static unsafe object ReadAddonText(JObject args)
+    {
+        string? addonName = null;
+        if (args["addon"] is { } addonToken)
+        {
+            if (addonToken.Type != JTokenType.String)
+                throw new ToolException("addon must be a string");
+            addonName = addonToken.Value<string>()?.Trim();
+            if (addonName?.Length > 256)
+                throw new ToolException("addon is limited to 256 characters");
+        }
+        if (args["addonId"] is not null)
+            _ = MapTools.Integer(args, "addonId", 0, 0, ushort.MaxValue);
+        if (string.IsNullOrEmpty(addonName) && args["addonId"] is null)
+            throw new ToolException("pass 'addon' or 'addonId'");
+
+        string? contains = null;
+        if (args["contains"] is { } containsToken)
+        {
+            if (containsToken.Type != JTokenType.String)
+                throw new ToolException("contains must be a string");
+            contains = containsToken.Value<string>()?.Trim();
+            if (string.IsNullOrEmpty(contains))
+                throw new ToolException("contains cannot be empty");
+            if (contains.Length > 256)
+                throw new ToolException("contains is limited to 256 characters");
+        }
+
+        var visibleOnly = CheckboxTools.StrictBoolean(args, "visibleOnly", true);
+        var includeNodeText = CheckboxTools.StrictBoolean(args, "includeNodeText", true);
+        var includeAtkValues = CheckboxTools.StrictBoolean(args, "includeAtkValues", true);
+        if (!includeNodeText && !includeAtkValues)
+            throw new ToolException("at least one of includeNodeText or includeAtkValues must be true");
+        var maxNodeTexts = MapTools.Integer(args, "maxNodeTexts", 100, 1, 500);
+        var maxValueTexts = MapTools.Integer(args, "maxValueTexts", 100, 1, 500);
+        var maxTextLength = MapTools.Integer(args, "maxTextLength", 512, 32, 4096);
+        var maxDepth = MapTools.Integer(args, "maxDepth", 12, 1, 40);
+
+        var unit = ResolveAddon(addonName, args["addonId"]);
+        if (unit is null)
+        {
+            var loaded = string.Empty;
+            var mgr = SafeRaptureAtkUnitManager();
+            if (mgr is not null)
+                loaded = DescribeLoadedAddons(mgr);
+            return Json.ToolError(addonName is not null
+                ? $"no loaded addon named '{addonName}' was found; discover current names with list_loaded_addons.{loaded}"
+                : "no addon resolved; pass an exact loaded 'addon' name or 'addonId'");
+        }
+        if (!unit->IsReady || unit->RootNode is null)
+        {
+            return new JObject
+            {
+                ["available"] = false,
+                ["addon"] = unit->NameString,
+                ["addonId"] = (int)unit->Id,
+                ["ready"] = unit->IsReady,
+                ["reason"] = "addon is loaded but its native UI tree is not ready yet",
+            };
+        }
+
+        AddonElementQuery? query = null;
+        if (includeNodeText)
+        {
+            var queryArgs = new JObject
+            {
+                ["detail"] = "compact",
+                ["textOnly"] = true,
+                ["visibleOnly"] = visibleOnly,
+            };
+            if (contains is not null)
+            {
+                queryArgs["label"] = contains;
+                queryArgs["containsMatch"] = true;
+            }
+            query = new AddonElementQuery(queryArgs, maxNodeTexts);
+            WalkAddon((nint)unit, unit->IsVisible, maxDepth, false, query);
+        }
+
+        var nodeTexts = ReadNodeTexts(query, contains, maxTextLength, out var suppressedDuplicates, out var nodeTextClipped);
+        var retainedNodeTexts = query is null
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : new HashSet<string>(
+                query.Elements.Select(row => EscapeText(row.Value<string>("label") ?? string.Empty)),
+                StringComparer.Ordinal);
+        var valuesSkipped = includeAtkValues && visibleOnly && !unit->IsVisible;
+        var valueRead = includeAtkValues && !valuesSkipped
+            ? ReadAtkValueTexts(unit, contains, maxValueTexts, maxTextLength, retainedNodeTexts)
+            : default;
+        var valueTexts = valueRead.Texts ?? new JArray();
+        var nodeTextsTruncated = query?.Truncated ?? false;
+        var textClipped = nodeTextClipped || valueRead.TextTruncated;
+        var truncated = nodeTextsTruncated || valueRead.Truncated || valuesSkipped || textClipped;
+
+        var result = new JObject
+        {
+            ["available"] = true,
+            ["addon"] = unit->NameString,
+            ["addonId"] = (int)unit->Id,
+            ["visible"] = unit->IsVisible,
+            ["ready"] = unit->IsReady,
+            ["scannedNodes"] = query?.Visited.Count ?? 0,
+            ["returned"] = nodeTexts.Count + valueTexts.Count,
+            ["nodeTextCount"] = nodeTexts.Count,
+            ["valueTextCount"] = valueTexts.Count,
+            ["atkValueStringCount"] = valueRead.StringValues,
+            ["valueTextMatchCount"] = valueRead.Matches,
+            ["nodeTexts"] = nodeTexts,
+            ["valueTexts"] = valueTexts,
+            ["truncated"] = truncated,
+            ["scanIncomplete"] = query?.ScanIncomplete ?? false,
+            ["nodeTextsTruncated"] = nodeTextsTruncated,
+            ["valueTextsTruncated"] = valueRead.Truncated,
+            ["textTruncated"] = textClipped,
+            ["suppressedDuplicateNodeTexts"] = suppressedDuplicates,
+            ["suppressedDuplicateValueTexts"] = valueRead.Duplicates,
+        };
+        if (valuesSkipped) result["valueTextsSkipped"] = "addonHidden";
+        return result;
+    }
+
+    private static JArray ReadNodeTexts(
+        AddonElementQuery? query,
+        string? contains,
+        int maxTextLength,
+        out int suppressedDuplicates,
+        out bool textTruncated)
+    {
+        var candidates = new List<(string Raw, string Display, int NodeId, string? ComponentType,
+            uint[] Path, uint[]? ComponentFullPath, bool Clipped, bool? Visible)>();
+        if (query is not null)
+        {
+            foreach (var element in query.Elements)
+            {
+                var raw = element.Value<string>("label");
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                if (contains is not null && !raw.Contains(contains, StringComparison.OrdinalIgnoreCase)) continue;
+                var display = ClipText(EscapeText(raw), maxTextLength, out var clipped);
+                var path = element["componentPath"]?.Values<uint>().ToArray() ?? Array.Empty<uint>();
+                var nodeId = element.Value<int>("nodeId");
+                var componentType = element.Value<string>("componentType");
+                var componentFullPath = componentType is null
+                    ? null
+                    : path.Append((uint)nodeId).ToArray();
+                candidates.Add((raw, display, nodeId, componentType, path, componentFullPath, clipped,
+                    element.Value<bool?>("visible")));
+            }
+        }
+
+        suppressedDuplicates = 0;
+        textTruncated = false;
+        var rows = new JArray();
+        for (var candidateIndex = 0; candidateIndex < candidates.Count; candidateIndex++)
+        {
+            var candidate = candidates[candidateIndex];
+            // A Button/List component and its text child can expose the same visible label.
+            // Keep the component source because it is directly useful for follow-up clicks,
+            // and suppress only a same-text descendant with no additional information.
+            var childOfMatchingComponent = false;
+            for (var parentIndex = 0; parentIndex < candidates.Count; parentIndex++)
+            {
+                if (parentIndex == candidateIndex) continue;
+                var parent = candidates[parentIndex];
+                if (parent.ComponentFullPath is not null &&
+                    parent.Path.Length < candidate.Path.Length &&
+                    string.Equals(parent.Raw, candidate.Raw, StringComparison.Ordinal) &&
+                    candidate.Path.AsSpan().StartsWith(parent.ComponentFullPath))
+                {
+                    childOfMatchingComponent = true;
+                    break;
+                }
+            }
+            if (childOfMatchingComponent) { suppressedDuplicates++; continue; }
+
+            var row = new JObject
+            {
+                ["text"] = candidate.Display,
+                ["nodeId"] = candidate.NodeId,
+                ["componentPath"] = new JArray(candidate.Path),
+                ["visible"] = candidate.Visible,
+            };
+            if (candidate.ComponentType is not null) row["componentType"] = candidate.ComponentType;
+            if (candidate.Clipped)
+            {
+                row["textTruncated"] = true;
+                textTruncated = true;
+            }
+            rows.Add(row);
+        }
+        return rows;
+    }
+
+    private static unsafe (JArray? Texts, int StringValues, int Matches, int Duplicates, bool Truncated, bool TextTruncated)
+        ReadAtkValueTexts(AtkUnitBase* unit, string? contains, int maxTexts, int maxTextLength,
+            IReadOnlySet<string> retainedNodeTexts)
+    {
+        var texts = new JArray();
+        var values = unit->AtkValuesSpan;
+        var strings = 0;
+        var matches = 0;
+        var duplicates = 0;
+        var truncated = false;
+        var textTruncated = false;
+        for (var i = 0; i < values.Length; i++)
+        {
+            try
+            {
+                AtkValue* value;
+                fixed (AtkValue* p = &values[i]) value = p;
+                if (!IsStringValue(value->Type)) continue;
+                strings++;
+                var decoded = DecodeAddonValue(value);
+                if (string.IsNullOrWhiteSpace(decoded)) continue;
+                if (contains is not null && !decoded.Contains(contains, StringComparison.OrdinalIgnoreCase)) continue;
+                matches++;
+                if (retainedNodeTexts.Contains(decoded))
+                {
+                    duplicates++;
+                    continue;
+                }
+                var display = ClipText(decoded, maxTextLength, out var clipped);
+                if (texts.Count >= maxTexts) { truncated = true; continue; }
+                var row = new JObject
+                {
+                    ["text"] = display,
+                    ["index"] = i,
+                    ["type"] = value->Type.ToString(),
+                };
+                if (clipped)
+                {
+                    row["textTruncated"] = true;
+                    textTruncated = true;
+                }
+                texts.Add(row);
+            }
+            catch
+            {
+                // An unreadable value does not hide the rest of the addon text.
+            }
+        }
+        return (texts, strings, matches, duplicates, truncated, textTruncated);
+    }
+
+    private static string ClipText(string text, int maxLength, out bool truncated)
+    {
+        if (text.Length <= maxLength)
+        {
+            truncated = false;
+            return text;
+        }
+        var length = maxLength;
+        if (length > 0 && char.IsHighSurrogate(text[length - 1])) length--;
+        truncated = true;
+        return text[..length];
     }
 
     internal static unsafe object ClickAddonElement(JObject args)

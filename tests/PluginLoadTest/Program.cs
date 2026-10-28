@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 138;
+    private const int ExpectedTools = 139;
 
     private static int checks;
     private static int failures;
@@ -530,6 +530,21 @@ internal static class Program
                 Check("addon query advertises server-side filters and explicit detail enum",
                     querySchema.TryGetProperty("label", out _) && querySchema.TryGetProperty("visibleOnly", out _) &&
                     querySchema.GetProperty("detail").GetProperty("enum").EnumerateArray().Select(v => v.GetString()).SequenceEqual(new[] { "compact", "full" }));
+                var addonTextTool = toolsList.Single(t => t.GetProperty("name").GetString() == "read_addon_text");
+                var addonTextSchema = addonTextTool.GetProperty("inputSchema").GetProperty("properties");
+                Check("addon text reader defaults to visible node and AtkValue text with bounded limits",
+                    addonTextTool.GetProperty("description").GetString()!.Contains("before capture_game_screenshot", StringComparison.Ordinal) &&
+                    addonTextSchema.GetProperty("visibleOnly").GetProperty("default").GetBoolean() &&
+                    addonTextSchema.GetProperty("includeNodeText").GetProperty("default").GetBoolean() &&
+                    addonTextSchema.GetProperty("includeAtkValues").GetProperty("default").GetBoolean() &&
+                    addonTextSchema.GetProperty("maxNodeTexts").GetProperty("maximum").GetInt32() == 500 &&
+                    addonTextSchema.GetProperty("maxValueTexts").GetProperty("maximum").GetInt32() == 500 &&
+                    addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
+                var screenshotDescription = toolsList.Single(t => t.GetProperty("name").GetString() == "capture_game_screenshot")
+                    .GetProperty("description").GetString();
+                Check("screenshot description directs readable native UI text to the addon text reader",
+                    screenshotDescription!.Contains("read_addon_text", StringComparison.Ordinal) &&
+                    screenshotDescription.Contains("do not screenshot merely to OCR", StringComparison.Ordinal));
                 foreach (var name in new[] { "click_addon_element", "get_addon_node_snapshot", "sample_addon_nodes", "click_addon_when_node_matches" })
                 {
                     var pathSchema = toolsList.Single(t => t.GetProperty("name").GetString() == name)

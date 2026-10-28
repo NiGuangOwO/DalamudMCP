@@ -11,7 +11,7 @@ plugin development, runtime inspection and in-game validation.
 The plugin runs within the game process and exposes character, object, party, inventory, game-data and UI state
 through Dalamud services and [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs).
 It also provides validated raw-memory reads, event collection, screenshots and inter-plugin communication.
-The current catalog contains **138 tools: 81 read-only and 57 mutating**. Mutating tools require explicit enablement.
+The current catalog contains **139 tools: 82 read-only and 57 mutating**. Mutating tools require explicit enablement.
 
 The default endpoint is `http://127.0.0.1:18777/mcp`. HTTP-capable MCP clients connect directly;
 stdio-only clients use the included bridge.
@@ -239,7 +239,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## Tool reference
 
-The catalog contains 138 tools: 81 read-only and 57 mutating. The tables summarize the principal tools and parameters.
+The catalog contains 139 tools: 82 read-only and 57 mutating. The tables summarize the principal tools and parameters.
 The server's `tools/list` schemas define the complete catalog and argument constraints.
 Mutating tools are available only when `AllowMutatingTools` is enabled.
 
@@ -355,7 +355,7 @@ Original handler addresses for static analysis are available through `get_addon_
 | `set_addon_text_input` | Replaces native TextInput text through the SDK, applies native limits, and returns the actual text. Does not submit the form. | `addon`, `nodeId`, `text` (required); `componentPath`, `dryRun`, `expectedText`, `expectedAddonId` |
 | `list_addon_elements` | Searches any loaded addon's nodes before applying the result limit. Use `detail=compact` for ordinary lookup; full detail preserves geometry. Returns exact `componentPath` scopes. See [addon queries](docs/addon-queries.md). | `addon` or `addonId`, `label`, `containsMatch`, `componentType`, `visibleOnly`, `enabledOnly`, `clickableOnly`, `detail`, `allNodes`, `maxDepth` (12), `maxNodes` (100) |
 | `click_addon_element` | Dispatches an Atk UI event through `ReceiveEvent`. Supports `click`, `doubleClick`, `buttonClick`, `buttonPress`, `buttonRelease` and `registered`. Behavior depends on the target node and listener. | `addon` or `addonId`, `nodeId` or `index`, `event`, `param` (advanced override) |
-| `get_addon_strings` | Reads strings and scalar values from the addon's `AtkValue` table, returning index, type and decoded value with escaped control characters. Read-only. | `addon` or `addonId`, `maxValues` (1-500, default 200), `stringsOnly` |
+| `read_addon_text` | Preferred read-only path for native UI text. Combines visible Text/Button/List labels with string-valued `AtkValue` entries, keeps `nodeId`/`componentPath`, filters literally and explicitly reports truncation. Use this before OCR or a screenshot. See [addon text reads](docs/addon-text.md). | `addon` or `addonId`, `contains`, `visibleOnly` (default true), `includeNodeText`, `includeAtkValues`, `maxNodeTexts` (100), `maxValueTexts` (100), `maxTextLength` (512), `maxDepth` (12) |
 | `select_addon_menu_item` | Selects a menu-style addon entry by label or index and submits it through the addon callback. Matching is exact after normalization unless `containsMatch` is enabled. | `addon` or `addonId`, `label` or `index`, `containsMatch`, `dryRun` |
 | `probe_receive_event_enable` | Installs a `ReceiveEvent` vtable probe on a loaded addon and records events before forwarding. Use the dump tool to compare user input with synthetic events. | `addon` or `addonId` |
 | `probe_receive_event_enable_listener` | Installs an event probe on the specified node's first registered listener for component-level input analysis. | `addon` or `addonId`, `nodeId` (required) |
@@ -516,7 +516,7 @@ Each entry includes the channel (`XivChatType`), sender, message, relation types
 
 | Tool | Description | Notable parameters |
 | --- | --- | --- |
-| `capture_game_screenshot` | Default `client` reads the game render target through Dalamud, including while minimized if rendering continues. No desktop fallback or automatic restoration. Optional cache is explicitly marked with age; native MCP image output and path-only output are supported. See [screenshot guide](docs/screenshots.md). | `area`, `maxDimension`, `includeDalamudUi`, `timeoutMs`, `allowCached`, `maxCacheAgeMs`, `save`, `ttlSeconds`, `includeImage`, `imageContent` |
+| `capture_game_screenshot` | Use only for pixels, layout, color, icons or image-only glyphs. For readable native UI text, call `read_addon_text` first rather than OCRing a screenshot. Default `client` reads the game render target through Dalamud, including while minimized if rendering continues. No desktop fallback or automatic restoration. Optional cache is explicitly marked with age; native MCP image output and path-only output are supported. See [screenshot guide](docs/screenshots.md). | `area`, `maxDimension`, `includeDalamudUi`, `timeoutMs`, `allowCached`, `maxCacheAgeMs`, `save`, `ttlSeconds`, `includeImage`, `imageContent` |
 | `set_game_window_state` | Explicitly minimize/restore only this process's game window; reports the observed state. Mutating-gated, works without login, restoration may activate the game. | `state` (`minimize`/`restore`, required) |
 
 ### Installed plugins

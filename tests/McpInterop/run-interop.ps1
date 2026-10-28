@@ -80,7 +80,8 @@ try {
         try {
             Write-Host ''
             Write-Host '--- dumping the real tools/list payload out of the shipped plugin ---'
-            & dotnet run --project (Join-Path $here '..\PluginLoadTest\PluginLoadTest.csproj') -p:Platform=x64 --nologo -v q 2>&1 |
+            $env:DOTNET_NOLOGO = '1'
+            & dotnet run --project (Join-Path $here '..\PluginLoadTest\PluginLoadTest.csproj') -p:Platform=x64 -v q 2>&1 |
                 Select-String -Pattern 'checks passed|\[FAIL\]|wrote tools/list' |
                 ForEach-Object { $_ }
             $loadExit = $LASTEXITCODE

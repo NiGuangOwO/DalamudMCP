@@ -2,7 +2,9 @@
 
 `capture_game_screenshot` defaults to Dalamud's public `ITextureProvider.CreateFromImGuiViewportAsync` and `ITextureReadbackProvider.GetRawImageAsync` services. It copies the main game viewport and reads RGBA pixels through Dalamud's render-thread coordination, with no custom Direct3D hooks. Other desktop windows are not used as a fallback.
 
-默认路径通过 Dalamud 官方视口复制与纹理读回接口取得游戏画面。即使窗口被遮挡或最小化，只要游戏继续渲染，也可取得新图；若游戏暂停渲染，请求会按时限返回，不会擅自恢复窗口，也不会以桌面内容代替游戏。
+**Text is not a screenshot task.** When the question is what a window, menu, dialog or list says, call `read_addon_text` first. It reads native Text/Button/List labels and string `AtkValue` entries without transmitting pixels; follow with `list_addon_elements` or `get_addon_strings` for narrower queries. Screenshots are for pixels, layout, color, icons and image-only glyphs that structured native reads cannot answer. See [addon text reads](addon-text.md).
+
+默认路径通过 Dalamud 官方视口复制与纹理读回接口取得游戏画面。即使窗口被遮挡或最小化，只要游戏继续渲染，也可取得新图；若游戏暂停渲染，请求会按时限返回，不会擅自恢复窗口，也不会以桌面内容代替游戏。**普通界面文字不是截图场景**：先调用 `read_addon_text` 读取 Text/Button/List 与字符串型 `AtkValue`，不要传输像素后自行 OCR；只有像素、布局、颜色、图标或纯图像文字才使用截图。
 
 ## Examples / 示例
 
