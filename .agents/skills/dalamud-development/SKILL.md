@@ -13,7 +13,7 @@ Call `get_client_state`, then `get_local_player` before live work. If disconnect
 
 Discover the relevant tools and read their actual schemas. Namespace prefixes depend on the agent client. When using raw MCP, follow every `nextCursor` from `tools/list`; a first page is not the full catalog. Mutating tools are hidden/refused when `AllowMutatingTools` is off, so absence alone does not prove a missing capability. Do not bypass that gate.
 
-Read [tool-selection.md](references/tool-selection.md) when choosing observation, UI, event or plugin-loading tools. Prefer typed state and node observations to raw memory or visual input when they answer the question. For native UI text, use `read_addon_text`; use `list_addon_elements` or `get_addon_strings` for narrower follow-up reads. A screenshot is for pixels, layout, icons or image-only glyphs, not routine OCR of addon text. Inspect the current addon and component scope before choosing a node or event.
+Read [tool-selection.md](references/tool-selection.md) when choosing observation, UI, event or plugin-loading tools. Prefer typed state and node observations to raw memory when they answer the question. For native UI text, use `read_addon_text`; use `list_addon_elements` or `get_addon_strings` for narrower follow-up reads. Screenshot capture is not provided. Use structured state, geometry and image-node metadata; report visual information that these observations cannot establish. Inspect the current addon and component scope before choosing a node or event.
 
 ## Develop and verify
 

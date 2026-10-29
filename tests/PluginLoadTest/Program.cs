@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 139;
+    private const int ExpectedTools = 138;
 
     private static int checks;
     private static int failures;
@@ -136,7 +136,12 @@ internal static class Program
         if (ctors.Length != 1) return 1;
 
         var parameters = ctors[0].GetParameters();
-        Check("constructor takes 25 services", parameters.Length == 25, $"found {parameters.Length}");
+        Check("constructor takes 24 services", parameters.Length == 24, $"found {parameters.Length}");
+        Check("constructor does not require texture readback",
+            parameters.All(p => p.ParameterType.Name != "ITextureReadbackProvider"));
+        Check("screenshot capture implementations are absent from the shipped assembly",
+            new[] { "ScreenshotTools", "ScreenshotPixels", "ScreenshotSession" }.All(name =>
+                pluginAssembly.GetType("DalamudMCP.Tools." + name, throwOnError: false) is null));
 
         var nonInterfaces = parameters.Where(p => !p.ParameterType.IsInterface).Select(p => p.ParameterType.Name).ToArray();
         Check("every constructor parameter is an interface", nonInterfaces.Length == 0, string.Join(", ", nonInterfaces));
@@ -533,18 +538,15 @@ internal static class Program
                 var addonTextTool = toolsList.Single(t => t.GetProperty("name").GetString() == "read_addon_text");
                 var addonTextSchema = addonTextTool.GetProperty("inputSchema").GetProperty("properties");
                 Check("addon text reader defaults to visible node and AtkValue text with bounded limits",
-                    addonTextTool.GetProperty("description").GetString()!.Contains("before capture_game_screenshot", StringComparison.Ordinal) &&
+                    addonTextTool.GetProperty("description").GetString()!.Contains("Use this to read native UI text", StringComparison.Ordinal) &&
                     addonTextSchema.GetProperty("visibleOnly").GetProperty("default").GetBoolean() &&
                     addonTextSchema.GetProperty("includeNodeText").GetProperty("default").GetBoolean() &&
                     addonTextSchema.GetProperty("includeAtkValues").GetProperty("default").GetBoolean() &&
                     addonTextSchema.GetProperty("maxNodeTexts").GetProperty("maximum").GetInt32() == 500 &&
                     addonTextSchema.GetProperty("maxValueTexts").GetProperty("maximum").GetInt32() == 500 &&
                     addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
-                var screenshotDescription = toolsList.Single(t => t.GetProperty("name").GetString() == "capture_game_screenshot")
-                    .GetProperty("description").GetString();
-                Check("screenshot description directs readable native UI text to the addon text reader",
-                    screenshotDescription!.Contains("read_addon_text", StringComparison.Ordinal) &&
-                    screenshotDescription.Contains("do not screenshot merely to OCR", StringComparison.Ordinal));
+                Check("screenshot capture is not advertised in tools/list",
+                    toolsList.All(t => t.GetProperty("name").GetString() != "capture_game_screenshot"));
                 foreach (var name in new[] { "click_addon_element", "get_addon_node_snapshot", "sample_addon_nodes", "click_addon_when_node_matches" })
                 {
                     var pathSchema = toolsList.Single(t => t.GetProperty("name").GetString() == name)
@@ -615,16 +617,15 @@ internal static class Program
             var (guardPayload, guardError) = UnwrapToolResult(invalidGuard);
             Check("screen match rejects an incomplete phase guard before subscribing",
                 guardError && guardPayload?.Contains("guardValueIndex", StringComparison.Ordinal) == true);
-            var invalidScreenshot = await CallAsync(http, baseUrl, sessionId,
-                "{\"jsonrpc\":\"2.0\",\"id\":111,\"method\":\"tools/call\",\"params\":{\"name\":\"capture_game_screenshot\",\"arguments\":{\"includeImage\":false}}}").ConfigureAwait(false);
-            var (screenshotPayload, screenshotError) = UnwrapToolResult(invalidScreenshot);
-            Check("path-only screenshot without save is rejected before capture",
-                screenshotError && screenshotPayload?.Contains("save=true", StringComparison.Ordinal) == true);
-            var wrongScreenshotType = await CallAsync(http, baseUrl, sessionId,
-                "{\"jsonrpc\":\"2.0\",\"id\":112,\"method\":\"tools/call\",\"params\":{\"name\":\"capture_game_screenshot\",\"arguments\":{\"allowCached\":\"false\"}}}").ConfigureAwait(false);
-            var (wrongTypePayload, wrongTypeError) = UnwrapToolResult(wrongScreenshotType);
-            Check("screenshot string boolean cannot silently enable cached frames",
-                wrongTypeError && wrongTypePayload?.Contains("JSON boolean", StringComparison.Ordinal) == true);
+            foreach (var allowMutating in new[] { false, true })
+            {
+                Set(config, "AllowMutatingTools", allowMutating);
+                var removedScreenshot = await CallAsync(http, baseUrl, sessionId,
+                    "{\"jsonrpc\":\"2.0\",\"id\":111,\"method\":\"tools/call\",\"params\":{\"name\":\"capture_game_screenshot\",\"arguments\":{}}}").ConfigureAwait(false);
+                var (removedPayload, removedError) = UnwrapToolResult(removedScreenshot);
+                Check($"removed screenshot tool is unknown with mutation gate {allowMutating}",
+                    removedError && removedPayload?.Contains("Unknown tool", StringComparison.OrdinalIgnoreCase) == true);
+            }
             var invalidGameKey = await CallAsync(http, baseUrl, sessionId,
                 JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 206, method = "tools/call",
                     @params = new { name = "press_game_key", arguments = new { key = "NOT_A_KEY" } } })).ConfigureAwait(false);

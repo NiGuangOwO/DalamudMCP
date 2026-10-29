@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0.30",
+  "live": {
+    "buildMvid": "6360d84d-fd60-4ec2-ae2d-23280f4f541f",
+    "expectedDebugMvid": "6360d84d-fd60-4ec2-ae2d-23280f4f541f",
+    "buildVerified": true,
+    "toolCount": 138,
+    "catalogPages": 2,
+    "screenshotAdvertised": false,
+    "removedCallRejectedAsUnknown": true,
+    "instructionsUpdated": true
+  },
+  "offline": {
+    "debugBuild": "0 warnings, 0 errors",
+    "releaseBuild": "0 warnings, 0 errors",
+    "releasePluginLoadTest": "164/164",
+    "protocolSmokeTest": "59/59",
+    "loadabilityCheck": "112/112",
+    "debugPluginLoadTest": "164/164",
+    "officialSdkInterop": "12/12",
+    "negativeControl": "2/2",
+    "realSchemaValidation": "11/11 (138 schemas)",
+    "docLinks": "83 checked, 0 broken"
+  },
+  "package": {
+    "version": "1.0.0.30",
+    "sha256": "5AD4A3D72ACF47A7554572317F1681DCEA6E380EDF67D9D4E91D3B73EC22D64D",
+    "releaseMvid": "1d91b015-65fc-4211-b5c3-1f0467d7f4de",
+    "entries": [
+      "DalamudMCP.deps.json",
+      "DalamudMCP.dll",
+      "DalamudMCP.json"
+    ]
+  }
+}

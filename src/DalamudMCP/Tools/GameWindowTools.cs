@@ -12,7 +12,7 @@ internal static class GameWindowTools
     {
         registry.AddAsync("set_game_window_state", "Minimize or restore the game window",
             "Explicitly minimizes or restores only this game process's main window. Restoring may activate the game. " +
-            "Use for an authorized window action or screenshot validation; capture_game_screenshot never performs this implicitly. " +
+            "Use only for an authorized window action. " +
             "Waits up to 1500ms to observe the requested state and reports observed=false if it has not taken effect. " +
             "Does not change display mode, size, game settings or other applications. Available without a logged-in character.",
             Json.SchemaWithEnum("state", new[] { "minimize", "restore" }, "Requested game window state", true),

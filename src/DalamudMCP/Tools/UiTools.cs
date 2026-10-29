@@ -191,9 +191,8 @@ internal static class UiTools
             "read_addon_text",
             "Read text from an addon (UI window)",
             "Preferred read-only text path for native UI. Reads visible Text/Button/List labels from the " +
-            "addon node tree and string-valued AtkValue entries in one bounded result. Use this before " +
-            "capture_game_screenshot; request a screenshot only when pixels, layout, color, or image-only " +
-            "glyphs are needed. This does not OCR textured text. visibleOnly defaults true. Node text keeps " +
+            "addon node tree and string-valued AtkValue entries in one bounded result. Use this to read " +
+            "native UI text. This does not OCR textured text. visibleOnly defaults true. Node text keeps " +
             "nodeId/componentPath for follow-up; values keep their AtkValue index. truncated or scanIncomplete " +
             "means text coverage is incomplete.",
             AddonTextSchema(),

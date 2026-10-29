@@ -1,6 +1,6 @@
 # Addon 查询与精简结果
 
-需要读取当前界面文本时，优先使用 [`read_addon_text`](addon-text.md)；本页重点说明控件节点、可见性、筛选和定位。截图不用于普通 addon 文本 OCR。
+需要读取当前界面文本时，优先使用 [`read_addon_text`](addon-text.md)；本页重点说明控件节点、可见性、筛选和定位。插件不提供截图能力。
 
 `list_addon_elements` 接受 `list_loaded_addons` 返回的任意已加载窗口名称；名称不受 `open_addon` 允许列表限制。默认仍返回完整字段，兼容原有调用。普通查找建议使用精简结果和服务端筛选，避免传输整棵节点树再由模型编写过滤代码。
 

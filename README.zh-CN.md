@@ -8,8 +8,8 @@ DalamudMCP 是适用于 FINAL FANTASY XIV 的 [Dalamud](https://github.com/goatc
 通过本地 [Model Context Protocol](https://modelcontextprotocol.io) 服务器，为 AI 辅助插件开发、运行时分析和游戏内验证提供接口。
 
 插件运行于游戏进程内部，通过 Dalamud 服务和 [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)
-提供角色、游戏对象、小队、物品栏、游戏数据及界面状态访问，并支持经过校验的原始内存读取、事件采集、截图和插件间通信。
-当前工具目录包含 **139 个工具，其中 82 个只读、57 个可变更**。可变更工具需在配置中显式启用。
+提供角色、游戏对象、小队、物品栏、游戏数据及界面状态访问，并支持经过校验的原始内存读取、事件采集和插件间通信。
+当前工具目录包含 **138 个工具，其中 81 个只读、57 个可变更**。可变更工具需在配置中显式启用。
 
 默认 MCP 地址为 `http://127.0.0.1:18777/mcp`。支持 HTTP 的 MCP 客户端可直接连接；仅支持 stdio 的客户端可使用仓库附带的桥接程序。
 
@@ -22,7 +22,7 @@ Dalamud 与插件运行日志可用只读工具 `get_dalamud_log` 查询，支�
 参数与确认范围见[冷却和配装状态说明](docs/ability-gearset-state.md)。
 
 > **验证范围：** 离线检查覆盖协议、schema、插件加载及部分原生内存操作。
-> 游戏内验证范围以[工具审计记录](docs/tool-audit-2026-10-17.md)和[截图说明](docs/screenshots.md)为准，
+> 游戏内验证范围以[工具审计记录](docs/tool-audit-2026-10-17.md)为准，
 > 相关结果不代表全部工具在所有客户端版本和游戏状态下均可正常使用。
 
 ## 目录
@@ -236,7 +236,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## 工具参考
 
-当前目录包含 139 个工具：82 个只读、57 个可变更。下表按功能列出主要工具及参数摘要；
+当前目录包含 138 个工具：81 个只读、57 个可变更。下表按功能列出主要工具及参数摘要；
 完整目录和参数约束以服务器返回的 `tools/list` schema 为准，可变更工具在 `AllowMutatingTools` 启用后开放。
 
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。
@@ -340,7 +340,7 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `get_addon_state` | 返回 `active`、`inactive`、`unknown`；背包使用实际窗口开关状态，其他条目仍为 agent 活动状态。只读。 | 无 |
 | `list_addon_elements` | 在任意已加载 addon 中先筛选再限制结果数量。普通定位使用 `detail=compact`；完整模式保留几何信息。返回可精确定位的 `componentPath`。见 [addon 查询](docs/addon-queries.md)。 | `addon` 或 `addonId`、`label`、`containsMatch`、`componentType`、`visibleOnly`、`enabledOnly`、`clickableOnly`、`detail`、`allNodes`、`maxDepth`（12）、`maxNodes`（100） |
 | `click_addon_element` | 通过 `ReceiveEvent` 派发 Atk UI 事件。支持 `click`、`doubleClick`、`buttonClick`、`buttonPress`、`buttonRelease` 和 `registered`；实际效果取决于目标节点及其监听器。 | `addon` 或 `addonId`、`nodeId` 或 `index`、`event`、`param`（高级覆盖） |
-| `read_addon_text` | 读取原生界面文字的首选只读工具。合并可见 Text/Button/List 标签与字符串型 `AtkValue`，保留 `nodeId`/`componentPath`，支持字面筛选并明确报告截断。读取普通界面文本时不要先截图 OCR。见 [addon 文本读取](docs/addon-text.md)。 | `addon` 或 `addonId`、`contains`、`visibleOnly`（默认 true）、`includeNodeText`、`includeAtkValues`、`maxNodeTexts`（100）、`maxValueTexts`（100）、`maxTextLength`（512）、`maxDepth`（12） |
+| `read_addon_text` | 读取原生界面文字的首选只读工具。合并可见 Text/Button/List 标签与字符串型 `AtkValue`，保留 `nodeId`/`componentPath`，支持字面筛选并明确报告截断。使用此工具读取原生界面文字。见 [addon 文本读取](docs/addon-text.md)。 | `addon` 或 `addonId`、`contains`、`visibleOnly`（默认 true）、`includeNodeText`、`includeAtkValues`、`maxNodeTexts`（100）、`maxValueTexts`（100）、`maxTextLength`（512）、`maxDepth`（12） |
 | `select_addon_menu_item` | 按标签或索引选择菜单型 addon 的条目，并通过其回调提交选择。默认采用归一化后的精确匹配，可通过 `containsMatch` 启用包含匹配。 | `addon` 或 `addonId`、`label` 或 `index`、`containsMatch`、`dryRun` |
 | `probe_receive_event_enable` | 安装已加载 addon 的 `ReceiveEvent` 虚函数表探针，记录转发前的界面事件。配合 `probe_receive_event_dump` 比较用户输入与合成事件。 | `addon` 或 `addonId` |
 | `probe_receive_event_enable_listener` | 对指定节点的首个已注册监听器安装事件探针，用于分析组件级输入。 | `addon` 或 `addonId`、`nodeId`（必填） |
@@ -480,11 +480,10 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `get_quest_status` | 报告某个任务是已接受还是已完成、处于哪个序列步骤，按 ID 或（部分）名称查找。名称查找会搜索所有已安装的客户端语言，因此在非英文客户端上也能用英文名找到任务。 | `questId`、`query`、`maxResults`（1-20，默认 8） |
 | `get_available_quests` | 读取客户端尚未接受的任务标记，返回当前可见任务及其地图位置、等级和目标 ID。 | `nameContains`、`maxResults`（1-20，默认 8） |
 
-### 屏幕截图
+### 游戏窗口
 
 | 工具 | 描述 | 关键参数 |
 | --- | --- | --- |
-| `capture_game_screenshot` | 仅在需要像素、布局、颜色、图标或图像文字时使用；能由 addon 节点或 `AtkValue` 读取的普通文本应先调用 `read_addon_text`，不要截图 OCR。默认 `client` 模式通过 Dalamud 读取游戏渲染目标；最小化后持续渲染时仍可截图。缓存结果附带年龄信息，支持原生 MCP 图片和仅返回保存路径。详见[截图说明](docs/screenshots.md)。 | `area`、`maxDimension`、`includeDalamudUi`、`timeoutMs`、`allowCached`、`maxCacheAgeMs`、`save`、`ttlSeconds`、`includeImage`、`imageContent` |
 | `set_game_window_state` | 显式最小化/恢复本进程游戏窗口，并报告观测结果。受变更工具开关控制，无需角色登录；恢复可能激活游戏。 | `state`（必需：`minimize`/`restore`） |
 
 ### 已安装插件
@@ -515,7 +514,7 @@ IPC 调用可能改变游戏或插件状态，因此归类为可变更操作。
 上述检查可拒绝无效读取，但不构成对全部原生操作或未来客户端内存布局的安全保证。
 
 **线程调度。** 同步游戏状态处理器通过 `IFramework.RunOnFrameworkThread` 执行，并设有超时限制。
-事件等待和截图等异步处理器自行管理调度，避免阻塞框架线程。
+事件等待等异步处理器自行管理调度，避免阻塞框架线程。
 超时仅限制请求等待时间，不保证取消已提交的原生操作。
 
 ## 架构
@@ -526,7 +525,7 @@ MCP 客户端
   -> McpServer          JSON-RPC 路由、认证与会话管理
   -> ToolRegistry       工具查找、schema 与可变更权限检查
   -> GameThread         框架线程上的同步游戏状态访问
-     或异步处理器        显式调度事件等待与渲染截图
+     或异步处理器        显式调度事件等待
   -> Dalamud 服务 / FFXIVClientStructs / IPC
   -> MCP 结果           文本内容，以及按请求返回的原生图片内容
 ```
@@ -547,7 +546,7 @@ MCP 客户端
 
 ## 验证
 
-仓库提供协议行为、插件加载、原生数据访问和图像编码等离线检查。
+仓库提供协议行为、插件加载和原生数据访问等离线检查。
 部分测试依赖本地 Dalamud 安装目录，以及预先构建的插件或桥接程序。
 
 | 测试套件 | 覆盖范围 |
@@ -559,7 +558,6 @@ MCP 客户端
 | `tests/McpInterop` | 与官方 TypeScript MCP SDK 的互操作及 JSON Schema 校验。 |
 | `tests/NativeUiReadTest`、`tests/AddonGeometryTest`、`tests/StatusSlotTest` | 受保护的原生界面读取、几何信息和稀疏状态槽。 |
 | `tests/IpcArgumentTest`、`tests/SignatureScanTest`、`tests/BuildIdentityTest` | IPC 参数校验、签名扫描边界和构建标识。 |
-| `tests/ScreenshotTest` | 截图边界、像素转换、PNG 编码和截图会话行为。 |
 
 `McpInterop` 还依赖 Node.js 和 npm；应检查脚本输出，区分实际执行与依赖缺失导致的跳过。
 
@@ -572,7 +570,6 @@ dotnet run --project tests\ProtocolSmokeTest\ProtocolSmokeTest.csproj -p:Platfor
 dotnet run --project tests\BridgeSmokeTest\BridgeSmokeTest.csproj -p:Platform=x64
 dotnet run --project tests\LoadabilityCheck\LoadabilityCheck.csproj
 dotnet run --project tests\PluginLoadTest\PluginLoadTest.csproj -p:Platform=x64
-dotnet run --project tests\ScreenshotTest\ScreenshotTest.csproj
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\McpInterop\run-interop.ps1
 ```
 
@@ -581,7 +578,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\McpInterop\run-int
 其构造与调用检查无法复现全部运行时依赖或界面状态。
 
 [2026-10-17 工具审计记录](docs/tool-audit-2026-10-17.md)记录了 62 个不同工具的现场调用，
-其中包括上下文拒绝和空操作。[截图验证说明](docs/screenshots.md)覆盖后续的渲染截图实现，
+其中包括上下文拒绝和空操作。
 [开发工具说明](docs/addon-probes-and-dev-loader.md)记录相关界面与加载器检查。
 上述记录适用于特定构建与场景，测试数量不构成兼容性保证。
 
@@ -590,8 +587,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\McpInterop\run-int
 - 游戏内存布局、签名和原生界面行为依赖客户端及 Dalamud 版本，后续更新可能需要调整结构体映射或工具实现。
 - 游戏内验证仅覆盖部分场景。外部 IPC 副作用、导航、插件生命周期操作、战斗、副本及其他界面上下文，需按实际工作流分别验证。
 - 导航依赖已安装并加载的 [vnavmesh](https://github.com/awgil/ffxiv_navmesh)。请求派发成功不代表移动、回调或其他游戏操作已经完成。
-- 默认截图路径要求游戏持续渲染。最小化后暂停渲染的客户端可能返回超时；缓存结果须显式允许，并附带年龄信息。详见[截图说明](docs/screenshots.md)。
-- 全分辨率图片可能产生较大响应，可按需使用 `maxDimension`、原生图片内容或仅返回保存路径。
+- 不提供截图能力；使用结构化界面文本、几何及图像节点元数据，并明确报告剩余的视觉信息缺口。
 - 对象查询在读取对象表后执行筛选；适用场景中可使用事件采集减少完整状态的高频轮询。
 - 会话保存在内存中，空闲两小时后过期。会话过期或插件重载后需重新初始化，长期运行的内存占用及监听器稳定性尚未充分验证。
 - 请求日志记录方法、工具名称、结果和耗时，不记录参数或结果载荷。

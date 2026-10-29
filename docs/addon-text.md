@@ -1,8 +1,8 @@
 # Addon 文本读取 / Addon text reads
 
-`read_addon_text` 是读取原生界面文字的首选只读工具。需要知道窗口、菜单、对话框或列表当前显示什么文本时，先使用它，不要为了 OCR 普通 addon 文本而调用 `capture_game_screenshot`。截图仍适用于像素、布局、颜色、图标、纹理数字或没有可读节点的图像文字；文本读取工具不会对纹理做 OCR。
+`read_addon_text` 是读取原生界面文字的首选只读工具。需要知道窗口、菜单、对话框或列表当前显示什么文本时，先使用它。插件不提供截图能力；文本读取工具不会对纹理做 OCR，无法由结构化数据确定的视觉信息应明确报告为未知。
 
-`read_addon_text` is the preferred read-only path for native UI text. Use it before requesting a screenshot when the question is what a window, menu, dialog or list currently says. Screenshots remain appropriate for pixels, layout, color, icons, texture digits or text that exists only as artwork; this tool does not OCR images.
+`read_addon_text` is the preferred read-only path for native UI text. Use it when the question is what a window, menu, dialog or list currently says. Screenshot capture is not provided. This tool does not OCR images; report visual information that structured data cannot establish as unknown.
 
 ## 调用 / Call
 
@@ -33,7 +33,7 @@ The output has separate `nodeTexts` and `valueTexts` arrays. Node entries retain
 - `get_addon_strings`：需要原始 `AtkValue` 全表、标量或 `stringsOnly=true` 时使用。
 - `list_addon_elements`：需要控件类型、可见/启用/可点击状态或几何位置时使用。
 - `get_addon_node_snapshot`：需要节点坐标、变换、图像 atlas/UV 或类型化图像元数据时使用。
-- `capture_game_screenshot`：仅在上述结构化读取仍不能回答视觉问题时使用。
+- `sample_addon_nodes`：采样节点几何及图像元数据；无法确定的视觉信息保留为未知。
 
 ## 验证 / Validation
 

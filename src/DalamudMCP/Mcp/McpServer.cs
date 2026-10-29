@@ -648,8 +648,8 @@ public sealed class McpServer : IDisposable
                         "input restrictions. Locate entities with get_game_objects/find_game_object and native windows " +
                         "with list_loaded_addons. When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
-                        "controls or geometry are needed. Use capture_game_screenshot only for pixels, layout, color, " +
-                        "icons or image-only glyphs, not routine text OCR. Copy nodeId/componentPath to clicks or node snapshots. " +
+                        "controls or geometry are needed. Screenshot capture is not provided. " +
+                        "Copy nodeId/componentPath to clicks or node snapshots. " +
                         "Use set_addon_text_input for native TextInput fields " +
                         "and imgui_text for Dear ImGui; inspect actual text/exactMatch and verify search results separately. " +
                         "Use set_addon_numeric_input for native NumericInput fields; read live limits and actual value. Numeric edits do not confirm the surrounding dialog. " +

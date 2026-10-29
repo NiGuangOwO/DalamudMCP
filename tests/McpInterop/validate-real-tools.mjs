@@ -187,18 +187,6 @@ check(
   resultParsed.success ? "" : firstLine(JSON.stringify(resultParsed.error?.issues)),
 );
 
-if (process.argv[3]) {
-  const imageResponse = JSON.parse(readFileSync(process.argv[3], "utf8"));
-  const nativeResult = imageResponse.result ?? imageResponse;
-  const nativeParsed = CallToolResultSchema.safeParse(nativeResult);
-  check("the official SDK accepts the actual screenshot image result", nativeParsed.success,
-    nativeParsed.success ? "" : firstLine(JSON.stringify(nativeParsed.error?.issues)));
-  check("the screenshot uses native PNG content without base64 text duplication",
-    nativeResult.content?.some(c => c.type === "image" && c.mimeType === "image/png" && c.data?.startsWith("iVBOR")) &&
-    nativeResult.content?.filter(c => c.type === "text").every(c => !c.text.includes("imageBase64")));
-  check("the official SDK rejects an image block missing its required data",
-    !CallToolResultSchema.safeParse({content: [{type: "image", mimeType: "image/png"}]}).success);
-}
 
 console.log();
 console.log(`${checks - failures}/${checks} real-schema checks passed`);
