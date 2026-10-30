@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+    <DalamudDir>$(APPDATA)/XIVLauncherCN/addon/Hooks/dev</DalamudDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(DalamudDir)/cimgui.dll" Link="cimgui.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Reference Include="Dalamud.Bindings.ImGui"><HintPath>$(DalamudDir)/Dalamud.Bindings.ImGui.dll</HintPath></Reference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Compile Include="../../src/DalamudMCP/Tools/ImGuiInputTools.cs" Link="ImGuiInputTools.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/ImGuiInputScheduler.cs" Link="ImGuiInputScheduler.cs" />
+    <Compile Include="../../src/DalamudMCP/Mcp/Json.cs" Link="Json.cs" />
+    <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />
+  </ItemGroup>
+</Project>

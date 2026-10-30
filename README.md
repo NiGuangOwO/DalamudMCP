@@ -11,7 +11,7 @@ plugin development, runtime inspection and in-game validation.
 The plugin runs within the game process and exposes character, object, party, inventory, game-data and UI state
 through Dalamud services and [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs).
 It also provides validated raw-memory reads, event collection and inter-plugin communication.
-The current catalog contains **138 tools: 81 read-only and 57 mutating**. Mutating tools require explicit enablement.
+The current catalog contains **139 tools: 81 read-only and 58 mutating**. Mutating tools require explicit enablement.
 
 The default endpoint is `http://127.0.0.1:18777/mcp`. HTTP-capable MCP clients connect directly;
 stdio-only clients use the included bridge.
@@ -239,7 +239,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## Tool reference
 
-The catalog contains 138 tools: 81 read-only and 57 mutating. The tables summarize the principal tools and parameters.
+The catalog contains 139 tools: 81 read-only and 58 mutating. The tables summarize the principal tools and parameters.
 The server's `tools/list` schemas define the complete catalog and argument constraints.
 Mutating tools are available only when `AllowMutatingTools` is enabled.
 
@@ -386,17 +386,18 @@ Use `imgui_windows` to locate a window and `imgui_hover_grid` to inspect control
 | `imgui_mouse_click` | Injects a press and release at the specified coordinates on separate frames to avoid merging by the ImGui trickle queue. | `x`, `y`, `button` (0 left/1 right/2 middle), `double`, `settleFrames` (default 3), `moveCursor`, `restoreCursor` |
 | `imgui_mouse_scroll` | Injects a wheel event, optionally moving to a widget first. Deltas are in ImGui notches. | `x`, `y`, `deltaY` (default -3), `deltaX`, `settleFrames` |
 | `imgui_key_press` | A complete key press with optional Ctrl / Shift / Alt held across the chord, using Dear ImGui key names (`Enter`, `Escape`, `A`, `F1`, `LeftArrow`, `LeftCtrl`, ...). | `key` (required), `ctrl`, `shift`, `alt` |
-| `imgui_key` | Submits an individual key-down or key-up event, allowing a modifier to remain held across multiple calls. | `key`, `down` (both required) |
+| `imgui_key` | Owns a bounded key-down lease or releases an agent-owned key; user activity and expiry release ownership. | `key`, `down` (required), `holdMs` (50–2000, default 1000), `expectedWindow`, `expectedId` |
 | `imgui_text` | Submits text through the character-input path to the focused ImGui field, including CJK characters. The target field must have keyboard focus. | `text` (required), `charsPerFrame` (1-16, default 16) |
 | `imgui_hover_grid` | Samples a rectangular `cols x rows` grid, returning window hit state and hovered control IDs. `rows=1` produces a horizontal scan. | `x0`, `y0`, `x1`, `y1` (required), `cols` (default 8), `rows` (default 8), `settleFrames` |
+| `imgui_cancel_input` | Cancels queued/active input and owned key leases; inspect `cleanupConfirmed`. | none |
 | `imgui_wait` | Waits the requested number of draw frames for popup or layout updates. Read-only. | `frames` (1-600, default 30) |
 
-`imgui_state`, `imgui_windows` and `imgui_wait` are read-only; the other seven tools require mutation permission.
+`imgui_state`, `imgui_windows` and `imgui_wait` are read-only; the other eight tools require mutation permission.
 
-Input requests are divided into frame steps executed through `UiBuilder.Draw`, with presses and releases on separate frames.
-Mouse operations temporarily coordinate `io.WantSetMousePos` and restore the associated input state at completion.
-`moveCursor` and `restoreCursor` control physical cursor movement and restoration.
-Before submission, the tools wait up to two seconds for a draw frame and return an error if rendering is unavailable.
+Input runs in the SDK's frame callbacks with a virtual pointer; the Windows cursor is never moved or restored.
+Human input preempts jobs. Use `expectedWindow`/`expectedId`, inspect completion/cancellation, and verify actual plugin behavior.
+Raw key-down has a bounded `holdMs` lease. `moveCursor=true` is refused; `restoreCursor` is ignored.
+See [ImGui input, cancellation and limits](docs/imgui-input.md).
 
 ### Character control (mutating)
 
@@ -586,6 +587,7 @@ Several suites require a local Dalamud installation and previously built plugin 
 | `tests/ProtocolSmokeTest` | HTTP transport, sessions, authentication, tool permissions, concurrency and MCP result encoding. |
 | `tests/BridgeSmokeTest` | stdio transport, session forwarding, authentication and subprocess lifecycle. |
 | `tests/LoadabilityCheck` | Generated manifest, service resolution, structure offsets and localization keys. |
+| `tests/ImGuiInputTest` | Actual native ImGui controls, virtual input, backend reconciliation, user preemption, cancellation and cleanup. |
 | `tests/PluginLoadTest` | Plugin construction, tool registration, schemas and HTTP invocation with offline services. |
 | `tests/McpInterop` | Interoperability with the official TypeScript MCP SDK and JSON Schema validation. |
 | `tests/NativeUiReadTest`, `tests/AddonGeometryTest`, `tests/StatusSlotTest` | Guarded native UI reads, geometry and sparse status slots. |

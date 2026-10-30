@@ -652,6 +652,9 @@ public sealed class McpServer : IDisposable
                         "Copy nodeId/componentPath to clicks or node snapshots. " +
                         "Use set_addon_text_input for native TextInput fields " +
                         "and imgui_text for Dear ImGui; inspect actual text/exactMatch and verify search results separately. " +
+                        "ImGui input uses a virtual pointer without moving the OS cursor. Human input preempts jobs. " +
+                        "Read imgui_state.inputScheduler, guard targets with expectedWindow/expectedId, and inspect completed/cancelled. " +
+                        "imgui_cancel_input cancels pending input; raw imgui_key down has a bounded holdMs lease. " +
                         "Use set_addon_numeric_input for native NumericInput fields; read live limits and actual value. Numeric edits do not confirm the surrounding dialog. " +
                         "Use get_map_state to distinguish current and selected maps and page static markers; nativeX/nativeY are raw marker coordinates, never movement coordinates. Hidden-map selection is cached. " +
                         "For native dropdowns use get_addon_dropdown, set_addon_dropdown_open, then re-query settled visible state before select_addon_dropdown_item with exact expectedLabel. Verify actual addon behavior separately. " +

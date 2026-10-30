@@ -10,61 +10,10 @@ using Newtonsoft.Json.Linq;
 
 namespace DalamudMCP.Tools;
 
-/// <summary>
-/// Generic ImGui input injection. Nothing in this file knows about any other plugin: it works
-/// purely in the coordinates, ids and key names that Dear ImGui itself exposes, so it applies to
-/// every ImGui window in the process - Dalamud's own, this plugin's, and any third-party
-/// plugin's - without referencing their assemblies, ids or commands.
-///
-/// <para>The mechanism is Dear ImGui's supported input queue: events are pushed with
-/// <c>AddMousePosEvent</c> / <c>AddMouseButtonEvent</c> / <c>AddKeyEvent</c> /
-/// <c>AddInputCharacter</c> and applied by ImGui on the next <c>NewFrame</c>, exactly as a real
-/// backend would. No vtable is patched, no plugin code is called and no Win32 message is
-/// synthesised into another process - the events enter the same pipeline the real mouse and
-/// keyboard use.</para>
-///
-/// <para>Frames and timing. The hook runs from <c>UiBuilder.Draw</c>, which is inside the frame,
-/// after <c>ImGui.NewFrame</c>. An event queued there is therefore consumed by the next frame's
-/// <c>NewFrame</c>. Every request is expanded into a list of single-frame steps and exactly one
-/// step runs per frame; that is what makes a click a genuine press-then-release with a frame in
-/// between rather than a collapsed no-op, and what lets ImGui's trickle queue deliver a new mouse
-/// position before anything depends on it.</para>
-///
-/// <para>Mouse position needs one extra care. Dalamud's Win32 input backend re-enqueues the real
-/// OS cursor position every frame while <c>io.WantSetMousePos</c> is false, which would overwrite
-/// an injected position. Each job therefore raises <c>io.WantSetMousePos</c> for its duration
-/// (the same flag a real backend uses both to suppress that re-enqueue and to move the OS cursor
-/// to the injected point) and restores the previous value, along with the previous cursor
-/// position and the <c>AppAcceptingEvents</c> flag, when the last step has been consumed.</para>
-/// </summary>
-internal static class ImGuiInputTools
+/// <summary>Bounded, user-preemptible input into the shared ImGui context. Never warps the OS cursor.</summary>
+internal static partial class ImGuiInputTools
 {
-    private static readonly object Sync = new();
-    private static readonly Queue<InjectionJob> Pending = new();
-
-    private static GameServices? services;
-    private static bool hooked;
-    private static long jobCounter;
-
-    /// <summary>
-    /// Completed by the first <c>OnDraw</c> ever, which is the proof that the client really is
-    /// running an ImGui frame loop. Injectors wait on it briefly before committing to a job, so a
-    /// call made when no frame will ever come (out of game, or before the UI is up) is answered
-    /// with a phrased error instead of hanging until the job timeout.
-    /// </summary>
-    private static readonly TaskCompletionSource<bool> FirstFrame =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    /// <summary>
-    /// How long an injector waits for the frame loop to prove itself. In game the very next frame
-    /// completes this, so the wait costs nothing; out of game it is the whole cost of the call.
-    /// </summary>
-    private const int FrameGraceMs = 2000;
-
-    /// <summary>Largest grid a single hover sweep may cover, so one call cannot stall the client.</summary>
-    private const int MaxGridCells = 4096;
-
-    /// <summary>Characters pushed per frame by imgui_text.</summary>
+    private const int MaxGridCells = 256;
     private const int TextCharsPerFrame = 16;
 
     // ------------------------------------------------------------------
@@ -84,7 +33,8 @@ internal static class ImGuiInputTools
             "WantCaptureKeyboard / WantTextInput flags, and the hovered / active / nav window and " +
             "id. This is the ground truth for the imgui_* injection tools: read it before and " +
             "after a click to see exactly what changed. Read-only, and independent of which " +
-            "plugin owns the window.",
+            "plugin owns the window. inputScheduler reports callback readiness, queue depth, owned key leases and last outcome; " +
+            "physicalCursor is the observed OS position. Input tools never warp it.",
             Json.Schema(),
             _ => ImGuiState());
 
@@ -104,34 +54,20 @@ internal static class ImGuiInputTools
             args => ImGuiWindows(args));
 
         RegisterInjectors(registry);
-    }
-
-    public static void Unregister()
-    {
-        Unhook();
-        lock (Sync)
+        foreach (var tool in registry.Tools.Where(t => t.Name is "imgui_mouse_click" or "imgui_mouse_scroll" or
+                     "imgui_key_press" or "imgui_key" or "imgui_text"))
         {
-            foreach (var job in Pending)
-                job.Done.TrySetResult(new JObject { ["cancelled"] = true });
-            Pending.Clear();
+            var properties = (JObject)tool.InputSchema["properties"]!;
+            properties["expectedWindow"] = new JObject { ["type"] = "string", ["description"] = "Exact observed ImGui window name; refuse if the target changes" };
+            properties["expectedId"] = new JObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = uint.MaxValue,
+                ["description"] = "Observed hovered ID for mouse input, or active ID for keyboard/text" };
         }
-        services = null;
-    }
-
-    private static void Hook(GameServices svc)
-    {
-        var iface = svc.PluginInterface;
-        if (iface is null || hooked) return;
-        iface.UiBuilder.Draw += OnDraw;
-        hooked = true;
-    }
-
-    private static void Unhook()
-    {
-        var iface = services?.PluginInterface;
-        if (iface is null || !hooked) return;
-        iface.UiBuilder.Draw -= OnDraw;
-        hooked = false;
+        ((JObject)registry.Tools.Single(t => t.Name == "imgui_key").InputSchema["properties"]!)["holdMs"] =
+            new JObject { ["type"] = "integer", ["minimum"] = 50, ["maximum"] = 2000, ["default"] = 1000,
+                ["description"] = "Automatic release lease for down=true; never holds indefinitely" };
+        registry.AddAsync("imgui_cancel_input", "Cancel ImGui input",
+            "Cancels queued and active ImGui input and releases only agent-owned keys/buttons. Never moves the system cursor. " +
+            "Inspect cleanupConfirmed; a stopped frame loop cannot confirm cleanup until frames resume.", Json.Schema(), _ => CancelAsync(), mutating: true);
     }
 
     // ------------------------------------------------------------------
@@ -145,16 +81,15 @@ internal static class ImGuiInputTools
             "Move the ImGui pointer",
             "Injects a pointer position into Dear ImGui and lets it settle for the requested " +
             "number of frames, then reports what is hovered. Use this to aim before clicking, or " +
-            "with imgui_state to probe what sits at a coordinate. The position is in ImGui " +
-            "coordinates, which are the game window's client pixels (read displaySize from " +
-            "imgui_state to sanity-check). Mutating: it synthesises input.",
+            "with imgui_state to probe what sits at a coordinate. Use the coordinate space reported by imgui_windows. " +
+            "The OS cursor is never moved; human input cancels the job. Mutating: it synthesises input.",
             Json.Schema(
                 ("x", "number", "Target X in ImGui coordinates", true),
                 ("y", "number", "Target Y in ImGui coordinates", true),
                 ("settleFrames", "integer", "Frames to hold the position before sampling (default 2)", false),
-                ("moveCursor", "boolean", "Also move the real OS cursor to the target (default true)", false),
-                ("restoreCursor", "boolean", "Restore the real cursor when the job ends (default true)", false)),
-            args => RunAsync(JobMouseMove(args)),
+                ("moveCursor", "boolean", "Legacy option; true is refused. System cursor movement is unsupported (default false)", false),
+                ("restoreCursor", "boolean", "Legacy option, accepted but ignored; the system cursor is never moved", false)),
+            args => RunAsync(Prepare(JobMouseMove(args), args)),
             mutating: true);
 
         registry.AddAsync(
@@ -165,16 +100,16 @@ internal static class ImGuiInputTools
             "collapsed by ImGui's trickle queue. Reports the hovered window and id captured just " +
             "before the press, and a full state snapshot afterwards, so the caller can see what " +
             "was hit and what changed. Works on any ImGui window regardless of which plugin owns " +
-            "it. Mutating: it synthesises input.",
+            "it. The OS cursor is never moved; human input cancels the job. Mutating: it synthesises input.",
             Json.Schema(
                 ("x", "number", "X in ImGui coordinates (omit to click where the pointer already is)", false),
                 ("y", "number", "Y in ImGui coordinates (omit to click where the pointer already is)", false),
                 ("button", "integer", "Mouse button: 0 left (default), 1 right, 2 middle", false),
                 ("double", "boolean", "Also send a second press/release pair (default false)", false),
                 ("settleFrames", "integer", "Frames to hold the position before pressing (default 3)", false),
-                ("moveCursor", "boolean", "Also move the real OS cursor to the target (default true)", false),
-                ("restoreCursor", "boolean", "Restore the real cursor when the job ends (default true)", false)),
-            args => RunAsync(JobMouseClick(args)),
+                ("moveCursor", "boolean", "Legacy option; true is refused. System cursor movement is unsupported (default false)", false),
+                ("restoreCursor", "boolean", "Legacy option, accepted but ignored; the system cursor is never moved", false)),
+            args => RunAsync(Prepare(JobMouseClick(args), args)),
             mutating: true);
 
         registry.AddAsync(
@@ -189,7 +124,7 @@ internal static class ImGuiInputTools
                 ("deltaY", "number", "Vertical wheel delta in notches (default -3)", false),
                 ("deltaX", "number", "Horizontal wheel delta in notches (default 0)", false),
                 ("settleFrames", "integer", "Frames to hold the position before scrolling (default 2)", false)),
-            args => RunAsync(JobMouseScroll(args)),
+            args => RunAsync(Prepare(JobMouseScroll(args), args)),
             mutating: true);
 
         registry.AddAsync(
@@ -199,26 +134,26 @@ internal static class ImGuiInputTools
             "modifiers held across the same frames a real chord would span. The key is named with " +
             "Dear ImGui's own key names (A, Enter, Escape, Tab, Delete, F1, LeftArrow, ...). Any " +
             "ImGui window in the process sees this exactly as it would see the physical key. " +
-            "Mutating: it synthesises input.",
+            "User activity cancels the job. The system cursor is never moved. Mutating: it synthesises input.",
             Json.Schema(
                 ("key", "string", "Dear ImGui key name, e.g. Enter, Escape, A, F1, LeftArrow", true),
                 ("ctrl", "boolean", "Hold Ctrl for the press (default false)", false),
                 ("shift", "boolean", "Hold Shift for the press (default false)", false),
                 ("alt", "boolean", "Hold Alt for the press (default false)", false)),
-            args => RunAsync(JobKeyPress(args)),
+            args => RunAsync(Prepare(JobKeyPress(args), args)),
             mutating: true);
 
         registry.AddAsync(
             "imgui_key",
             "Set a raw ImGui key state",
-            "Injects a bare key down or key up into Dear ImGui with no pairing - useful for " +
-            "holding a modifier or a movement key across several other calls. The key is named " +
-            "with Dear ImGui's own key names. Remember to send the matching up. Mutating: it " +
+            "Injects an owned key down with a bounded lease (holdMs, default 1000, max 2000), or releases an agent-owned key. " +
+            "User activity, cancellation, gate closure or lease expiry releases ownership. The key is named " +
+            "with Dear ImGui's own key names. Send the matching up promptly. Mutating: it " +
             "synthesises input.",
             Json.Schema(
                 ("key", "string", "Dear ImGui key name, e.g. LeftCtrl, A, Enter", true),
                 ("down", "boolean", "True for key down, false for key up", true)),
-            args => RunAsync(JobKey(args)),
+            args => RunAsync(Prepare(JobKey(args), args)),
             mutating: true);
 
         registry.AddAsync(
@@ -231,7 +166,7 @@ internal static class ImGuiInputTools
             Json.Schema(
                 ("text", "string", "Text to type", true),
                 ("charsPerFrame", "integer", $"Characters per frame (1-{TextCharsPerFrame}, default {TextCharsPerFrame})", false)),
-            args => RunAsync(JobText(args)),
+            args => RunAsync(Prepare(JobText(args), args)),
             mutating: true);
 
         registry.AddAsync(
@@ -252,7 +187,7 @@ internal static class ImGuiInputTools
                 ("cols", "integer", "Number of sample columns (default 8)", false),
                 ("rows", "integer", "Number of sample rows (default 8)", false),
                 ("settleFrames", "integer", "Frames to hold each position before sampling (default 1)", false)),
-            args => RunAsync(JobHoverGrid(args)),
+            args => RunAsync(Prepare(JobHoverGrid(args), args)),
             mutating: true);
 
         registry.AddAsync(
@@ -262,7 +197,7 @@ internal static class ImGuiInputTools
             "layout change settle before the next observation. Read-only.",
             Json.Schema(
                 ("frames", "integer", "Frames to wait (1-600, default 30)", false)),
-            args => RunAsync(JobWait(args)));
+            args => RunAsync(Prepare(JobWait(args), args)));
     }
 
     // ------------------------------------------------------------------
@@ -292,7 +227,13 @@ internal static class ImGuiInputTools
         state["wantCaptureKeyboard"] = io.WantCaptureKeyboard;
         state["wantTextInput"] = io.WantTextInput;
         state["wantSetMousePos"] = io.WantSetMousePos;
+        state["modifiers"] = new JObject { ["ctrl"] = io.KeyCtrl, ["shift"] = io.KeyShift,
+            ["alt"] = io.KeyAlt, ["super"] = io.KeySuper };
         state["appAcceptingEvents"] = io.AppAcceptingEvents;
+        state["inputScheduler"] = SchedulerState();
+        var physical = ObservePhysicalInput();
+        state["physicalCursor"] = physical.Available ? new JArray(physical.X, physical.Y) : null;
+        state["systemCursorWarpSupported"] = false;
 
         if (!ctx.IsNull)
         {
@@ -354,6 +295,8 @@ internal static class ImGuiInputTools
                 ["size"] = new JArray(window.Size.X, window.Size.Y),
                 ["sizeFull"] = new JArray(window.SizeFull.X, window.SizeFull.Y),
                 ["contentSize"] = new JArray(window.ContentSize.X, window.ContentSize.Y),
+                ["scroll"] = new JArray(window.Scroll.X, window.Scroll.Y),
+                ["scrollMax"] = new JArray(window.ScrollMax.X, window.ScrollMax.Y),
                 ["active"] = window.Active,
                 ["wasActive"] = window.WasActive,
                 ["hidden"] = window.Hidden,
@@ -377,189 +320,11 @@ internal static class ImGuiInputTools
         };
     }
 
-    // ------------------------------------------------------------------
-    // Frame hook
-    // ------------------------------------------------------------------
-
-    /// <summary>
-    /// Runs inside the ImGui frame, after NewFrame. Exactly one step of the head job is executed
-    /// per frame, which is what separates a press from its release and what lets a position
-    /// settle before anything is read from it.
-    /// </summary>
-    private static void OnDraw()
-    {
-        // Reaching here at all is the proof that the client is pumping ImGui frames, which is what
-        // lets an injector distinguish "the UI is up" from "no frame will ever come". Signalled
-        // before the queue is inspected so it is recorded even on frames with no job pending.
-        FirstFrame.TrySetResult(true);
-
-        InjectionJob? job;
-        lock (Sync) { job = Pending.Count > 0 ? Pending.Peek() : null; }
-        if (job is null) return;
-
-        var ctx = ImGui.GetCurrentContext();
-        if (ctx.IsNull) return;
-
-        if (job.TimedOut)
-        {
-            RestoreState(job);
-            lock (Sync) { Pending.Dequeue(); }
-            job.Done.TrySetResult(job.Result);
-            return;
-        }
-
-        var io = ImGui.GetIO();
-
-        if (!job.Began)
-        {
-            job.SavedWantSetMousePos = io.WantSetMousePos;
-            job.SavedAppAccepting = io.AppAcceptingEvents;
-            if (job.MoveCursor && GetCursorPos(out var p))
-            {
-                job.SavedCursor = p;
-                job.HaveSavedCursor = true;
-            }
-            job.Began = true;
-            job.Trace.Add("begin");
-        }
-
-        // Raised for the whole job: it both suppresses the backend's per-frame re-enqueue of the
-        // real cursor position and makes the backend drive the OS cursor to the injected point,
-        // so the two sources of truth converge instead of fighting.
-        if (job.HoldWantSetMousePos) io.WantSetMousePos = true;
-        io.SetAppAcceptingEvents(true);
-
-        if (job.Step < job.Steps.Count)
-        {
-            var step = job.Steps[job.Step];
-            job.Step++;
-            try
-            {
-                step(job);
-            }
-            catch (Exception ex)
-            {
-                job.Result["error"] = $"{ex.GetType().Name}: {ex.Message}";
-                RestoreState(job);
-                lock (Sync) { Pending.Dequeue(); }
-                job.Done.TrySetResult(job.Result);
-            }
-            return;
-        }
-
-        job.Result["endState"] = Snapshot();
-        job.Result["injectedEvents"] = job.InjectedEvents;
-        job.Result["trace"] = job.Trace;
-        RestoreState(job);
-        lock (Sync) { Pending.Dequeue(); }
-        job.Done.TrySetResult(job.Result);
-    }
-
-    private static void RestoreState(InjectionJob job)
-    {
-        if (!job.Began) return;
-        try
-        {
-            var ctx = ImGui.GetCurrentContext();
-            if (!ctx.IsNull)
-            {
-                var io = ImGui.GetIO();
-                io.WantSetMousePos = job.SavedWantSetMousePos;
-                io.SetAppAcceptingEvents(job.SavedAppAccepting);
-            }
-            if (job.RestoreCursor && job.HaveSavedCursor)
-                SetCursorPos(job.SavedCursor.X, job.SavedCursor.Y);
-        }
-        catch (Exception ex)
-        {
-            if (job.Result["error"] is null) job.Result["restoreError"] = ex.Message;
-        }
-        job.Trace.Add("end");
-    }
-
-    // ------------------------------------------------------------------
-    // Jobs
-    // ------------------------------------------------------------------
-
-    private sealed class InjectionJob
-    {
-        public long Id;
-        public string Kind = string.Empty;
-        public bool MoveCursor = true;
-        public bool RestoreCursor = true;
-        public bool HoldWantSetMousePos = true;
-        public int TimeoutMs = 15000;
-
-        public readonly List<Action<InjectionJob>> Steps = new();
-        public readonly JArray Trace = new();
-        public readonly JObject Result = new();
-        public readonly TaskCompletionSource<JObject> Done =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public int Step;
-        public bool Began;
-        public bool TimedOut;
-        public bool SavedWantSetMousePos;
-        public bool SavedAppAccepting;
-        public bool HaveSavedCursor;
-        public POINT SavedCursor;
-        public int InjectedEvents;
-    }
-
-    private static InjectionJob NewJob(string kind, int steps, int timeoutMs)
-    {
-        var job = new InjectionJob
-        {
-            Id = System.Threading.Interlocked.Increment(ref jobCounter),
-            Kind = kind,
-        };
-        job.Result["kind"] = kind;
-        job.Result["jobId"] = job.Id;
-        // One step per frame, plus a frame to consume the last event and a frame of slack.
-        job.TimeoutMs = Math.Max(timeoutMs, (steps + 8) * 40);
-        return job;
-    }
-
-    private static async Task<object?> RunAsync(InjectionJob job)
-    {
-        if (services is null) return Json.ToolError("ImGui input tools are not initialised.");
-        if (!hooked) return Json.ToolError("The ImGui frame hook is not installed.");
-
-        // Prove the frame loop is live before committing to a job. Without this an injector called
-        // out of game enqueues itself, is never picked up by OnDraw, and only answers when the job
-        // timeout expires - a whole idle timeout for what is really an immediate "not available".
-        if (!FirstFrame.Task.IsCompleted)
-        {
-            var frame = await Task.WhenAny(FirstFrame.Task, Task.Delay(FrameGraceMs)).ConfigureAwait(false);
-            if (frame != FirstFrame.Task)
-            {
-                return Json.ToolError(
-                    $"imgui_{job.Kind} is not available: Dear ImGui did not render a frame within " +
-                    $"{FrameGraceMs} ms, so there is nothing to inject into. The client may be " +
-                    "loading, zoned, or the UI may be down.");
-            }
-        }
-
-        lock (Sync) { Pending.Enqueue(job); }
-
-        var finished = await Task.WhenAny(job.Done.Task, Task.Delay(job.TimeoutMs))
-            .ConfigureAwait(false);
-
-        if (finished != job.Done.Task)
-        {
-            job.TimedOut = true;
-            return Json.ToolError(
-                $"imgui_{job.Kind} timed out after {job.TimeoutMs} ms waiting for ImGui frames. " +
-                "The client may be loading, zoned, or the UI may be down.");
-        }
-
-        return job.Done.Task.Result;
-    }
-
     // -- step builders -------------------------------------------------
 
     private static Action<InjectionJob> StepMove(float x, float y) => job =>
     {
+        job.Pointer = new System.Numerics.Vector2(x, y);
         ImGui.GetIO().AddMousePosEvent(x, y);
         job.InjectedEvents++;
         job.Trace.Add($"mousePos {x:0.##},{y:0.##}");
@@ -567,13 +332,16 @@ internal static class ImGuiInputTools
 
     private static Action<InjectionJob> StepButton(int button, bool down) => job =>
     {
+        if (down) ValidateTarget(job, false);
         ImGui.GetIO().AddMouseButtonEvent(button, down);
+        if (down) job.Buttons.Add(button); else job.Buttons.Remove(button);
         job.InjectedEvents++;
         job.Trace.Add($"mouse{button} {(down ? "down" : "up")}");
     };
 
     private static Action<InjectionJob> StepWheel(float dx, float dy) => job =>
     {
+        ValidateTarget(job, false);
         ImGui.GetIO().AddMouseWheelEvent(dx, dy);
         job.InjectedEvents++;
         job.Trace.Add($"wheel {dx:0.##},{dy:0.##}");
@@ -581,7 +349,12 @@ internal static class ImGuiInputTools
 
     private static Action<InjectionJob> StepKey(ImGuiKey key, bool down) => job =>
     {
+        if (down) ValidateTarget(job, true);
+        if (!down && !HeldKeys.ContainsKey(key)) throw new ToolException("key is not agent-owned");
         ImGui.GetIO().AddKeyEvent(key, down);
+        if (down) { job.Keys.Add(key); HeldKeys[key] = Environment.TickCount64 + job.HoldMs; heldBaseline ??= job.Baseline; }
+        else { job.Keys.Remove(key); HeldKeys.Remove(key); }
+        UpdateModifier(key);
         job.InjectedEvents++;
         job.Trace.Add($"key {key} {(down ? "down" : "up")}");
     };
@@ -605,7 +378,9 @@ internal static class ImGuiInputTools
         var token = args[name];
         if (token is null || token.Type == JTokenType.Null)
             throw new ToolException($"missing required parameter: {name}");
-        return token.Value<float>();
+        var value = token.Value<float>();
+        if (!float.IsFinite(value)) throw new ToolException($"{name} must be finite");
+        return value;
     }
 
     // -- concrete jobs -------------------------------------------------
@@ -616,9 +391,9 @@ internal static class ImGuiInputTools
         var y = RequireFloat(args, "y");
         var settle = ReadSettle(args, 2, 1, 240);
 
-        var job = NewJob("mouse_move", settle + 2, 20000);
-        job.MoveCursor = args["moveCursor"]?.Value<bool>() ?? true;
-        job.RestoreCursor = args["restoreCursor"]?.Value<bool>() ?? true;
+        var job = NewJob("mouse_move", settle + 2);
+
+
         job.Result["target"] = new JArray(x, y);
 
         AddSettle(job, x, y, settle);
@@ -637,9 +412,9 @@ internal static class ImGuiInputTools
         var settle = ReadSettle(args, 3, 1, 240);
 
         var steps = (hasPos ? settle : 0) + (dbl ? 4 : 2) + 2;
-        var job = NewJob("mouse_click", steps, 20000);
-        job.MoveCursor = args["moveCursor"]?.Value<bool>() ?? true;
-        job.RestoreCursor = args["restoreCursor"]?.Value<bool>() ?? true;
+        var job = NewJob("mouse_click", steps);
+
+
         job.Result["button"] = button;
         job.Result["double"] = dbl;
         if (hasPos) job.Result["target"] = new JArray(x, y);
@@ -670,9 +445,9 @@ internal static class ImGuiInputTools
         var dy = args["deltaY"]?.Value<float>() ?? -3f;
         var settle = ReadSettle(args, 2, 1, 240);
 
-        var job = NewJob("mouse_scroll", (hasPos ? settle : 0) + 3, 20000);
-        job.MoveCursor = args["moveCursor"]?.Value<bool>() ?? true;
-        job.RestoreCursor = args["restoreCursor"]?.Value<bool>() ?? true;
+        var job = NewJob("mouse_scroll", (hasPos ? settle : 0) + 3);
+
+
         job.Result["delta"] = new JArray(dx, dy);
 
         if (hasPos) AddSettle(job, x, y, settle);
@@ -687,7 +462,7 @@ internal static class ImGuiInputTools
         var name = args["key"]?.Value<string>();
         if (string.IsNullOrWhiteSpace(name))
             throw new ToolException("missing required parameter: key");
-        if (!Enum.TryParse<ImGuiKey>(name, ignoreCase: true, out var key) || key == ImGuiKey.None)
+        if (!Enum.TryParse<ImGuiKey>(name, ignoreCase: true, out var key) || VirtualKey(key) < 0)
             throw new ToolException(
                 $"unknown ImGui key '{name}'. Use Dear ImGui key names such as A, Enter, Escape, " +
                 "Tab, Space, Delete, LeftArrow, F1, LeftCtrl.");
@@ -706,7 +481,7 @@ internal static class ImGuiInputTools
         if (shift) mods.Add(ImGuiKey.LeftShift);
         if (alt) mods.Add(ImGuiKey.LeftAlt);
 
-        var job = NewJob("key_press", mods.Count * 2 + 3, 20000);
+        var job = NewJob("key_press", mods.Count * 2 + 3);
         job.Result["key"] = key.ToString();
         job.Result["modifiers"] = new JArray(mods.Select(m => (object)m.ToString()).ToArray());
 
@@ -724,7 +499,7 @@ internal static class ImGuiInputTools
         var down = args["down"]?.Value<bool>()
             ?? throw new ToolException("missing required parameter: down");
 
-        var job = NewJob("key", 3, 20000);
+        var job = NewJob("key", 3);
         job.Result["key"] = key.ToString();
         job.Result["down"] = down;
         job.Steps.Add(StepKey(key, down));
@@ -745,6 +520,9 @@ internal static class ImGuiInputTools
         var current = new List<Rune>();
         foreach (var rune in text.EnumerateRunes())
         {
+            // The installed SDK exposes InputQueueCharacters as ImVector<ushort> (ImWchar16).
+            if (rune.Value > ushort.MaxValue)
+                throw new ToolException("This ImGui build uses 16-bit characters; supplementary Unicode is unsupported.");
             current.Add(rune);
             if (current.Count < perFrame) continue;
             chunks.Add(current);
@@ -752,7 +530,8 @@ internal static class ImGuiInputTools
         }
         if (current.Count > 0) chunks.Add(current);
 
-        var job = NewJob("text", chunks.Count + 2, 30000);
+        if (chunks.Count > 256) throw new ToolException("text exceeds the 4096-character input budget");
+        var job = NewJob("text", chunks.Count + 2);
         job.Result["text"] = text;
         job.Result["runeCount"] = text.EnumerateRunes().Count();
         job.Result["frames"] = chunks.Count;
@@ -763,6 +542,7 @@ internal static class ImGuiInputTools
             var local = chunk;
             job.Steps.Add(j =>
             {
+                ValidateTarget(j, true);
                 var io = ImGui.GetIO();
                 foreach (var rune in local)
                 {
@@ -790,7 +570,7 @@ internal static class ImGuiInputTools
             throw new ToolException(
                 $"grid too large: {cols}x{rows} exceeds the {MaxGridCells}-cell limit per call.");
 
-        var job = NewJob("hover_grid", (settle + 1) * cols * rows + 2, 60000);
+        var job = NewJob("hover_grid", (settle + 1) * cols * rows + 2);
         job.Result["rect"] = new JArray(x0, y0, x1, y1);
         job.Result["cols"] = cols;
         job.Result["rows"] = rows;
@@ -833,10 +613,8 @@ internal static class ImGuiInputTools
     private static InjectionJob JobWait(JObject args)
     {
         var frames = Math.Clamp(args["frames"]?.Value<int>() ?? 30, 1, 600);
-        var job = NewJob("wait", frames + 1, 30000);
-        job.HoldWantSetMousePos = false;
-        job.MoveCursor = false;
-        job.RestoreCursor = false;
+        var job = NewJob("wait", frames + 1);
+        job.Passive = true;
         job.Result["frames"] = frames;
 
         for (var i = 0; i < frames; i++) job.Steps.Add(j => j.Trace.Add("tick"));
@@ -844,20 +622,4 @@ internal static class ImGuiInputTools
         return job;
     }
 
-    // ------------------------------------------------------------------
-    // Win32 cursor
-    // ------------------------------------------------------------------
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT
-    {
-        public int X;
-        public int Y;
-    }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool GetCursorPos(out POINT point);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetCursorPos(int x, int y);
 }

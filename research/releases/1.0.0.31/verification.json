@@ -1,0 +1,336 @@
+{
+  "version": "1.0.0.31",
+  "offline": {
+    "debugBuild": "0 warnings, 0 errors",
+    "releaseBuild": "0 warnings, 0 errors",
+    "nativeImGuiInputTest": "48/48",
+    "releasePluginLoadTest": "166/166",
+    "debugPluginLoadTest": "166/166",
+    "protocolSmokeTest": "59/59",
+    "loadabilityCheck": "112/112",
+    "officialSdkInterop": "12/12",
+    "negativeControl": "2/2",
+    "realSchemaValidation": "11/11 (139 schemas)",
+    "docLinks": "82 checked, 0 broken"
+  },
+  "package": {
+    "version": "1.0.0.31",
+    "sha256": "87B112774D40BF2884DE746DF8DC63FD2617D80065D1DAE6F7D07E75A5741CFD",
+    "releaseMvid": "aa2633a8-9a19-4e03-a5c5-3cda44bce888",
+    "entries": [
+      "DalamudMCP.deps.json",
+      "DalamudMCP.dll",
+      "DalamudMCP.json"
+    ]
+  },
+  "live": {
+    "date": "2026-10-30",
+    "loggedIn": false,
+    "playerLoaded": false,
+    "buildMvid": "f9dd1a35-fca6-429c-aa07-d27345bca9df",
+    "checks": [
+      {
+        "name": "running build matches tested Debug DLL",
+        "ok": true,
+        "detail": "f9dd1a35-fca6-429c-aa07-d27345bca9df"
+      },
+      {
+        "name": "complete tool catalog includes cancel and excludes screenshot",
+        "ok": true
+      },
+      {
+        "name": "development plugin version is 1.0.0.31",
+        "ok": true,
+        "detail": "1.0.0.31"
+      },
+      {
+        "name": "own configuration window actually opened",
+        "ok": true,
+        "detail": {
+          "pos": [
+            1540,
+            479
+          ],
+          "size": [
+            620,
+            520
+          ]
+        }
+      },
+      {
+        "name": "virtual frame callbacks are ready and error-free",
+        "ok": true
+      },
+      {
+        "name": "virtual hover reaches the real close control without warping OS cursor",
+        "ok": true,
+        "detail": {
+          "hoveredId": 3109409122,
+          "cursor": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "guarded virtual click actually closes the configuration window",
+        "ok": true
+      },
+      {
+        "name": "configuration window can be reopened after virtual close",
+        "ok": true
+      },
+      {
+        "name": "virtual title-bar click focuses the observed window",
+        "ok": true,
+        "detail": "DalamudMCP###DalamudMCPConfig"
+      },
+      {
+        "name": "virtual wheel changes actual window scroll without warping cursor",
+        "ok": true,
+        "detail": {
+          "before": 0,
+          "after": 80
+        }
+      },
+      {
+        "name": "raw Ctrl down is tracked by the running scheduler",
+        "ok": true
+      },
+      {
+        "name": "raw key lease expires with actual Ctrl released",
+        "ok": true
+      },
+      {
+        "name": "explicit cancellation stops a live scan and confirms cleanup",
+        "ok": true,
+        "detail": {
+          "scan": {
+            "isError": true,
+            "completed": false,
+            "cancelled": true,
+            "reason": "cancelled_by_caller",
+            "cleanupConfirmed": true,
+            "physicalCursorUnchanged": true,
+            "physicalCursorStart": [
+              1364,
+              458
+            ],
+            "physicalCursorEnd": [
+              1364,
+              458
+            ]
+          },
+          "cancel": {
+            "isError": false,
+            "cancelled": true,
+            "cleanupConfirmed": true
+          }
+        }
+      },
+      {
+        "name": "legacy cursor-warp request is refused",
+        "ok": true
+      },
+      {
+        "name": "live verification leaves no jobs, held keys, buttons or pointer ownership",
+        "ok": true
+      }
+    ],
+    "actions": [
+      {
+        "name": "imgui_mouse_move",
+        "args": {
+          "x": 2147,
+          "y": 490,
+          "settleFrames": 3,
+          "moveCursor": false
+        },
+        "result": {
+          "isError": false,
+          "completed": true,
+          "cancelled": false,
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "imgui_mouse_click",
+        "args": {
+          "x": 2147,
+          "y": 490,
+          "expectedWindow": "DalamudMCP###DalamudMCPConfig",
+          "expectedId": 3109409122,
+          "moveCursor": false
+        },
+        "result": {
+          "isError": false,
+          "completed": true,
+          "cancelled": false,
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "imgui_mouse_click",
+        "args": {
+          "x": 1640,
+          "y": 489,
+          "expectedWindow": "DalamudMCP###DalamudMCPConfig",
+          "moveCursor": false
+        },
+        "result": {
+          "isError": false,
+          "completed": true,
+          "cancelled": false,
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "imgui_mouse_scroll",
+        "args": {
+          "x": 1690,
+          "y": 699,
+          "deltaY": -1,
+          "expectedWindow": "DalamudMCP###DalamudMCPConfig"
+        },
+        "result": {
+          "isError": false,
+          "completed": true,
+          "cancelled": false,
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "imgui_key",
+        "args": {
+          "key": "LeftCtrl",
+          "down": true,
+          "holdMs": 200,
+          "expectedWindow": "DalamudMCP###DalamudMCPConfig"
+        },
+        "result": {
+          "isError": false,
+          "completed": true,
+          "cancelled": false,
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "imgui_hover_grid",
+        "args": {
+          "x0": 1620,
+          "y0": 489,
+          "x1": 1720,
+          "y1": 491,
+          "cols": 8,
+          "rows": 8
+        },
+        "result": {
+          "isError": true,
+          "completed": false,
+          "cancelled": true,
+          "reason": "cancelled_by_caller",
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      },
+      {
+        "name": "imgui_cancel_input",
+        "args": {},
+        "result": {
+          "isError": false,
+          "cancelled": true,
+          "cleanupConfirmed": true
+        }
+      },
+      {
+        "name": "imgui_mouse_move",
+        "args": {
+          "x": 2147,
+          "y": 490,
+          "moveCursor": true
+        },
+        "result": {
+          "isError": true,
+          "detail": "System cursor movement is unsupported; omit moveCursor or set false."
+        }
+      },
+      {
+        "name": "imgui_mouse_click",
+        "args": {
+          "x": 2147,
+          "y": 490,
+          "expectedWindow": "DalamudMCP###DalamudMCPConfig",
+          "moveCursor": false
+        },
+        "result": {
+          "isError": false,
+          "completed": true,
+          "cancelled": false,
+          "cleanupConfirmed": true,
+          "physicalCursorUnchanged": true,
+          "physicalCursorStart": [
+            1364,
+            458
+          ],
+          "physicalCursorEnd": [
+            1364,
+            458
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 138;
+    private const int ExpectedTools = 139;
 
     private static int checks;
     private static int failures;
@@ -547,6 +547,15 @@ internal static class Program
                     addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
                 Check("screenshot capture is not advertised in tools/list",
                     toolsList.All(t => t.GetProperty("name").GetString() != "capture_game_screenshot"));
+                Check("ImGui input exposes target guards and bounded key leases",
+                    new[] { "imgui_mouse_click", "imgui_mouse_scroll", "imgui_key_press", "imgui_key", "imgui_text" }.All(name =>
+                        toolsList.Single(t => t.GetProperty("name").GetString() == name).GetProperty("inputSchema")
+                            .GetProperty("properties").TryGetProperty("expectedWindow", out _)) &&
+                    toolsList.Single(t => t.GetProperty("name").GetString() == "imgui_key").GetProperty("inputSchema")
+                        .GetProperty("properties").GetProperty("holdMs").GetProperty("maximum").GetInt32() == 2000);
+                Check("ImGui cancellation is registered behind the mutation gate",
+                    toolsList.Single(t => t.GetProperty("name").GetString() == "imgui_cancel_input")
+                        .GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean() == false);
                 foreach (var name in new[] { "click_addon_element", "get_addon_node_snapshot", "sample_addon_nodes", "click_addon_when_node_matches" })
                 {
                     var pathSchema = toolsList.Single(t => t.GetProperty("name").GetString() == name)

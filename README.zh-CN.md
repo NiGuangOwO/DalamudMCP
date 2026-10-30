@@ -9,7 +9,7 @@ DalamudMCP 是适用于 FINAL FANTASY XIV 的 [Dalamud](https://github.com/goatc
 
 插件运行于游戏进程内部，通过 Dalamud 服务和 [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)
 提供角色、游戏对象、小队、物品栏、游戏数据及界面状态访问，并支持经过校验的原始内存读取、事件采集和插件间通信。
-当前工具目录包含 **138 个工具，其中 81 个只读、57 个可变更**。可变更工具需在配置中显式启用。
+当前工具目录包含 **139 个工具，其中 81 个只读、58 个可变更**。可变更工具需在配置中显式启用。
 
 默认 MCP 地址为 `http://127.0.0.1:18777/mcp`。支持 HTTP 的 MCP 客户端可直接连接；仅支持 stdio 的客户端可使用仓库附带的桥接程序。
 
@@ -236,7 +236,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## 工具参考
 
-当前目录包含 138 个工具：81 个只读、57 个可变更。下表按功能列出主要工具及参数摘要；
+当前目录包含 139 个工具：81 个只读、58 个可变更。下表按功能列出主要工具及参数摘要；
 完整目录和参数约束以服务器返回的 `tools/list` schema 为准，可变更工具在 `AllowMutatingTools` 启用后开放。
 
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。
@@ -371,17 +371,18 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `imgui_mouse_click` | 在指定坐标注入按下与释放，分别在不同帧执行，避免事件被 ImGui trickle 队列合并。 | `x`、`y`、`button`（0 左/1 右/2 中）、`double`、`settleFrames`（默认 3）、`moveCursor`、`restoreCursor` |
 | `imgui_mouse_scroll` | 注入滚轮事件，可先移动到目标控件。增量以 ImGui 刻度计。 | `x`、`y`、`deltaY`（默认 -3）、`deltaX`、`settleFrames` |
 | `imgui_key_press` | 一次完整按键，可在整个组合键期间按住 Ctrl / Shift / Alt，键名用 Dear ImGui 的命名（`Enter`、`Escape`、`A`、`F1`、`LeftArrow`、`LeftCtrl` …）。 | `key`（必填）、`ctrl`、`shift`、`alt` |
-| `imgui_key` | 提交单独的按下或释放事件，可用于在多次调用期间保持修饰键状态。 | `key`、`down`（均必填） |
+| `imgui_key` | 在有界期限内持有按下状态，或释放 agent 自己持有的键；用户操作及到期会释放所有权。 | `key`、`down`（必填）、`holdMs`（50–2000，默认 1000）、`expectedWindow`、`expectedId` |
 | `imgui_text` | 通过字符输入通道向获得键盘焦点的 ImGui 输入框提交文本，支持中日韩字符。调用前需确认目标输入框已获得焦点。 | `text`（必填）、`charsPerFrame`（1-16，默认 16） |
 | `imgui_hover_grid` | 按 `cols x rows` 网格扫描指定矩形，在各采样位置返回窗口命中状态和悬停控件 ID。`rows=1` 表示水平扫描。 | `x0`、`y0`、`x1`、`y1`（必填）、`cols`（默认 8）、`rows`（默认 8）、`settleFrames` |
+| `imgui_cancel_input` | 取消排队/活动输入并释放自有按键；检查 `cleanupConfirmed`。 | 无 |
 | `imgui_wait` | 等待指定绘制帧数，供弹窗或布局状态更新。只读。 | `frames`（1-600，默认 30） |
 
-`imgui_state`、`imgui_windows` 和 `imgui_wait` 为只读工具；其他七个工具受可变更权限控制。
+`imgui_state`、`imgui_windows` 和 `imgui_wait` 为只读工具；其他八个工具受可变更权限控制。
 
-输入请求拆分为逐帧步骤，由 `UiBuilder.Draw` 执行，按下与释放分布于不同帧。
-鼠标操作临时协调 `io.WantSetMousePos`，任务结束后恢复相关输入状态。
-`moveCursor` 和 `restoreCursor` 控制物理光标移动与恢复行为。
-提交前最多等待两秒以确认绘制循环可用；未检测到绘制帧时返回错误。
+输入通过 SDK 帧回调和虚拟指针执行，不移动或拉回系统鼠标。真人输入会中止任务。
+使用 `expectedWindow` / `expectedId` 校验目标，核对完成/取消结果，并验证插件实际状态。
+单独按下的键有 `holdMs` 超时；`moveCursor=true` 被拒绝，`restoreCursor` 不再产生操作。
+详见 [ImGui 输入、取消与边界](docs/imgui-input.md)。
 
 ### 角色控制（可变更）
 
@@ -554,6 +555,7 @@ MCP 客户端
 | `tests/ProtocolSmokeTest` | HTTP 传输、会话、认证、工具权限、并发和 MCP 结果编码。 |
 | `tests/BridgeSmokeTest` | stdio 传输、会话转发、认证和子进程生命周期。 |
 | `tests/LoadabilityCheck` | 生成的清单、服务解析、结构体偏移和本地化键。 |
+| `tests/ImGuiInputTest` | 原生 ImGui 实际控件、虚拟输入、后端按键校正、用户中断、取消与清理。 |
 | `tests/PluginLoadTest` | 使用离线服务验证插件构造、工具注册、schema 和 HTTP 调用。 |
 | `tests/McpInterop` | 与官方 TypeScript MCP SDK 的互操作及 JSON Schema 校验。 |
 | `tests/NativeUiReadTest`、`tests/AddonGeometryTest`、`tests/StatusSlotTest` | 受保护的原生界面读取、几何信息和稀疏状态槽。 |
