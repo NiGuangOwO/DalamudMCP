@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/DalamudMCP/Tools/GameWindowKeySink.cs" Link="GameWindowKeySink.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/DevBuildIdentity.cs" Link="DevBuildIdentity.cs" />
+  </ItemGroup>
+</Project>

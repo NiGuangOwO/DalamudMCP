@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0.32",
+  "date": "2026-10-30",
+  "debugBuildMvid": "5e0c00cb-a91c-4039-8e59-1ae6645cd0bd",
+  "releaseBuildMvid": "1295d4d4-1695-44e2-995f-722950ebb7a3",
+  "packageSha256": "A1D4984179C1ED9977072530BE0EB87F51964681CFED6B46ABD7610417136E9F",
+  "offline": {
+    "debugBuild": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "releaseBuild": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "GameKeyInputTest": "22/22",
+    "PluginLoadTestDebugDll": "167/167",
+    "PluginLoadTestReleaseDll": "167/167",
+    "ProtocolSmokeTest": "59/59",
+    "package": "ZIP manifest equals external manifest; packaged DLL equals Release DLL; version/author/internal name checked"
+  },
+  "live": {
+    "mvidMatched": true,
+    "catalogTools": 139,
+    "hold250ms": {
+      "before": {
+        "x": -4.04,
+        "y": 0,
+        "z": 1.54
+      },
+      "after": {
+        "x": -3.62,
+        "y": 0,
+        "z": 2.15
+      },
+      "rawAfter": 0
+    },
+    "holdInterrupted": {
+      "requestedMs": 1800,
+      "observedElapsedMs": 460,
+      "foregroundAtRelease": false,
+      "interrupted": true,
+      "keyUpDispatched": true,
+      "rawAfter": 0
+    },
+    "foregroundReceiverEvents": {
+      "keyDown": 0,
+      "keyUp": 0,
+      "character": 0
+    },
+    "repeatedTaps": "stopped after 1 tap when game lost foreground; receiver remained at zero",
+    "postInterruptMovement": "less than 0.05 yalms over 300ms",
+    "tapOutcome": "B opened gatheringnote; second B restored inactive state via get_addon_state",
+    "cleanup": "game restored and receiver closed"
+  },
+  "limits": [
+    "Live interruption was induced by minimizing the game through MCP; ordinary foreground switching covered by isolated Windows-window regression.",
+    "No global-key-state/Raw Input/system-shortcut equivalence is promised.",
+    "Successful PostMessage dispatch is not proof of business outcome; game state was checked separately."
+  ]
+}

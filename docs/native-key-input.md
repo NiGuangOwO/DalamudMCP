@@ -1,66 +1,47 @@
 # 原生游戏键盘输入
 
-这两个工具用于把键盘输入送进游戏，而不是 Dear ImGui 窗口：
+`press_game_key` 和 `hold_game_key` 通过 `PostMessageW` 向已验证的游戏主窗口发送 `WM_KEYDOWN` / `WM_KEYUP`。所有发送与清理路径都绑定原窗口 HWND，不使用全局 `SendInput` 或 `KeyboardDevice.SendKey`，不会把按键转发给其他前台软件。
 
-- `press_game_key`：通过 `InputDeviceManager.Instance()->KeyboardDevice->SendKey` 发送一次或多次完整点击。
-- `hold_game_key`：通过有界的 Win32 `SendInput` 发送 key-down，保持指定时间，再发送 key-up。
+这两个工具要求变更工具门开启。输入派发成功仍不代表业务完成，必须回读角色或 addon 状态。
 
-它们要求变更工具门已开启。调用后仍必须回读角色、界面或 addon 状态；成功派发不代表目标系统已经产生业务结果。
-
-## `press_game_key`
+## 点击
 
 ```json
-{
-  "key": "RETURN",
-  "repeat": 1,
-  "intervalFrames": 2,
-  "expectedTerritoryId": 177,
-  "activateWindow": true,
-  "dryRun": false
-}
+{"key":"RETURN","repeat":1,"intervalFrames":2,"expectedTerritoryId":653,"activateWindow":true}
 ```
 
-- `key` 使用精确的 FFXIV `SeVirtualKey` 名称，例如 `UP`、`DOWN`、`LEFT`、`RIGHT`、`RETURN`、`SPACE`、`ESCAPE`、`W`、`A`、`S`、`D`、`KEY_1`、`NUMPAD1`、`F1`。
-- `repeat` 限制为 1–8；`intervalFrames` 限制为 1–30。
-- 当前客户端必须已登录且本地角色已加载；可选的 `expectedTerritoryId` 是区域守卫。
-- 原生 `KeyboardDevice.SendKey` 在单次调用中生成 key-down/key-up 对，因此不会留下悬挂按键。
-- 调用前会检查目标键的原始键态。键已经按下时拒绝覆盖物理输入。
-- 每次点击后等待一个框架 tick，并回读键态；若异常残留非零值，会清除并再次核验。
-- 鼠标键和 `PAD_*` 游戏手柄键会被拒绝。
+- `key` 使用精确、大小写不敏感的 `SeVirtualKey` 名称，例如 `UP`、`RETURN`、`SPACE`、`W`、`KEY_1`、`NUMPAD1` 和 `F1`；拒绝数字名称、鼠标键和 `PAD_*`。
+- `repeat` 为 1–8，`intervalFrames` 为 1–30。每次按下后等待一个框架 tick，再向同一窗口松开；松开后再等待一个 tick。
+- 在实际按下所在的框架回调内重新核验客户端、区域、窗口身份、前台与物理/原生键态。已经按下的键会被拒绝。
+- 超时或异常通过 `finally` 和发送器释放已拥有的键；已关闭的发送器拒绝迟到的框架回调。不再直接清空游戏键态，避免覆盖物理输入。
 
-## `hold_game_key`
+## 长按
 
 ```json
-{
-  "key": "W",
-  "durationMs": 250,
-  "expectedTerritoryId": 177,
-  "activateWindow": true,
-  "dryRun": false
-}
+{"key":"W","durationMs":250,"expectedTerritoryId":653,"activateWindow":true}
 ```
 
-- `durationMs` 限制为 50–2000。
-- 使用 Win32 `SendInput` 发送一次 key-down，等待指定时间，再由 `finally` 路径发送 key-up；超时、取消和异常也会尝试释放。
-- 返回 `keyDownDispatched`、`keyUpDispatched`、`foregroundAtRelease` 和键态前后值。
-- 若发送 key-down 后游戏失去前台，key-up 仍会尝试发送，避免操作系统留下悬挂键；这种场景不能宣称目标动作成功。
+- `durationMs` 为 50–2000，默认 250。每隔最多 25ms 的计时等待后检查客户端和窗口；框架排队可能延长观察时间。
+- 游戏失去前台时提前结束，`interrupted=true`；松开仍只发送给原游戏窗口，不会发送给新前台软件。
+- 返回 `keyDownDispatched`、`keyUpDispatched`、`foregroundAtRelease`、`interrupted` 和原始键态前后值。这些派发字段不保证游戏已执行目标操作。
+- 框架停止时清理不依赖新的框架回调，但窗口队列必须继续处理消息才能消费松键。窗口销毁或消息投递失败会报告错误，不回退到全局输入。
 
-## 前台窗口守卫
+## 前台与客户端守卫
 
-原生输入最终经过 Windows `SendInput`，它发送到当前前台窗口。调用方必须显式传入 `activateWindow: true` 才会尝试切换前台；工具只接受游戏进程自己的窗口，并验证切换后的前台 PID 与当前进程一致。
+客户端须已登录、本地角色已加载且不在区域加载中。可选 `expectedTerritoryId` 保护当前区域。变更门关闭、框架卸载、窗口被替换或键盘设备不可用都会拒绝继续输入。
 
-切换流程使用 `BringWindowToTop`、`SetForegroundWindow` 和 `SetFocus`；受 Windows 前台锁限制时，会仅在调用线程和当前前台线程之间临时 `AttachThreadInput`，随后解除。若始终无法取得前台，工具在发送任何键之前返回错误。
+默认要求游戏主窗口在前台，后台或最小化时拒绝发送。仅当 `activateWindow=true` 时尝试在操作开始前激活一次游戏；连续点击期间失去前台会中止，不会再次夺取焦点。激活使用 `BringWindowToTop`、`SetForegroundWindow`、`SetFocus` 及临时 `AttachThreadInput`；无法取得前台就不发送。
 
-`dryRun` 只验证客户端、区域、窗口和原生键盘，并读取当前键态，不会切换前台或发送输入。变更工具门关闭时，连 `dryRun` 也会在访问客户端之前被拒绝。
+`dryRun=true` 只读取和验证，不激活窗口、不发送输入；即使显式指定 `activateWindow=true` 也一样。变更门关闭时连 dry run 也拒绝。
 
-## 已验证行为
+窗口消息不修改 Windows 全局键态；依赖全局键态、Raw Input 或系统快捷键的处理程序不保证等同于物理按键。不要为兼容这些行为恢复全局注入。
 
-2026-10-24 在实时中文客户端上：
+## 验证
 
-- `press_game_key` 的只读探测确认 `LEFT` 原始键态为 0，原生键盘设备可用，键态表长度 159。
-- 首次未取得前台时，工具拒绝发送，角色位置和朝向保持不变。
-- `RETURN` 成功切换原生聊天输入；`ChatLog` 可见节点数为 `40 → 41`，再次按 `RETURN` 后变为 `39`。这证明输入进入游戏原生 UI，而不是只留在 Dear ImGui。
-- 单次 `LEFT` 点击的 down/up 在键态上正确闭合，但未使角色朝向变化，说明短点击适合 UI 选择，连续移动应使用 `hold_game_key`。
-- `hold_game_key` 将 `W` 保持 250ms 后，角色位置从 `z=4.91` 变为 `z=3.93`，朝向不变；返回的 `rawBefore=0`、`rawAfter=0`、`foregroundAtRelease=true`。
+`dotnet run --project tests/GameKeyInputTest -c Release` 使用两个真实 Windows 窗口，检查前台切换后的松键隔离、取消和释放、迟到回调、失效/外进程/广播 HWND 拒绝、扩展键参数与全局键态不变。
 
-离线验证检查工具注册与 mutation 分类、未知键拒绝、关闭变更门拒绝、Windows x64 `INPUT` 结构大小，以及项目 schema 与协议测试。
+`dotnet run --project tests/GameKeyInputTest -c Release -- --live` 是显式启用的游戏集成测试：检查完整工具目录与运行 MVID，创建临时前台接收窗口，验证后台拒绝和 dry run 不泄漏按键、游戏移动和归零、最小化导致的长按中断、连续点击中断以及字符不再移动。测试会移动角色、临时最小化/恢复游戏，测试窗口自动关闭。
+
+2026-10-30 现场验证：250ms 定向长按使角色位置改变；1800ms 长按在游戏失去前台后约 460ms 结束，`interrupted=true`、`rawAfter=0`。前台测试程序收到的 down/up/character 消息均为 0，角色随后保持停止。连续点击在切换后拒绝继续，前台接收计数仍为 0。单次 `B` 在当前用户键位下打开并再次关闭 `gatheringnote`，由 `get_addon_state` 确认实际切换。
+
+消息格式和定向投递语义参见 Microsoft 的 [PostMessageW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew)、[WM_KEYDOWN](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-keydown)、[WM_KEYUP](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-keyup)。

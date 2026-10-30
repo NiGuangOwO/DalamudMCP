@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Conditions;
 using DalamudMCP.Mcp;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using Newtonsoft.Json.Linq;
@@ -12,9 +13,8 @@ using Newtonsoft.Json.Linq;
 namespace DalamudMCP.Tools;
 
 /// <summary>
-/// Sends a bounded tap through FFXIV's own keyboard device instead of Dear ImGui.
-/// KeyboardDevice.SendKey constructs and submits a key-down/key-up SendInput pair in one
-/// native call, so every successfully dispatched tap is self-closing.
+/// Sends bounded keyboard messages only to this game's verified window.
+/// No path, including release/cleanup, uses system-wide input injection.
 /// </summary>
 internal static class GameKeyInputTools
 {
@@ -31,8 +31,8 @@ internal static class GameKeyInputTools
         registry.AddAsync(
             "press_game_key",
             "Press a native game key",
-            "Sends a bounded keyboard tap through FFXIV's native KeyboardDevice, not Dear ImGui. " +
-            "Each repeat is one complete key-down/key-up pair; no key is left held. The game window must be foreground " +
+            "Posts a bounded keyboard tap only to the verified game window, never to the system input stream. " +
+            "Each repeat has a key-down/key-up cleanup path. Focus loss stops further input. The game window must be foreground " +
             "unless activateWindow is requested. Refuses while logged out/loading, in the wrong expected territory, " +
             "when the native keyboard is unavailable, or when the key was already down. Supports exact SeVirtualKey names " +
             "such as UP, DOWN, LEFT, RIGHT, RETURN, SPACE, ESCAPE, W, A, S, D, KEY_1, NUMPAD1 and F1. " +
@@ -50,7 +50,7 @@ internal static class GameKeyInputTools
         registry.AddAsync(
             "hold_game_key",
             "Hold a native game key",
-            "Sends a bounded Win32 key-down, keeps it held for 50-2000ms, then always sends key-up in a finally path. " +
+            "Posts key-down only to the verified game window, holds for 50-2000ms, then posts key-up to that same window. Focus loss ends the hold early. Cleanup never sends system-wide input. " +
             "Use this for continuous movement or held UI controls that a one-shot KeyState tap cannot exercise. " +
             "The verified game window must be foreground unless activateWindow is requested. Refuses logged-out/loading clients, " +
             "wrong expected territory, unavailable native keyboard state, and keys already down. Verify position/UI state afterwards.",
@@ -75,6 +75,7 @@ internal static class GameKeyInputTools
 
         var hwnd = GameWindowTools.WindowHandle(svc);
         GameWindowTools.Validate(hwnd);
+        using var sink = new GameWindowKeySink(hwnd, (uint)Environment.ProcessId);
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await Gate.WaitAsync(timeout.Token).ConfigureAwait(false);
@@ -85,40 +86,37 @@ internal static class GameKeyInputTools
                 () => Probe(svc, key, expectedTerritoryId),
                 timeout.Token).ConfigureAwait(false);
 
-            var foregroundPid = ForegroundProcessId();
-            var gameInForeground = foregroundPid == Environment.ProcessId;
+            var gameInForeground = sink.IsForeground;
             if (dryRun)
                 return Result(key, probe.RawValue, probe, dryRun: true, activated: false, gameInForeground,
                     repeats, tapsSent, intervalFrames, 0);
 
-            if (probe.RawValue != 0)
-                throw new ToolException($"key {key} is already down (raw state {probe.RawValue}); refusing to synthesize over physical input");
+            EnsureKeyUp(key, probe.RawValue);
 
             var started = Stopwatch.StartNew();
-            var activated = false;
+            var foreground = await EnsureForegroundAsync(svc, activateWindow).ConfigureAwait(false);
+            var activated = foreground.Changed;
             for (var index = 0; index < repeats; index++)
             {
-                var foreground = await EnsureForegroundAsync(svc, activateWindow).ConfigureAwait(false);
-                activated |= foreground.Changed;
-
-                await svc.Framework.Run(() => SendOnce(key), timeout.Token).ConfigureAwait(false);
-                tapsSent++;
-
-                // SendKey emits both transitions in one native SendInput call. One tick gives the
-                // game time to consume them, after which the raw key state should be clear again.
-                await svc.Framework.DelayTicks(1, timeout.Token).ConfigureAwait(false);
-                var after = await svc.Framework.Run(() => ReadKeyState(svc, key, expectedTerritoryId), timeout.Token)
-                    .ConfigureAwait(false);
-                if (after.RawValue != 0)
+                var downSent = false;
+                try
                 {
-                    await svc.Framework.Run(() => ClearKeyState(key), timeout.Token).ConfigureAwait(false);
+                    await svc.Framework.Run(() =>
+                    {
+                        EnsureSameWindow(svc, hwnd);
+                        var current = Probe(svc, key, expectedTerritoryId);
+                        EnsureKeyUp(key, current.RawValue);
+                        sink.Send((int)key, keyUp: false);
+                        downSent = true;
+                    }, timeout.Token).ConfigureAwait(false);
                     await svc.Framework.DelayTicks(1, timeout.Token).ConfigureAwait(false);
-                    var cleared = await svc.Framework.Run(
-                        () => ReadKeyState(svc, key, expectedTerritoryId),
-                        timeout.Token).ConfigureAwait(false);
-                    if (cleared.RawValue != 0)
-                        throw new ToolException($"native key state for {key} did not clear after a one-shot tap (raw state {cleared.RawValue})");
                 }
+                finally
+                {
+                    if (downSent) sink.Send((int)key, keyUp: true);
+                }
+                tapsSent++;
+                await svc.Framework.DelayTicks(1, timeout.Token).ConfigureAwait(false);
 
                 if (index + 1 < repeats)
                     await svc.Framework.DelayTicks(intervalFrames, timeout.Token).ConfigureAwait(false);
@@ -130,13 +128,13 @@ internal static class GameKeyInputTools
             if (final.RawValue != 0)
                 throw new ToolException($"key {key} remained down after the final tap (raw state {final.RawValue})");
 
-            return Result(key, probe.RawValue, final, dryRun: false, activated, gameInForeground: true,
+            return Result(key, probe.RawValue, final, dryRun: false, activated, gameInForeground: sink.IsForeground,
                 repeats, tapsSent, intervalFrames, started.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {
             throw new ToolException(
-                "native key input timed out waiting for the game framework; each dispatched tap is a complete key-down/key-up pair");
+                "native key input timed out waiting for the game framework; game-window key-up cleanup was attempted for each dispatched key-down");
         }
         catch (ToolException)
         {
@@ -148,7 +146,8 @@ internal static class GameKeyInputTools
         }
         finally
         {
-            Gate.Release();
+            try { sink.Dispose(); }
+            finally { Gate.Release(); }
         }
     }
 
@@ -162,6 +161,7 @@ internal static class GameKeyInputTools
 
         var hwnd = GameWindowTools.WindowHandle(svc);
         GameWindowTools.Validate(hwnd);
+        using var sink = new GameWindowKeySink(hwnd, (uint)Environment.ProcessId);
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(durationMs + 8000));
         await Gate.WaitAsync(timeout.Token).ConfigureAwait(false);
@@ -172,37 +172,48 @@ internal static class GameKeyInputTools
             var probe = await svc.Framework.Run(
                 () => Probe(svc, key, expectedTerritoryId),
                 timeout.Token).ConfigureAwait(false);
-            var gameInForeground = BelongsToGame(GetForegroundWindow());
+            var gameInForeground = sink.IsForeground;
             if (dryRun)
                 return HoldResult(key, durationMs, probe.RawValue, probe.RawValue, dryRun: true, activated: false,
                     gameInForeground, keyDown: false, keyUp: false, foregroundAtRelease: gameInForeground, elapsedMs: 0);
-            if (probe.RawValue != 0)
-                throw new ToolException($"key {key} is already down (raw state {probe.RawValue}); refusing to synthesize over physical input");
+            EnsureKeyUp(key, probe.RawValue);
 
             var focused = await EnsureForegroundAsync(svc, activateWindow).ConfigureAwait(false);
             var started = Stopwatch.StartNew();
-            SendKeyboardInput(key, keyUp: false);
-            downSent = true;
-            await Task.Delay(durationMs, timeout.Token).ConfigureAwait(false);
-            var foregroundAtRelease = BelongsToGame(GetForegroundWindow());
-            SendKeyboardInput(key, keyUp: true);
-            upSent = true;
-
+            await svc.Framework.Run(() =>
+            {
+                EnsureSameWindow(svc, hwnd);
+                var current = Probe(svc, key, expectedTerritoryId);
+                EnsureKeyUp(key, current.RawValue);
+                sink.Send((int)key, keyUp: false);
+                downSent = true;
+            }, timeout.Token).ConfigureAwait(false);
+            bool foregroundAtRelease;
+            try
+            {
+                while (started.ElapsedMilliseconds < durationMs && sink.IsForeground)
+                {
+                    await Task.Delay((int)Math.Clamp(durationMs - started.ElapsedMilliseconds, 1, 25), timeout.Token)
+                        .ConfigureAwait(false);
+                    await svc.Framework.Run(() =>
+                    {
+                        EnsureSameWindow(svc, hwnd);
+                        EnsureGameContext(svc, expectedTerritoryId);
+                    }, timeout.Token).ConfigureAwait(false);
+                }
+                foregroundAtRelease = sink.IsForeground;
+            }
+            finally
+            {
+                sink.Send((int)key, keyUp: true);
+                upSent = true;
+            }
             await svc.Framework.DelayTicks(2, timeout.Token).ConfigureAwait(false);
             var after = await svc.Framework.Run(
                 () => ReadKeyState(svc, key, expectedTerritoryId),
                 timeout.Token).ConfigureAwait(false);
             if (after.RawValue != 0)
-            {
-                await svc.Framework.Run(() => ClearKeyState(key), timeout.Token).ConfigureAwait(false);
-                await svc.Framework.DelayTicks(1, timeout.Token).ConfigureAwait(false);
-                var cleared = await svc.Framework.Run(
-                    () => ReadKeyState(svc, key, expectedTerritoryId),
-                    timeout.Token).ConfigureAwait(false);
-                if (cleared.RawValue != 0)
-                    throw new ToolException($"native key state for {key} did not clear after hold (raw state {cleared.RawValue})");
-                after = cleared;
-            }
+                throw new ToolException($"key {key} is still down after release (raw state {after.RawValue}); physical input was not cleared");
 
             return HoldResult(key, durationMs, probe.RawValue, after.RawValue, dryRun: false, focused.Changed,
                 gameInForeground: true, keyDown: true, keyUp: true, foregroundAtRelease,
@@ -216,10 +227,11 @@ internal static class GameKeyInputTools
         {
             if (downSent && !upSent)
             {
-                try { SendKeyboardInput(key, keyUp: true); }
+                try { sink.Send((int)key, keyUp: true); }
                 catch { /* Preserve the primary failure; a process/window failure may prevent cleanup. */ }
             }
-            Gate.Release();
+            try { sink.Dispose(); }
+            finally { Gate.Release(); }
         }
     }
 
@@ -244,26 +256,18 @@ internal static class GameKeyInputTools
         return key;
     }
 
-    private static void SendKeyboardInput(SeVirtualKey key, bool keyUp)
+    private static void EnsureSameWindow(GameServices svc, IntPtr window)
     {
-        const uint inputKeyboard = 1;
-        const uint keyEventExtendedKey = 0x0001;
-        const uint keyEventKeyUp = 0x0002;
-
-        var input = new NativeInput { Type = inputKeyboard };
-        input.Data.Keyboard.VirtualKey = (ushort)key;
-        input.Data.Keyboard.Flags = (IsExtendedKey(key) ? keyEventExtendedKey : 0) | (keyUp ? keyEventKeyUp : 0);
-        var sent = SendInput(1, new[] { input }, Marshal.SizeOf<NativeInput>());
-        if (sent != 1)
-            throw new ToolException($"Win32 SendInput accepted {sent} of 1 keyboard event (error {Marshal.GetLastWin32Error()})");
+        if (GameWindowTools.WindowHandle(svc) != window)
+            throw new ToolException("the game window was replaced; refusing further input");
+        GameWindowTools.Validate(window);
     }
 
-    private static bool IsExtendedKey(SeVirtualKey key) => key is
-        SeVirtualKey.PRIOR or SeVirtualKey.NEXT or SeVirtualKey.END or SeVirtualKey.HOME or
-        SeVirtualKey.LEFT or SeVirtualKey.UP or SeVirtualKey.RIGHT or SeVirtualKey.DOWN or
-        SeVirtualKey.INSERT or SeVirtualKey.DELETE or SeVirtualKey.DIVIDE or SeVirtualKey.NUMLOCK or
-        SeVirtualKey.LWIN or SeVirtualKey.RWIN or
-        SeVirtualKey.APPS or SeVirtualKey.PRINT or SeVirtualKey.SNAPSHOT;
+    private static void EnsureKeyUp(SeVirtualKey key, int rawValue)
+    {
+        if (rawValue != 0 || (GetAsyncKeyState((int)key) & 0x8000) != 0)
+            throw new ToolException($"key {key} is already down; refusing to synthesize over physical input");
+    }
 
     private static int OptionalInt(JObject args, string name, int fallback, int min, int max)
     {
@@ -314,27 +318,17 @@ internal static class GameKeyInputTools
 
     private static void EnsureGameContext(GameServices svc, int? expectedTerritoryId)
     {
+        if (!svc.Config.AllowMutatingTools)
+            throw new ToolException("mutating tools were disabled; refusing further key-down input");
         if (svc.Framework.IsFrameworkUnloading)
             throw new ToolException("the game framework is unloading");
         if (!svc.ClientState.IsLoggedIn || svc.ObjectTable.LocalPlayer is null)
             throw new ToolException("not logged in or the local player is not loaded");
+        if (svc.Condition[ConditionFlag.BetweenAreas] || svc.Condition[ConditionFlag.BetweenAreas51])
+            throw new ToolException("the client is loading between areas");
         if (expectedTerritoryId is { } expected && svc.ClientState.TerritoryType != expected)
             throw new ToolException(
                 $"territory guard failed: expected {expected}, current {svc.ClientState.TerritoryType}");
-    }
-
-    private static unsafe void SendOnce(SeVirtualKey key)
-    {
-        var keyboard = ResolveKeyboard(key);
-        if (keyboard.RawValue != 0)
-            throw new ToolException($"key {key} is already down (raw state {keyboard.RawValue}); refusing to send");
-        keyboard.Device->SendKey(key);
-    }
-
-    private static unsafe void ClearKeyState(SeVirtualKey key)
-    {
-        var keyboard = ResolveKeyboard(key);
-        keyboard.Data->KeyState[keyboard.KeyIndex] = KeyStateFlags.None;
     }
 
     private static unsafe NativeKeyboard ResolveKeyboard(SeVirtualKey key)
@@ -370,7 +364,7 @@ internal static class GameKeyInputTools
             ShowWindowAsync(hwnd, SwRestore);
         }
 
-        if (BelongsToGame(GetForegroundWindow())) return (false, true);
+        if (GetForegroundWindow() == hwnd) return (false, true);
         if (!activate)
             throw new ToolException("the game window is not foreground; pass activateWindow=true for an authorized game-input call");
 
@@ -379,16 +373,11 @@ internal static class GameKeyInputTools
         while (Environment.TickCount64 <= deadline)
         {
             await Task.Delay(50).ConfigureAwait(false);
-            if (BelongsToGame(GetForegroundWindow())) return (true, true);
+            if (GetForegroundWindow() == hwnd) return (true, true);
         }
 
         throw new ToolException("the game window could not be brought to the foreground; no key input was sent");
     }
-
-    private static bool BelongsToGame(IntPtr hwnd) =>
-        hwnd != IntPtr.Zero &&
-        GetWindowThreadProcessId(hwnd, out var pid) != 0 &&
-        pid == (uint)Environment.ProcessId;
 
     private static void ForceForeground(IntPtr hwnd)
     {
@@ -408,12 +397,6 @@ internal static class GameKeyInputTools
             if (attached)
                 AttachThreadInput(currentThread, foregroundThread, attach: false);
         }
-    }
-
-    private static int ForegroundProcessId()
-    {
-        var hwnd = GetForegroundWindow();
-        return hwnd != IntPtr.Zero && GetWindowThreadProcessId(hwnd, out var pid) != 0 ? (int)pid : 0;
     }
 
     private static JObject Result(
@@ -441,8 +424,8 @@ internal static class GameKeyInputTools
             ["tapsSent"] = tapsSent,
             ["intervalFrames"] = intervalFrames,
             ["elapsedMs"] = elapsedMs,
-            ["inputPath"] = "FFXIVClientStructs.InputDeviceManager.KeyboardDevice.SendKey",
-            ["delivery"] = "one complete SendInput key-down/key-up pair per tap",
+            ["inputPath"] = "Win32.PostMessageW game-window-only",
+            ["delivery"] = "game-window WM_KEYDOWN/WM_KEYUP with finally cleanup",
         };
 
     private static JObject HoldResult(
@@ -469,8 +452,9 @@ internal static class GameKeyInputTools
             ["keyDownDispatched"] = keyDown,
             ["keyUpDispatched"] = keyUp,
             ["foregroundAtRelease"] = foregroundAtRelease,
+            ["interrupted"] = !dryRun && !foregroundAtRelease,
             ["elapsedMs"] = elapsedMs,
-            ["inputPath"] = "Win32.SendInput key-down/hold/key-up",
+            ["inputPath"] = "Win32.PostMessageW game-window-only key-down/hold/key-up",
         };
 
     private readonly record struct KeyProbe(bool KeyboardConnected, int RawValue, int KeyStateLength);
@@ -523,30 +507,6 @@ internal static class GameKeyInputTools
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern uint SendInput(uint inputCount, NativeInput[] inputs, int inputSize);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeInput
-    {
-        public uint Type;
-        public NativeInputUnion Data;
-        public NativeKeyboardInput Keyboard => Data.Keyboard;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 32)]
-    private struct NativeInputUnion
-    {
-        [FieldOffset(0)] public NativeKeyboardInput Keyboard;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeKeyboardInput
-    {
-        public ushort VirtualKey;
-        public ushort ScanCode;
-        public uint Flags;
-        public uint Time;
-        public UIntPtr ExtraInfo;
-    }
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
 }

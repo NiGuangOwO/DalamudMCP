@@ -119,10 +119,13 @@ internal static class Program
 
         var gameKeyInputType = pluginAssembly.GetType("DalamudMCP.Tools.GameKeyInputTools", throwOnError: false);
         Check("native game key input implementation is present", gameKeyInputType is not null);
-        var nativeInputType = gameKeyInputType?.GetNestedType("NativeInput", BindingFlags.NonPublic);
-        Check("Win32 keyboard INPUT uses the Windows x64 40-byte layout",
-            nativeInputType is not null && Marshal.SizeOf(nativeInputType) == 40,
-            nativeInputType is null ? "NativeInput missing" : $"size {Marshal.SizeOf(nativeInputType)}");
+        var sinkType = pluginAssembly.GetType("DalamudMCP.Tools.GameWindowKeySink", throwOnError: false);
+        Check("game key delivery is scoped to a window", sinkType is not null);
+        var forbiddenImports = new[] { "SendInput", "keybd_event" };
+        var inputImports = new[] { gameKeyInputType, sinkType }.Where(t => t is not null)
+            .SelectMany(t => t!.GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
+            .Select(m => m.GetCustomAttribute<DllImportAttribute>()).Where(a => a is not null);
+        Check("game key paths import no global keyboard injection", !inputImports.Any(a => forbiddenImports.Contains(a!.EntryPoint)));
 
         Check("Plugin type is public", pluginType.IsPublic, pluginType.Attributes.ToString());
         Check("Plugin type is sealed and not abstract", pluginType.IsSealed && !pluginType.IsAbstract);
