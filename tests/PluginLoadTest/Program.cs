@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 139;
+    private const int ExpectedTools = 148;
 
     private static int checks;
     private static int failures;
@@ -417,6 +417,10 @@ internal static class Program
         Check("registry exposes read_memory", toolNames.Contains("read_memory"));
         Check("registry exposes query_events", toolNames.Contains("query_events"));
         Check("registry exposes call_plugin_ipc", toolNames.Contains("call_plugin_ipc"));
+        foreach (var name in new[] { "add_plugin_repository", "remove_plugin_repository", "set_plugin_repository_enabled", "refresh_plugin_repositories", "install_plugin", "uninstall_plugin" })
+            Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
+        foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation" })
+            Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         var holdingsTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "search_item_holdings"));
         Check("item holdings query is read-only", Equals(Prop(holdingsTool, "Mutating"), false));
         var textTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "set_addon_text_input"));

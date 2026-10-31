@@ -9,7 +9,7 @@ DalamudMCP 是适用于 FINAL FANTASY XIV 的 [Dalamud](https://github.com/goatc
 
 插件运行于游戏进程内部，通过 Dalamud 服务和 [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs)
 提供角色、游戏对象、小队、物品栏、游戏数据及界面状态访问，并支持经过校验的原始内存读取、事件采集和插件间通信。
-当前工具目录包含 **139 个工具，其中 81 个只读、58 个可变更**。可变更工具需在配置中显式启用。
+当前工具目录包含 **148 个工具，其中 84 个只读、64 个可变更**。可变更工具需在配置中显式启用。
 
 默认 MCP 地址为 `http://127.0.0.1:18777/mcp`。支持 HTTP 的 MCP 客户端可直接连接；仅支持 stdio 的客户端可使用仓库附带的桥接程序。
 
@@ -236,7 +236,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## 工具参考
 
-当前目录包含 139 个工具：81 个只读、58 个可变更。下表按功能列出主要工具及参数摘要；
+当前目录包含 148 个工具：84 个只读、64 个可变更。下表按功能列出主要工具及参数摘要；
 完整目录和参数约束以服务器返回的 `tools/list` schema 为准，可变更工具在 `AllowMutatingTools` 启用后开放。
 
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。
@@ -493,9 +493,26 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | --- | --- | --- |
 | `plugin_list` | 列出 Dalamud 报告的插件，含加载状态与 manifest 摘要，按游标分页。 | `query`、`cursor`、`limit`（1-100，默认 50） |
 | `plugin_describe` | 完整报告一个插件的 manifest：作者、描述、版本、仓库、标签与加载状态。 | `pluginName`（必需） |
+
 | `list_plugin_commands` | 从运行中的命令注册表读取帮助，包括不显示在帮助列表中的命令；不会调用处理器。处理器程序集仅作为归属线索。 | `query`、`cursor`、`limit`（1-100，默认 30） |
 | `open_plugin_ui` | 请求精确匹配的已加载插件打开其公开主界面或设置界面；须另行读取界面验证结果。 | `pluginName`（必需）、`ui`（`main`/`config`，默认 `main`） |
 | `get_tribal_quest_state` | 使用已安装 SDK 和本地化游戏数据表读取实际部族受理限额、有界友好度记录和日常任务账本。 | 无 |
+
+### 插件仓库与安装
+
+详见[安装器行为与验证](docs/plugin-installer.md)。变更返回操作 ID；应使用 `get_plugin_operation` 查询到终态后再发起下一项变更。
+
+| 工具 | 说明 | 参数 |
+| --- | --- | --- |
+| `list_plugin_repositories` | 查询仓库配置、运行时状态及主源／预设源保护。 | `cursor`、`limit` |
+| `list_available_plugins` | 搜索 Dalamud 可安装目录，确认精确来源和版本。 | `query`、`repositoryUrl`、`cursor`、`limit` |
+| `add_plugin_repository` | 添加、保存并刷新一个第三方仓库。 | `url`（必需）、`enabled`（默认 true） |
+| `remove_plugin_repository` | 删除一个仓库配置，保留其已安装插件。 | `url`（必需） |
+| `set_plugin_repository_enabled` | 启用／禁用一个仓库并刷新。 | `url`、`enabled`（均必需） |
+| `refresh_plugin_repositories` | 刷新仓库，不安装或更新插件。 | 无 |
+| `install_plugin` | 从精确来源安装指定版本，回读安装和加载状态。 | `internalName`、`repositoryUrl`、`expectedVersion`（均必需）、`testing` |
+| `uninstall_plugin` | 卸载实例、标记文件清理并移除安装条目，保留配置。 | `internalName`、`expectedVersion`（均必需） |
+| `get_plugin_operation` | 查询进行中／终态操作和结果。 | `operationId`（可选，默认最新） |
 
 ## 安全模型
 

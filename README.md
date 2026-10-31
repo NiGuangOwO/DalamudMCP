@@ -11,7 +11,7 @@ plugin development, runtime inspection and in-game validation.
 The plugin runs within the game process and exposes character, object, party, inventory, game-data and UI state
 through Dalamud services and [FFXIVClientStructs](https://github.com/aers/FFXIVClientStructs).
 It also provides validated raw-memory reads, event collection and inter-plugin communication.
-The current catalog contains **139 tools: 81 read-only and 58 mutating**. Mutating tools require explicit enablement.
+The current catalog contains **148 tools: 84 read-only and 64 mutating**. Mutating tools require explicit enablement.
 
 The default endpoint is `http://127.0.0.1:18777/mcp`. HTTP-capable MCP clients connect directly;
 stdio-only clients use the included bridge.
@@ -239,7 +239,7 @@ Invoke-RestMethod http://127.0.0.1:18777/tools | ConvertTo-Json -Depth 4
 
 ## Tool reference
 
-The catalog contains 139 tools: 81 read-only and 58 mutating. The tables summarize the principal tools and parameters.
+The catalog contains 148 tools: 84 read-only and 64 mutating. The tables summarize the principal tools and parameters.
 The server's `tools/list` schemas define the complete catalog and argument constraints.
 Mutating tools are available only when `AllowMutatingTools` is enabled.
 
@@ -525,9 +525,26 @@ Each entry includes the channel (`XivChatType`), sender, message, relation types
 | --- | --- | --- |
 | `plugin_list` | Lists the plugins Dalamud reports, with load state and a manifest summary, paged by cursor. | `query`, `cursor`, `limit` (1-100, default 50) |
 | `plugin_describe` | Reports one plugin's manifest in full: author, description, version, repository, tags and load state. | `pluginName` (required) |
+
 | `list_plugin_commands` | Reads registered command help from the running client, including hidden-help commands; never invokes handlers. Handler assembly is a hint, not a complete ownership map. | `query`, `cursor`, `limit` (1-100, default 30) |
 | `open_plugin_ui` | Requests one exact loaded plugin's public main/config UI callback. Check resulting UI separately. | `pluginName` (required), `ui` (`main`/`config`, default `main`) |
 | `get_tribal_quest_state` | Reads actual remaining tribal allowance, guarded reputation records and the daily quest ledger using the installed SDK and localized game sheets. | none |
+
+### Plugin repositories and installation
+
+See [installer behavior and verification](docs/plugin-installer.md). Mutations return an operation ID; poll `get_plugin_operation` until terminal before issuing another change.
+
+| Tool | Description | Parameters |
+| --- | --- | --- |
+| `list_plugin_repositories` | Read configured/effective repository state and main/preset protection. | `cursor`, `limit` |
+| `list_available_plugins` | Search Dalamud's available catalog and discover exact source/version. | `query`, `repositoryUrl`, `cursor`, `limit` |
+| `add_plugin_repository` | Add, save and refresh one third-party repository. | `url` (required), `enabled` (default true) |
+| `remove_plugin_repository` | Remove one configured repository; keep its installed plugins. | `url` (required) |
+| `set_plugin_repository_enabled` | Enable/disable one configured repository and refresh. | `url`, `enabled` (both required) |
+| `refresh_plugin_repositories` | Refresh repositories without installing/updating plugins. | none |
+| `install_plugin` | Install one exact source/version, then report installed/load state. | `internalName`, `repositoryUrl`, `expectedVersion` (required), `testing` |
+| `uninstall_plugin` | Unload, schedule file cleanup and remove installed entry; preserve configuration. | `internalName`, `expectedVersion` (required) |
+| `get_plugin_operation` | Read running/terminal operation status and verified results. | `operationId` (optional, newest by default) |
 
 ## Safety model
 

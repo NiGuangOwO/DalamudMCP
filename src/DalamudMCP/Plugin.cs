@@ -48,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AddonProbeTools addonProbe;
     private readonly CombatRecorder combatRecorder;
     private readonly ItemHoldingsTools itemHoldings;
+    private readonly PluginInstallerTools pluginInstaller;
     private readonly WindowSystem windowSystem = new("DalamudMCP");
     private readonly ConfigWindow configWindow;
     private readonly EventHub eventHub = new();
@@ -159,6 +160,7 @@ public sealed class Plugin : IDalamudPlugin
         ChatTools.Register(registry, services);
         QuestTools.Register(registry, services);
         PluginManagementTools.Register(registry, services);
+        pluginInstaller = new PluginInstallerTools(registry, services);
         PluginDiscoveryTools.Register(registry, services);
         TribalQuestTools.Register(registry, services);
         DevPluginTools.Register(registry, services);
@@ -375,6 +377,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        pluginInstaller.Dispose();
         dalamudLogHub.Dispose();
         itemHoldings.Dispose();
         combatRecorder.Dispose();

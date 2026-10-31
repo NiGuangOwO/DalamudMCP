@@ -13,6 +13,8 @@ Call `get_client_state`, then `get_local_player` before live work. If disconnect
 
 Discover the relevant tools and read their actual schemas. Namespace prefixes depend on the agent client. When using raw MCP, follow every `nextCursor` from `tools/list`; a first page is not the full catalog. Mutating tools are hidden/refused when `AllowMutatingTools` is off, so absence alone does not prove a missing capability. Do not bypass that gate.
 
+For repository and installed-plugin changes, discover exact targets with `list_plugin_repositories`, `list_available_plugins` and `plugin_list` first. Use `add_plugin_repository`, `remove_plugin_repository`, `set_plugin_repository_enabled`, `refresh_plugin_repositories`, `install_plugin` and `uninstall_plugin` within the user's scope. Installation requires the observed source URL and version. Poll `get_plugin_operation` to a terminal state before repeating a change; an in-flight Dalamud task cannot be cancelled by disconnecting or closing the mutation gate. Check `refreshSucceeded`, actual installed/load state and deferred deletion flags. See [plugin installer tools](../../../docs/plugin-installer.md).
+
 Read [tool-selection.md](references/tool-selection.md) when choosing observation, UI, event or plugin-loading tools. Prefer typed state and node observations to raw memory when they answer the question. For native UI text, use `read_addon_text`; use `list_addon_elements` or `get_addon_strings` for narrower follow-up reads. Screenshot capture is not provided. Use structured state, geometry and image-node metadata; report visual information that these observations cannot establish. Inspect the current addon and component scope before choosing a node or event.
 
 ## Develop and verify

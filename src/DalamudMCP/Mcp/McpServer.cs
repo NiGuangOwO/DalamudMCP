@@ -642,6 +642,10 @@ public sealed class McpServer : IDisposable
                         "check hasMore/historyLost, and remember coverage begins at plugin load and respects Dalamud's logging level. " +
                         "Discover target-plugin features using list_plugin_commands and open_plugin_ui, then runtime help/UI; " +
                         "do not read target-plugin local source to find test entry points. Read get_tribal_quest_state for tribal quota/reputation. " +
+                        "For plugin installation discover exact targets with list_plugin_repositories/list_available_plugins; " +
+                        "install_plugin requires repositoryUrl and expectedVersion. Repository/install/uninstall mutations return " +
+                        "operationId: poll get_plugin_operation to terminal before repeating. Refresh failures may leave saved " +
+                        "repository settings; deletionScheduled is deferred cleanup, not filesDeleted. Plugin configuration is preserved. " +
                         "Use search_item_holdings for bags, equipment, armoury, saddlebags and visited retainers; read coverage/source/complete " +
                         "because unloaded or unvisited storage is unknown and session snapshots may be stale. " +
                         "Mutating tools are hidden/refused when AllowMutatingTools is off; follow the user's scope and " +
