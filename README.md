@@ -478,6 +478,8 @@ Combat recording runs automatically in the background while mutating tools are a
 Eight `network_capture_*` tools provide experimental, bounded zone IPC capture, numeric opcode/direction filtering, hex/ASCII paging, caller-declared field decoding and packet comparison. Capture defaults to 10 seconds and requires login plus mutation access. The native bridge currently accepts only the inspected CN game executable and SDK build; other builds refuse capture. Bytes stay in memory until replaced/unloaded. Send observations are attempts, not proof of delivery; unknown field semantics are unverified. See [network packet diagnostics](docs/network-packets.md) for limits, layouts and validation coverage.
 
 `network_packet_schema` and `network_capture_parse` add bundled elpis schema discovery and automatic parsing by captured opcode name/alias/direction. See [packet schemas](docs/packet-schemas.md) for provenance, limits and unverified-version behavior.
+The read-only `network_packet_schema_check_updates` checks published elpis versions and reference-directory/catalog changes online on demand; it never applies definitions automatically.
+
 
 
 `network_opcode_lookup` and `network_opcode_refresh` use the supplied [FFXIVOpcodes source](https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json). Names are scoped by region and direction, with version/hash provenance; captures pin one dataset. A bundled snapshot and last-good cache work offline. Refresh is explicit, bounded and off the game thread. Name labels do not certify client-version compatibility or field semantics. The dataset's [MIT notice](src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE) is embedded in the plugin.

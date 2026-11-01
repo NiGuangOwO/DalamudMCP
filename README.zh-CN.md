@@ -453,6 +453,8 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 八个 `network_capture_*` 工具提供实验性的区域 IPC 捕获、按数字 opcode/方向筛选、十六进制和 ASCII 分页、声明式字段解析与包差异比较。捕获默认 10 秒，需要登录并开启变更权限。原生桥目前仅接受已检查的国服游戏二进制和 SDK 构建，其他版本会拒绝启用。数据仅保留在内存，开始新场或卸载后失效；发送观测不代表服务器收到了消息，未知字段含义仍需验证。详见[网络包诊断](docs/network-packets.md)的容量、包头布局与验证范围。
 
 `network_packet_schema` 和 `network_capture_parse` 提供内置 elpis 结构查询及按捕获 opcode 名称/别名/方向自动解析。来源、容量和版本未验证状态见[包体结构](docs/packet-schemas.md)。
+只读工具 `network_packet_schema_check_updates` 可按需在线检查 elpis 已发布版本、参考结构目录及名称目录的变化，不自动替换定义。
+
 
 
 `network_opcode_lookup` 和 `network_opcode_refresh` 使用指定的 [FFXIVOpcodes 数据源](https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json)，按地区、方向映射名称并提供版本、哈希来源。每场捕获固定一份映射；内置快照及最后可用缓存支持离线使用，显式刷新在游戏线程外执行并受时间、容量和变更权限限制。名称不代表客户端版本兼容或字段语义已确认。数据的 [MIT 声明](src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE)已嵌入插件。

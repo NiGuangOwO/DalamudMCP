@@ -24,6 +24,18 @@
 
 来源：[elpis](https://github.com/thewakingsands/elpis)、[名称/方向目录固定提交](https://github.com/zhyupe/ffxiv-opcode-worker/blob/06df8d0ddf52e230c73826006cfbc50e6c2891a6/packets.yaml)。生成的元数据包含 elpis 的 GPL-3.0-only 结构定义与 opcode-worker 的 AGPL-3.0 目录信息，并保留 FFXIVClientStructs 的 MIT 来源声明。许可全文嵌入程序集并随 ZIP 的 `licenses/` 分发；对应生成器与 JSON 源码随 DalamudMCP 源码公开，修改这些第三方定义须遵守其上游许可。
 
+## 在线检查更新
+
+调用只读工具 `network_packet_schema_check_updates`，参数 `{}`；传 `{"force":true}` 可跳过内存缓存。它不会自动启动，也不要求登录或开启变更权限。
+
+- `packages`：比较两个 elpis 包的已安装版本与 npm `latest`，返回最新 SHA-512；`publishedUpdateAvailable` 表示有更高版本，`packageArtifactChanged` 单独报告同版本的安装包哈希变化。`latestPackageVersionsAligned` 表示上游两个包的 latest 是否一致。
+- `referenceStructures`：下载固定 GitHub 源码 ZIP，只计算包结构目录的内容摘要，与独立审阅过的源码基线比较。`aliasCatalog` 单独比较 opcode-worker 目录文件的 SHA-256。`referenceChanged` 不等于 npm 已发布更新，也不证明现有布局不兼容。审阅基线不是断言的 npm 发布提交。
+- 每个来源有独立 `status/error`；总体 `complete/partial/failed` 表示检查覆盖程度。未知比较返回 null，不伪装成“已是最新”。结果含检查时间，成功缓存 5 分钟，部分/失败缓存 30 秒，并发检查拒绝重复发起。
+
+四个固定 HTTPS GET 在游戏线程外并行执行，总期限 10 秒；元数据每项至多 1 MiB，源码 ZIP 至多 2 MiB、归档条目 4096 个、目录文件 512 个、单文件 1 MiB、目录解压总计 8 MiB。目录文件名使用有界 ASCII 路径。归档只在内存读取，不解压落盘、不执行；不使用用户凭据、不接受自定义 URL、不跟随重定向。没有定时后台检查或自动替换定义。
+
+检查结果的 `applied=false`、`compatibilityVerified=false` 始终保留。发现更新后，仍需更新导入脚本的固定包版本／哈希，必要时更新名称目录与审阅源码摘要，重新生成、验证并发布插件。只有包的结构或解析支持改变时才影响当前捕获工具。基线摘要算法为：对目录内每个文件计算小写 SHA-256，按 ASCII 相对路径排序，将 `relativePath + NUL + fileHash + LF` 的 UTF-8 字节拼接后再计算 SHA-256；不把 ZIP 根目录名、时间戳或无关源码文件算作结构更新。
+
 ## English
 
 `network_packet_schema` inspects bundled definitions; `network_capture_parse` applies them to owned captured bytes. Both are read-only, install no hooks, perform no HTTP and execute no JavaScript. Capture still requires login and the mutation gate.
@@ -37,3 +49,12 @@ Pinned npm network/struct packages are version 0.1.0. The snapshot contains 177 
 Passive live validation on 2026-11-01 captured 80 messages (5 send, 75 receive). Parsing all 80 matched 11 schema types; 1431 available fields matched independent Python decoding. 65 messages returned `decoded_unverified`. Four ActionRequest payloads were 32 bytes versus the schema's 40, returning `short_payload` with four unavailable tail fields. Nine messages lacked opcode names and two lacked schemas. This proves selection/bounds/byte reads in the sample, not every imported layout or version semantics. No gameplay input or packet injection was used. See the linked live record above.
 
 `python tools/import-elpis.py` reproduces the static snapshot using Python + PyYAML and Node >=22. It checks pinned tarball SHA-512 and catalog SHA-256 and runs no npm lifecycle scripts. Runtime has no Node dependency or remote schema updates. Tool `catalog` includes provenance/version/hash. Generated data derives from elpis (GPL-3.0-only) and the pinned opcode-worker catalog (AGPL-3.0), with FFXIVClientStructs MIT attribution. Full notices are embedded and shipped in ZIP `licenses/`; the generator and generated JSON are published with the plugin source.
+
+
+### Online update checks
+
+Call read-only `network_packet_schema_check_updates` with `{}` or `{"force":true}` to bypass its memory cache. It is on-demand and needs neither login nor mutation access. It independently checks both fixed npm latest versions/integrities, the GitHub packet-structure directory content against a separately reviewed reference, and alias-catalog SHA-256. Published versions, same-version artifact changes and possibly unpublished reference changes are separate. The reviewed source baseline is not an asserted npm release commit.
+
+Each source has status/errors. Overall complete/partial/failed describes coverage; unknown comparisons are null, never “up to date.” Successful results cache 5 minutes, partial/failed results 30 seconds. Concurrent checks are refused. Four parallel fixed HTTPS GETs run off the game thread within a 10-second total deadline. Limits: metadata 1 MiB each; source ZIP 2 MiB, 4096 entries, 512 directory files, 1 MiB per file and 8 MiB uncompressed directory content, bounded ASCII relative paths. No custom URLs, redirects, user credentials, disk extraction, code execution, background polling or automatic replacement. The source-content digest excludes archive root names, timestamps and unrelated source files; its exact algorithm is recorded in catalog metadata.
+
+`applied=false` and `compatibilityVerified=false` remain explicit. Applying updates requires reviewing upstream changes, updating importer pins/hashes and, where appropriate, alias/source baselines, regenerating, validating and publishing the plugin.

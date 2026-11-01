@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 159;
+    private const int ExpectedTools = 160;
 
     private static int checks;
     private static int failures;
@@ -455,7 +455,7 @@ internal static class Program
         Check("combat hook configuration is classified as mutating", Equals(Prop(combatTool, "Mutating"), true));
         foreach (var name in new[] { "network_capture_start", "network_capture_stop", "network_opcode_refresh" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
-        foreach (var name in new[] { "network_capture_status", "network_capture_list", "network_capture_read", "network_capture_decode", "network_capture_compare", "network_opcode_lookup", "network_packet_schema", "network_capture_parse" })
+        foreach (var name in new[] { "network_capture_status", "network_capture_list", "network_capture_read", "network_capture_decode", "network_capture_compare", "network_opcode_lookup", "network_packet_schema", "network_capture_parse", "network_packet_schema_check_updates" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         Check("Plugin.ToolCount agrees with the registry", Equals(Prop(plugin, "ToolCount"), toolNames.Count));
 
@@ -628,6 +628,9 @@ internal static class Program
             }
             Set(config, "AllowMutatingTools", false);
             var bundledSchema = await NetworkCall("network_packet_schema", new { name = "NpcYell" });
+            var invalidUpdateCheck = await NetworkCall("network_packet_schema_check_updates", new { force = "true" });
+            Check("online schema check remains read-only with mutation gate closed and validates before HTTP",
+                invalidUpdateCheck.Error && invalidUpdateCheck.Payload?.Contains("force must be a boolean", StringComparison.Ordinal) == true);
             using (var document = JsonDocument.Parse(bundledSchema.Payload!))
                 Check("bundled schemas are readable behind a closed mutation gate", !bundledSchema.Error &&
                     document.RootElement.GetProperty("packet").GetProperty("minimumPayloadLength").GetInt32() == 32 &&

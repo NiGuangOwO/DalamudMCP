@@ -140,6 +140,7 @@ limited.Status(() => cleanupCalls++);
 Check(cleanupCalls == 2, "capacity-ended snapshot also reconciles hooks");
 checks += await OpcodeTests.Run();
 checks += SchemaTests.Run();
+checks += await SchemaUpdateTests.Run();
 Console.WriteLine($"{checks} checks passed");
 
 sealed class NativePages : IDisposable

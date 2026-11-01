@@ -12,6 +12,7 @@ internal sealed class NetworkPacketTools : IDisposable
     private readonly GameServices svc;
     private readonly PacketHookSource source;
     private readonly OpcodeCatalog opcodeCatalog;
+    private readonly PacketSchemaUpdates schemaUpdates;
     private PacketCapture? capture;
     private bool disposed;
     internal const string Coverage = "Bounded in-process zone IPC observation, not TCP/PCAP or all lobby/chat traffic. " +
@@ -24,6 +25,19 @@ internal sealed class NetworkPacketTools : IDisposable
         svc = services;
         source = new PacketHookSource(svc);
         opcodeCatalog = OpcodeCatalog.Create(svc.PluginInterface?.GetPluginConfigDirectory(), () => !disposed && svc.Config.AllowMutatingTools);
+        schemaUpdates = new PacketSchemaUpdates(PacketSchemas.Bundled.Value.Summary());
+        registry.AddAsync("network_packet_schema_check_updates", "Check upstream packet schema updates",
+            "On-demand read-only check of fixed public npm latest metadata for the two elpis packages, " +
+            "GitHub's packet-structure directory content against a separately reviewed reference, and opcode-worker alias catalog content. " +
+            "Reports newer published versions, same-version integrity changes and reference/catalog differences separately. " +
+            "Reads a GitHub source ZIP as data without extraction/execution; downloads no npm package code and applies no definitions. " +
+            "Does not alter captures or certify compatibility. No login/mutation access required. " +
+            "Four parallel GETs off the game thread; 10-second deadline, 1 MiB metadata / 2 MiB source ZIP, " +
+            "512 structure files, 8 MiB uncompressed directory; no redirects or credentials. " +
+            "Successful results cache 5 minutes; partial/failed results 30 seconds. Read per-source status/errors; null means unknown, not up to date. " +
+            "Source-directory changes may be unpublished; comparison baseline is not an asserted npm release commit.",
+            Json.Schema(("force", "boolean", "Bypass the in-memory result cache, default false; concurrent checks are refused", false)),
+            args => schemaUpdates.CheckAsync(args));
         registry.Add("network_opcode_lookup", "Look up zone opcode names",
             "Looks up the supplied FFXIVOpcodes dataset by exact region, direction and numeric opcode, or searches names. " +
             "Default CN is tied to this capture backend's validated CN build, not UI language. " +
@@ -212,5 +226,6 @@ internal sealed class NetworkPacketTools : IDisposable
         Stop("unload");
         source.Dispose();
         opcodeCatalog.Dispose();
+        schemaUpdates.Dispose();
     }
 }

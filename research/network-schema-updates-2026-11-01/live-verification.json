@@ -1,0 +1,106 @@
+{
+  "checks": [
+    "running MVID matches tested debug DLL",
+    "complete catalog has 160 tools",
+    "online check classified read-only",
+    "all four real upstream metadata sources checked successfully",
+    "upstream result applies no definitions or compatibility claims",
+    "both fixed npm packages returned",
+    "registry version and integrity validated for @ffcafe/elpis-network",
+    "registry version and integrity validated for @ffcafe/elpis-struct",
+    "real GitHub source directory compared to reviewed baseline",
+    "real alias catalog compared by content hash",
+    "second call uses unchanged cached result",
+    "online checks preserve exact active schema hash",
+    "online checks preserve capture and hook state",
+    "online checks do not refresh opcode catalog"
+  ],
+  "gameplayInputUsed": false,
+  "packetCaptureStarted": false,
+  "definitionsApplied": false,
+  "health": {
+    "status": "ok",
+    "server": "dalamud-mcp",
+    "version": "1.0.0",
+    "buildMvid": "8a258eee-b852-4297-8023-b859dc21dd43",
+    "protocolVersions": [
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05"
+    ],
+    "tools": 160,
+    "mutatingToolsEnabled": true,
+    "sessions": 0,
+    "authRequired": false
+  },
+  "loggedIn": true,
+  "catalogPages": [
+    100,
+    60
+  ],
+  "result": {
+    "checkedAt": "2026-11-01T05:50:26.3694381+00:00",
+    "completedAt": "2026-11-01T05:50:27.6075778+00:00",
+    "cached": false,
+    "status": "complete",
+    "packages": [
+      {
+        "name": "@ffcafe/elpis-network",
+        "url": "https://registry.npmjs.org/@ffcafe%2felpis-network/latest",
+        "currentVersion": "0.1.0",
+        "currentIntegrity": "sha512-h5B6cVd3/ij3CeeQ+tKCQzGdsCn+jyXfoeC+fw/3/UJf3WzuSdNi4+Xp419R5Onh4sQ/dTbnLbd9WgqBDXOAhA==",
+        "latestVersion": "0.1.0",
+        "latestIntegrity": "sha512-h5B6cVd3/ij3CeeQ+tKCQzGdsCn+jyXfoeC+fw/3/UJf3WzuSdNi4+Xp419R5Onh4sQ/dTbnLbd9WgqBDXOAhA==",
+        "comparison": "same",
+        "newerVersion": false,
+        "artifactChanged": false,
+        "status": "ok"
+      },
+      {
+        "name": "@ffcafe/elpis-struct",
+        "url": "https://registry.npmjs.org/@ffcafe%2felpis-struct/latest",
+        "currentVersion": "0.1.0",
+        "currentIntegrity": "sha512-/BUfpRsFqKbNedTo/u/7dX1jMfgH5dJtYM1d0m1evsQ8veX8xLqPWe9Bgtf9C/pDR8qy6PEXa+rHZDuoT7Zmtg==",
+        "latestVersion": "0.1.0",
+        "latestIntegrity": "sha512-/BUfpRsFqKbNedTo/u/7dX1jMfgH5dJtYM1d0m1evsQ8veX8xLqPWe9Bgtf9C/pDR8qy6PEXa+rHZDuoT7Zmtg==",
+        "comparison": "same",
+        "newerVersion": false,
+        "artifactChanged": false,
+        "status": "ok"
+      }
+    ],
+    "referenceStructures": {
+      "url": "https://codeload.github.com/thewakingsands/elpis/zip/refs/heads/main",
+      "path": "packages/network/src/definitions/ipc",
+      "baseline": {
+        "commit": "c2ffacb0335cc080ab6f014f57be85632be610d1",
+        "path": "packages/network/src/definitions/ipc",
+        "treeSha": "d091bd7af1ad9a6bc60fa2d9405c63cc00460140",
+        "directorySha256": "D631F19C179C17D447936E633153834880DEEFB8E715C53382603508D0FD8A24",
+        "digestAlgorithm": "sha256(sorted(relativePath + NUL + lowercaseFileSha256 + LF))"
+      },
+      "comparisonScope": "directory_content_against_reviewed_reference_not_npm_release_commit",
+      "latestDirectorySha256": "D631F19C179C17D447936E633153834880DEEFB8E715C53382603508D0FD8A24",
+      "changed": false,
+      "status": "ok"
+    },
+    "aliasCatalog": {
+      "url": "https://raw.githubusercontent.com/zhyupe/ffxiv-opcode-worker/master/packets.yaml",
+      "baselineSource": "https://raw.githubusercontent.com/zhyupe/ffxiv-opcode-worker/06df8d0ddf52e230c73826006cfbc50e6c2891a6/packets.yaml",
+      "baselineSha256": "5676E22E0C9ED24BE698A893615BFF60F382815497A4DA73831FF981CBAF6EAF",
+      "latestSha256": "5676E22E0C9ED24BE698A893615BFF60F382815497A4DA73831FF981CBAF6EAF",
+      "changed": false,
+      "comparisonScope": "raw_catalog_content_not_protocol_compatibility",
+      "status": "ok"
+    },
+    "publishedUpdateAvailable": false,
+    "packageArtifactChanged": false,
+    "referenceChanged": false,
+    "latestPackageVersionsAligned": true,
+    "currentSchemaSha256": "6CE530514E28B113F46EE0C3DE83951C7F5D8266AAF10822C45A350D77B76E0E",
+    "applied": false,
+    "compatibilityVerified": false,
+    "nextStep": "Review changes, update importer pins, regenerate, validate and publish a plugin update. No remote definitions were applied."
+  },
+  "completed": true
+}

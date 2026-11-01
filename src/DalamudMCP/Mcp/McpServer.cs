@@ -686,6 +686,8 @@ public sealed class McpServer : IDisposable
                         "Read session identity, layout/header size, truncation and loss counters before interpreting bytes. " +
                         "network_capture_decode uses caller-declared fields; network_packet_schema inspects bundled elpis definitions and " +
                         "network_capture_parse selects them by captured opcode name/alias/direction with automatic header offsets. " +
+                        "network_packet_schema_check_updates checks fixed upstream metadata on demand without replacing bundled schemas; " +
+                        "check per-source failures and distinguish published packages from unpublished reference-directory changes. " +
                         "Unknown/ambiguous names do not guess, and schema/length matches do not verify client compatibility or protocol semantics. " +
                         "Opcode names use region/direction-scoped FFXIVOpcodes data. Use network_opcode_lookup to query " +
                         "and network_opcode_refresh to refresh the fixed source with mutation access. Captures pin mapping provenance; " +

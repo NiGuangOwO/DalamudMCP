@@ -58,6 +58,12 @@ with tempfile.TemporaryDirectory(prefix='dalamud-elpis-') as temporary:
                              'aliases': [aliases.get('FFXIVOpcodes', name)]}
     source = {'project': 'https://github.com/thewakingsands/elpis', 'version': '0.1.0',
               'license': 'GPL-3.0-only', 'artifacts': artifacts[:2],
+              # Independently reviewed directory, not an asserted npm release commit.
+              'reviewedReferenceSource': {'commit': 'c2ffacb0335cc080ab6f014f57be85632be610d1',
+                                          'path': 'packages/network/src/definitions/ipc',
+                                          'treeSha': 'd091bd7af1ad9a6bc60fa2d9405c63cc00460140',
+                                          'directorySha256': 'D631F19C179C17D447936E633153834880DEEFB8E715C53382603508D0FD8A24',
+                                          'digestAlgorithm': 'sha256(sorted(relativePath + NUL + lowercaseFileSha256 + LF))'},
               'aliasCatalogSource': CATALOG_URL,
               'aliasCatalogLicense': 'AGPL-3.0',
               'aliasCatalogSha256': hashlib.sha256(raw).hexdigest().upper()}
