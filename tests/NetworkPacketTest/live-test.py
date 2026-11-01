@@ -69,7 +69,7 @@ try:
     report["catalogPageSizes"] = page_sizes
     names = {t["name"] for t in tools}
     expected = {"network_capture_" + suffix for suffix in ("start", "stop", "status", "list", "read", "decode", "compare")}
-    check(len(tools) == 155 and expected <= names, "all 155 tools discovered across every page, including seven network tools")
+    check(len(tools) == 157 and expected <= names and {"network_opcode_lookup", "network_opcode_refresh"} <= names, "all 157 tools discovered across every page, including capture and mapping tools")
     for tool in tools:
         if tool["name"] in expected:
             check(tool["annotations"]["readOnlyHint"] == (tool["name"] not in {"network_capture_start", "network_capture_stop"}), "classification " + tool["name"])

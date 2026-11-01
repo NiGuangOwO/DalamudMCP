@@ -11,16 +11,38 @@ internal sealed class NetworkPacketTools : IDisposable
 {
     private readonly GameServices svc;
     private readonly PacketHookSource source;
+    private readonly OpcodeCatalog opcodeCatalog;
     private PacketCapture? capture;
     private bool disposed;
     internal const string Coverage = "Bounded in-process zone IPC observation, not TCP/PCAP or all lobby/chat traffic. " +
-        "Send means an attempted call, not server receipt. No opcode-name database or automatic unknown-field semantics. " +
+        "Send means an attempted call, not server receipt. Opcode labels use region/direction-scoped FFXIVOpcodes data; " +
+        "table/client version compatibility and field semantics remain unverified. " +
         "Read declaredLength/capturedLength/truncated and invalid/contention counters. Captures stay in memory until replaced or plugin unload.";
 
     internal NetworkPacketTools(ToolRegistry registry, GameServices services)
     {
         svc = services;
         source = new PacketHookSource(svc);
+        opcodeCatalog = OpcodeCatalog.Create(svc.PluginInterface?.GetPluginConfigDirectory(), () => !disposed && svc.Config.AllowMutatingTools);
+        registry.Add("network_opcode_lookup", "Look up zone opcode names",
+            "Looks up the supplied FFXIVOpcodes dataset by exact region, direction and numeric opcode, or searches names. " +
+            "Default CN is tied to this capture backend's validated CN build, not UI language. " +
+            "send uses ClientZoneIpcType; receive uses ServerZoneIpcType. No cross-region/direction fallback. " +
+            "Labels are external table claims, not independently verified protocol semantics or client-version matches. " +
+            "Returns unknowns for explicit numeric queries and all candidates for aliases. Follow nextCursor.",
+            Json.Schema(("region", "string", "Exact dataset region, default CN; current source includes Global, CN, KR, TW", false),
+                ("direction", "string", "send, receive or both (default both)", false),
+                ("opcodes", "array of integer", "Optional 0-65535 opcode allowlist, at most 64; explicit unknowns are returned", false),
+                ("contains", "string", "Optional literal name substring, 1-128 characters, case-insensitive", false),
+                ("cursor", "integer", "Offset 0-8192, default 0", false),
+                ("count", "integer", "1-100, default 30", false)),
+            args => opcodeCatalog.Snapshot().ForRegion(PacketAnalysis.Text(args, "region", "CN")).Lookup(args));
+        registry.AddAsync("network_opcode_refresh", "Refresh the fixed opcode dataset",
+            "Downloads only https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json. " +
+            "Bounded to 10 seconds and 1 MiB, validates before atomic cache replacement; failures preserve last-good labels. " +
+            "Runs off the game thread, without sending game data. Requires mutation access. " +
+            "Existing capture snapshots retain their original mapping; new captures use the refreshed dataset.",
+            Json.Schema(), _ => opcodeCatalog.RefreshAsync(), mutating: true);
         registry.Add("network_capture_start", "Start a bounded network capture",
             "Installs observation hooks for zone IPC for 1-120 seconds (default 10). Copies bytes before the original call. " +
             "Requires login and mutation access. Refuses an active capture; replaces a completed capture. " +
@@ -34,7 +56,7 @@ internal sealed class NetworkPacketTools : IDisposable
             "Stops this exact capture and removes its hooks; retains copied packets for analysis. Idempotent within a session.",
             SessionSchema(), args => { RequireMutation(); var current = Current(args); Stop("requested"); return Status(); }, mutating: true);
         registry.Add("network_capture_status", "Network capture status",
-            "Read-only hook availability, active session, budgets, loss counters and SDK/build identity. Does not install hooks. " + Coverage,
+            "Read-only hook availability, active session, budgets, loss counters, opcode catalog/provenance and SDK/build identity. Does not install hooks. " + Coverage,
             Json.Schema(), _ => Status());
         registry.Add("network_capture_list", "List captured network packets",
             "Lists packet metadata in capture order without draining. Use sessionId from start/status and lastId as afterId; " +
@@ -104,7 +126,7 @@ internal sealed class NetworkPacketTools : IDisposable
         RequireMutation();
         var next = new PacketCapture(PacketAnalysis.Direction(args), PacketAnalysis.Opcodes(args),
             PacketAnalysis.Int(args, "durationSeconds", 10, 1, 120), PacketAnalysis.Int(args, "maxPackets", 1000, 1, 4096),
-            PacketAnalysis.Int(args, "maxBytesPerPacket", 512, 32, 4096));
+            PacketAnalysis.Int(args, "maxBytesPerPacket", 512, 32, 4096), opcodeCatalog.Snapshot().ForRegion("CN"));
         if (capture?.Active == true) throw new ToolException("A capture is active; stop it before starting another");
         if (!svc.ClientState.IsLoggedIn || svc.ObjectTable.LocalPlayer == null)
             throw new ToolException("Network capture requires a logged-in local player; no hooks installed");
@@ -135,6 +157,7 @@ internal sealed class NetworkPacketTools : IDisposable
             && (opcodes.Length == 0 || opcodes.Contains(p.Opcode))).Take(count + 1).ToArray();
         var page = rows.Take(count).ToArray();
         return new JObject { ["sessionId"] = current.SessionId, ["active"] = current.Active,
+            ["opcodeMapping"] = current.Mapping?.Summary(),
             ["packets"] = new JArray(page.Select(p => p.Metadata())), ["count"] = page.Length,
             ["lastId"] = page.Length == 0 ? after : page[^1].Id, ["hasMore"] = rows.Length > count };
     }
@@ -147,6 +170,7 @@ internal sealed class NetworkPacketTools : IDisposable
         return new JObject
         {
             ["capture"] = snapshot, ["hooks"] = source.Status(), ["coverage"] = Coverage,
+            ["opcodeCatalog"] = opcodeCatalog.Status(),
             ["buildMvid"] = typeof(NetworkPacketTools).Assembly.ManifestModule.ModuleVersionId.ToString(),
         };
     }
@@ -166,5 +190,6 @@ internal sealed class NetworkPacketTools : IDisposable
         svc.Framework.Update -= Watch;
         Stop("unload");
         source.Dispose();
+        opcodeCatalog.Dispose();
     }
 }

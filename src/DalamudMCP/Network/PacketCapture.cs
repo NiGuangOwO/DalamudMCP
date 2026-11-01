@@ -26,8 +26,12 @@ internal sealed class PacketCapture
     internal readonly int MaxPackets;
     internal readonly int MaxBytesPerPacket;
     internal readonly int DurationSeconds;
+    internal readonly OpcodeDataset.OpcodeMapping? Mapping;
 
     internal PacketCapture(string direction, IEnumerable<ushort> opcodes, int seconds, int maxPackets, int maxBytes)
+        : this(direction, opcodes, seconds, maxPackets, maxBytes, null) { }
+
+    internal PacketCapture(string direction, IEnumerable<ushort> opcodes, int seconds, int maxPackets, int maxBytes, OpcodeDataset.OpcodeMapping? mapping)
     {
         if (direction is not ("send" or "receive" or "both") || seconds is < 1 or > 120 ||
             maxPackets is < 1 or > 4096 || maxBytes is < 32 or > 4096)
@@ -35,6 +39,7 @@ internal sealed class PacketCapture
         Direction = direction; this.opcodes = new HashSet<ushort>(opcodes);
         if (this.opcodes.Count > 64) throw new ToolException("At most 64 opcodes are allowed");
         DurationSeconds = seconds; MaxPackets = maxPackets; MaxBytesPerPacket = maxBytes;
+        Mapping = mapping;
         deadline = Stopwatch.GetTimestamp() + seconds * Stopwatch.Frequency;
     }
 
@@ -68,7 +73,7 @@ internal sealed class PacketCapture
             { Invalid(); return; }
             if (bytes + data.Length > ByteBudget) { Stop("byte_limit"); return; }
             packets.Add(new CapturedPacket(packets.Count + 1, DateTimeOffset.UtcNow, direction, opcode,
-                targetId, declaredLength, data, layout));
+                targetId, declaredLength, data, layout, Mapping));
             bytes += data.Length;
             if (packets.Count >= MaxPackets) Stop("packet_limit");
         }
@@ -97,6 +102,7 @@ internal sealed class PacketCapture
             ["capturedBytes"] = bytes, ["maxPackets"] = MaxPackets, ["maxBytesPerPacket"] = MaxBytesPerPacket,
             ["byteBudget"] = ByteBudget, ["filteredPackets"] = Interlocked.Read(ref filtered),
             ["invalidPackets"] = Interlocked.Read(ref invalid), ["contentionDroppedPackets"] = Interlocked.Read(ref contention),
+            ["opcodeMapping"] = Mapping?.Summary(),
         };
         // The snapshot may be the first observer of the deadline, before a framework
         // tick. Reconcile native hooks outside the buffer lock before publishing it.
@@ -116,13 +122,18 @@ internal sealed class PacketCapture
 }
 
 internal sealed record CapturedPacket(int Id, DateTimeOffset Timestamp, string Direction, ushort Opcode,
-    uint? TargetId, int DeclaredLength, byte[] Data, string Layout)
+    uint? TargetId, int DeclaredLength, byte[] Data, string Layout, OpcodeDataset.OpcodeMapping? Mapping = null)
 {
-    internal JObject Metadata() => new()
+    internal JObject Metadata()
     {
-        ["packetId"] = Id, ["timestamp"] = Timestamp, ["direction"] = Direction,
-        ["opcode"] = Opcode, ["opcodeHex"] = $"0x{Opcode:X4}", ["targetId"] = TargetId,
-        ["declaredLength"] = DeclaredLength, ["capturedLength"] = Data.Length,
-        ["truncated"] = Data.Length < DeclaredLength, ["layout"] = Layout,
-    };
+        var result = new JObject
+        {
+            ["packetId"] = Id, ["timestamp"] = Timestamp, ["direction"] = Direction,
+            ["opcode"] = Opcode, ["opcodeHex"] = $"0x{Opcode:X4}", ["targetId"] = TargetId,
+            ["declaredLength"] = DeclaredLength, ["capturedLength"] = Data.Length,
+            ["truncated"] = Data.Length < DeclaredLength, ["layout"] = Layout,
+        };
+        if (Mapping != null) result.Merge(Mapping.Label(Direction, Opcode));
+        return result;
+    }
 }

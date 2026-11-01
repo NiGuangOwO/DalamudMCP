@@ -685,6 +685,9 @@ public sealed class McpServer : IDisposable
                         "Capture requires login and mutation access, is restricted to a validated game/SDK ABI, and automatically stops. " +
                         "Read session identity, layout/header size, truncation and loss counters before interpreting bytes. " +
                         "network_capture_decode uses caller-declared fields; unknown protocol semantics remain unverified. " +
+                        "Opcode names use region/direction-scoped FFXIVOpcodes data. Use network_opcode_lookup to query " +
+                        "and network_opcode_refresh to refresh the fixed source with mutation access. Captures pin mapping provenance; " +
+                        "unknown or ambiguous names stay explicit and table/client version compatibility is not certified. " +
                         "Send observations do not prove server receipt; this does not cover TCP, lobby or all chat traffic.",
                 };
 

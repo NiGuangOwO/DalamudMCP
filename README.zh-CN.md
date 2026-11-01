@@ -452,6 +452,8 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 
 七个 `network_capture_*` 工具提供实验性的区域 IPC 捕获、按数字 opcode/方向筛选、十六进制和 ASCII 分页、声明式字段解析与包差异比较。捕获默认 10 秒，需要登录并开启变更权限。原生桥目前仅接受已检查的国服游戏二进制和 SDK 构建，其他版本会拒绝启用。数据仅保留在内存，开始新场或卸载后失效；发送观测不代表服务器收到了消息，未知字段含义仍需验证。详见[网络包诊断](docs/network-packets.md)的容量、包头布局与验证范围。
 
+`network_opcode_lookup` 和 `network_opcode_refresh` 使用指定的 [FFXIVOpcodes 数据源](https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json)，按地区、方向映射名称并提供版本、哈希来源。每场捕获固定一份映射；内置快照及最后可用缓存支持离线使用，显式刷新在游戏线程外执行并受时间、容量和变更权限限制。名称不代表客户端版本兼容或字段语义已确认。数据的 [MIT 声明](src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE)已嵌入插件。
+
 事件采集器随框架更新记录状态变化，使用容量为 2000 的环形缓冲区。
 支持 `hp_change`、`mp_change`、`gp_change`、`player_move`、`job_change`、`target_change`、
 `focus_target_change`、`target_hp_change`、`combat_damage`、`combat_start`、`combat_end`、`map_change`、

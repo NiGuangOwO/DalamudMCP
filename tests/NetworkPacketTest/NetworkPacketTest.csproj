@@ -4,6 +4,9 @@
     <Compile Include="../../src/DalamudMCP/Network/PacketCapture.cs" Link="PacketCapture.cs" />
     <Compile Include="../../src/DalamudMCP/Network/PacketAnalysis.cs" Link="PacketAnalysis.cs" />
     <Compile Include="../../src/DalamudMCP/Network/NativePacketReader.cs" Link="NativePacketReader.cs" />
+    <Compile Include="../../src/DalamudMCP/Network/OpcodeDataset.cs" Link="OpcodeDataset.cs" />
+    <Compile Include="../../src/DalamudMCP/Network/OpcodeCatalog.cs" Link="OpcodeCatalog.cs" />
+    <EmbeddedResource Include="../../src/DalamudMCP/Network/Data/opcodes.min.json" LogicalName="DalamudMCP.opcodes.min.json" />
     <Compile Include="../../src/DalamudMCP/MemoryProbe.cs" Link="MemoryProbe.cs" />
     <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

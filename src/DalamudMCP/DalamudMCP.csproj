@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <PropertyGroup>
-    <Version>1.0.0.35</Version>
+    <Version>1.0.0.36</Version>
     <!--
       Plugin manifest. DalamudPackager (pulled in by the SDK) reads these properties and
       writes DalamudMCP.json next to the assembly on every build:
@@ -37,6 +37,8 @@
     <Content Include="images\icon.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- Settings branding does not depend on an HTTP request or an external file. -->
     <EmbeddedResource Include="images\icon.png" LogicalName="DalamudMCP.icon.png" />
+    <EmbeddedResource Include="Network\Data\opcodes.min.json" LogicalName="DalamudMCP.opcodes.min.json" />
+    <EmbeddedResource Include="Network\Data\FFXIVOpcodes.LICENSE" LogicalName="DalamudMCP.FFXIVOpcodes.LICENSE" />
   </ItemGroup>
 
 </Project>

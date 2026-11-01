@@ -1,0 +1,1000 @@
+{
+  "checks": [
+    "running opcode build matches tested DLL",
+    "complete 157-tool catalog includes lookup and refresh",
+    "mutation classification network_opcode_lookup",
+    "mutation classification network_opcode_refresh",
+    "same CN opcode resolves independently by direction",
+    "mapping reports CN table and version",
+    "table claim is not promoted to verified client compatibility",
+    "unknown numeric opcode retains explicit unknown status",
+    "explicit alternate region lookup uses its own table",
+    "lookup/status do not install packet hooks",
+    "no existing active capture is replaced",
+    "real fixed-source refresh validates and saves cache off the game thread",
+    "refresh reports exact user-supplied URL",
+    "mapped capture expires and disables hooks",
+    "refresh preserves active capture's exact mapping snapshot",
+    "real zone packets captured with mapping attached",
+    "real captured opcodes receive names from CN table",
+    "captured name equals direction-scoped lookup",
+    "hex read preserves real packet name",
+    "field decoder preserves name and raw opcode",
+    "captured name equals direction-scoped lookup",
+    "hex read preserves real packet name",
+    "field decoder preserves name and raw opcode",
+    "captured name equals direction-scoped lookup",
+    "hex read preserves real packet name",
+    "field decoder preserves name and raw opcode",
+    "captured name equals direction-scoped lookup",
+    "hex read preserves real packet name",
+    "field decoder preserves name and raw opcode",
+    "real packet comparison carries both labels"
+  ],
+  "gameplayInputUsed": false,
+  "rawPayloadsSaved": false,
+  "health": {
+    "status": "ok",
+    "server": "dalamud-mcp",
+    "version": "1.0.0",
+    "buildMvid": "ceaeaedb-093d-45a4-9efd-d4b01f7983f5",
+    "protocolVersions": [
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05"
+    ],
+    "tools": 157,
+    "mutatingToolsEnabled": true,
+    "sessions": 0,
+    "authRequired": false
+  },
+  "loggedIn": true,
+  "catalogPages": [
+    100,
+    57
+  ],
+  "lookup872": {
+    "mapping": {
+      "source": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+      "sha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+      "origin": "cache",
+      "loadedAt": "2026-11-01T04:37:51.2089689+00:00",
+      "region": "CN",
+      "tableVersion": "7.57",
+      "available": true,
+      "versionMatch": "unverified",
+      "semanticsVerified": false
+    },
+    "count": 2,
+    "total": 2,
+    "entries": [
+      {
+        "opcodeName": "ClientTrigger",
+        "opcodeNames": [
+          "ClientTrigger"
+        ],
+        "opcodeMappingStatus": "named_unverified_version",
+        "opcodeRegion": "CN",
+        "opcodeTableVersion": "7.57",
+        "direction": "send",
+        "opcode": 872,
+        "opcodeHex": "0x0368"
+      },
+      {
+        "opcodeName": "FreeCompanyDialog",
+        "opcodeNames": [
+          "FreeCompanyDialog"
+        ],
+        "opcodeMappingStatus": "named_unverified_version",
+        "opcodeRegion": "CN",
+        "opcodeTableVersion": "7.57",
+        "direction": "receive",
+        "opcode": 872,
+        "opcodeHex": "0x0368"
+      }
+    ],
+    "nextCursor": null
+  },
+  "refresh": {
+    "refreshed": true,
+    "cacheSaved": true,
+    "catalog": {
+      "source": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+      "sha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+      "origin": "network",
+      "loadedAt": "2026-11-01T04:38:16.7918566+00:00",
+      "regions": [
+        {
+          "region": "CN",
+          "version": "7.57",
+          "sendOpcodes": 12,
+          "receiveOpcodes": 170
+        },
+        {
+          "region": "Global",
+          "version": "7.57h",
+          "sendOpcodes": 12,
+          "receiveOpcodes": 170
+        },
+        {
+          "region": "KR",
+          "version": "7.57",
+          "sendOpcodes": 12,
+          "receiveOpcodes": 170
+        },
+        {
+          "region": "TW",
+          "version": "7.25",
+          "sendOpcodes": 4,
+          "receiveOpcodes": 72
+        }
+      ],
+      "versionMatch": "unverified",
+      "semanticsVerified": false,
+      "refreshing": false,
+      "lastRefreshError": null,
+      "cacheError": null,
+      "cacheLoading": false
+    },
+    "existingCapturesUnchanged": true
+  },
+  "capture": {
+    "sessionId": "587c201def854bebba6ed4cba8675c00",
+    "active": false,
+    "startedAt": "2026-11-01T04:38:13.2907166+00:00",
+    "expiresAt": "2026-11-01T04:38:18.2907166+00:00",
+    "stopReason": "timeout",
+    "direction": "both",
+    "opcodes": [],
+    "packets": 41,
+    "capturedBytes": 1976,
+    "maxPackets": 128,
+    "maxBytesPerPacket": 64,
+    "byteBudget": 8388608,
+    "filteredPackets": 0,
+    "invalidPackets": 0,
+    "contentionDroppedPackets": 0,
+    "opcodeMapping": {
+      "source": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+      "sha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+      "origin": "cache",
+      "loadedAt": "2026-11-01T04:37:51.2089689+00:00",
+      "region": "CN",
+      "tableVersion": "7.57",
+      "available": true,
+      "versionMatch": "unverified",
+      "semanticsVerified": false
+    }
+  },
+  "directions": {
+    "receive": 39,
+    "send": 2
+  },
+  "namedPackets": 38,
+  "unknownPackets": 3,
+  "metadata": [
+    {
+      "packetId": 1,
+      "timestamp": "2026-11-01T04:38:13.2964704+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 2,
+      "timestamp": "2026-11-01T04:38:13.4052198+00:00",
+      "direction": "send",
+      "opcode": 137,
+      "opcodeHex": "0x0089",
+      "declaredLength": 64,
+      "capturedLength": 64,
+      "truncated": false,
+      "layout": "zone_send_call_header32",
+      "opcodeName": null,
+      "opcodeNames": [],
+      "opcodeMappingStatus": "unknown",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 3,
+      "timestamp": "2026-11-01T04:38:13.5274489+00:00",
+      "direction": "receive",
+      "opcode": 581,
+      "opcodeHex": "0x0245",
+      "declaredLength": 48,
+      "capturedLength": 48,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Init",
+      "opcodeNames": [
+        "Init"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 4,
+      "timestamp": "2026-11-01T04:38:13.6091181+00:00",
+      "direction": "receive",
+      "opcode": 189,
+      "opcodeHex": "0x00BD",
+      "declaredLength": 140,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Effect",
+      "opcodeNames": [
+        "Effect"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 5,
+      "timestamp": "2026-11-01T04:38:13.7216495+00:00",
+      "direction": "receive",
+      "opcode": 374,
+      "opcodeHex": "0x0176",
+      "declaredLength": 32,
+      "capturedLength": 32,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "FirstAttack",
+      "opcodeNames": [
+        "FirstAttack"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 6,
+      "timestamp": "2026-11-01T04:38:13.7216858+00:00",
+      "direction": "receive",
+      "opcode": 549,
+      "opcodeHex": "0x0225",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "EffectResultBasic",
+      "opcodeNames": [
+        "EffectResultBasic"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 7,
+      "timestamp": "2026-11-01T04:38:13.721753+00:00",
+      "direction": "receive",
+      "opcode": 189,
+      "opcodeHex": "0x00BD",
+      "declaredLength": 140,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Effect",
+      "opcodeNames": [
+        "Effect"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 8,
+      "timestamp": "2026-11-01T04:38:13.7941717+00:00",
+      "direction": "receive",
+      "opcode": 189,
+      "opcodeHex": "0x00BD",
+      "declaredLength": 140,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Effect",
+      "opcodeNames": [
+        "Effect"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 9,
+      "timestamp": "2026-11-01T04:38:13.9059671+00:00",
+      "direction": "receive",
+      "opcode": 549,
+      "opcodeHex": "0x0225",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "EffectResultBasic",
+      "opcodeNames": [
+        "EffectResultBasic"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 10,
+      "timestamp": "2026-11-01T04:38:13.9060494+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 11,
+      "timestamp": "2026-11-01T04:38:13.906176+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 12,
+      "timestamp": "2026-11-01T04:38:13.9062038+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 13,
+      "timestamp": "2026-11-01T04:38:13.9062686+00:00",
+      "direction": "receive",
+      "opcode": 242,
+      "opcodeHex": "0x00F2",
+      "declaredLength": 112,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "EffectResult",
+      "opcodeNames": [
+        "EffectResult"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 14,
+      "timestamp": "2026-11-01T04:38:13.9882504+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 15,
+      "timestamp": "2026-11-01T04:38:14.0585844+00:00",
+      "direction": "send",
+      "opcode": 176,
+      "opcodeHex": "0x00B0",
+      "declaredLength": 64,
+      "capturedLength": 64,
+      "truncated": false,
+      "layout": "zone_send_call_header32",
+      "opcodeName": "ActionRequest",
+      "opcodeNames": [
+        "ActionRequest"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 16,
+      "timestamp": "2026-11-01T04:38:14.1429467+00:00",
+      "direction": "receive",
+      "opcode": 189,
+      "opcodeHex": "0x00BD",
+      "declaredLength": 140,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Effect",
+      "opcodeNames": [
+        "Effect"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 17,
+      "timestamp": "2026-11-01T04:38:14.2791536+00:00",
+      "direction": "receive",
+      "opcode": 374,
+      "opcodeHex": "0x0176",
+      "declaredLength": 32,
+      "capturedLength": 32,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "FirstAttack",
+      "opcodeNames": [
+        "FirstAttack"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 18,
+      "timestamp": "2026-11-01T04:38:14.2791901+00:00",
+      "direction": "receive",
+      "opcode": 549,
+      "opcodeHex": "0x0225",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "EffectResultBasic",
+      "opcodeNames": [
+        "EffectResultBasic"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 19,
+      "timestamp": "2026-11-01T04:38:14.2792586+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 20,
+      "timestamp": "2026-11-01T04:38:14.2793176+00:00",
+      "direction": "receive",
+      "opcode": 516,
+      "opcodeHex": "0x0204",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": null,
+      "opcodeNames": [],
+      "opcodeMappingStatus": "unknown",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 21,
+      "timestamp": "2026-11-01T04:38:14.2793242+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 22,
+      "timestamp": "2026-11-01T04:38:14.3920444+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 23,
+      "timestamp": "2026-11-01T04:38:14.8205007+00:00",
+      "direction": "receive",
+      "opcode": 516,
+      "opcodeHex": "0x0204",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": null,
+      "opcodeNames": [],
+      "opcodeMappingStatus": "unknown",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 24,
+      "timestamp": "2026-11-01T04:38:15.4206755+00:00",
+      "direction": "receive",
+      "opcode": 476,
+      "opcodeHex": "0x01DC",
+      "declaredLength": 24,
+      "capturedLength": 24,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "DespawnCharacter",
+      "opcodeNames": [
+        "DespawnCharacter"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 25,
+      "timestamp": "2026-11-01T04:38:15.891909+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 26,
+      "timestamp": "2026-11-01T04:38:15.8920192+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 27,
+      "timestamp": "2026-11-01T04:38:16.075585+00:00",
+      "direction": "receive",
+      "opcode": 189,
+      "opcodeHex": "0x00BD",
+      "declaredLength": 140,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Effect",
+      "opcodeNames": [
+        "Effect"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 28,
+      "timestamp": "2026-11-01T04:38:16.157368+00:00",
+      "direction": "receive",
+      "opcode": 189,
+      "opcodeHex": "0x00BD",
+      "declaredLength": 140,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "Effect",
+      "opcodeNames": [
+        "Effect"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 29,
+      "timestamp": "2026-11-01T04:38:16.2596433+00:00",
+      "direction": "receive",
+      "opcode": 549,
+      "opcodeHex": "0x0225",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "EffectResultBasic",
+      "opcodeNames": [
+        "EffectResultBasic"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 30,
+      "timestamp": "2026-11-01T04:38:16.2597554+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 31,
+      "timestamp": "2026-11-01T04:38:16.2599066+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 32,
+      "timestamp": "2026-11-01T04:38:16.2599322+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 33,
+      "timestamp": "2026-11-01T04:38:16.260008+00:00",
+      "direction": "receive",
+      "opcode": 242,
+      "opcodeHex": "0x00F2",
+      "declaredLength": 112,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "EffectResult",
+      "opcodeNames": [
+        "EffectResult"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 34,
+      "timestamp": "2026-11-01T04:38:16.3714733+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 35,
+      "timestamp": "2026-11-01T04:38:16.9271963+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 36,
+      "timestamp": "2026-11-01T04:38:17.0085133+00:00",
+      "direction": "receive",
+      "opcode": 308,
+      "opcodeHex": "0x0134",
+      "declaredLength": 80,
+      "capturedLength": 64,
+      "truncated": true,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "UpdatePartyMemberPositions",
+      "opcodeNames": [
+        "UpdatePartyMemberPositions"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 37,
+      "timestamp": "2026-11-01T04:38:17.9403093+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 38,
+      "timestamp": "2026-11-01T04:38:17.9404154+00:00",
+      "direction": "receive",
+      "opcode": 486,
+      "opcodeHex": "0x01E6",
+      "declaredLength": 56,
+      "capturedLength": 56,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControlSelf",
+      "opcodeNames": [
+        "ActorControlSelf"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 39,
+      "timestamp": "2026-11-01T04:38:18.0379871+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 40,
+      "timestamp": "2026-11-01T04:38:18.0383543+00:00",
+      "direction": "receive",
+      "opcode": 408,
+      "opcodeHex": "0x0198",
+      "declaredLength": 40,
+      "capturedLength": 40,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "ActorControl",
+      "opcodeNames": [
+        "ActorControl"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    },
+    {
+      "packetId": 41,
+      "timestamp": "2026-11-01T04:38:18.2037535+00:00",
+      "direction": "receive",
+      "opcode": 476,
+      "opcodeHex": "0x01DC",
+      "declaredLength": 24,
+      "capturedLength": 24,
+      "truncated": false,
+      "layout": "zone_received_ipc_header16",
+      "opcodeName": "DespawnCharacter",
+      "opcodeNames": [
+        "DespawnCharacter"
+      ],
+      "opcodeMappingStatus": "named_unverified_version",
+      "opcodeRegion": "CN",
+      "opcodeTableVersion": "7.57"
+    }
+  ],
+  "completed": true,
+  "cleanup": {
+    "capture": {
+      "sessionId": "587c201def854bebba6ed4cba8675c00",
+      "active": false,
+      "startedAt": "2026-11-01T04:38:13.2907166+00:00",
+      "expiresAt": "2026-11-01T04:38:18.2907166+00:00",
+      "stopReason": "timeout",
+      "direction": "both",
+      "opcodes": [],
+      "packets": 41,
+      "capturedBytes": 1976,
+      "maxPackets": 128,
+      "maxBytesPerPacket": 64,
+      "byteBudget": 8388608,
+      "filteredPackets": 0,
+      "invalidPackets": 0,
+      "contentionDroppedPackets": 0,
+      "opcodeMapping": {
+        "source": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+        "sha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+        "origin": "cache",
+        "loadedAt": "2026-11-01T04:37:51.2089689+00:00",
+        "region": "CN",
+        "tableVersion": "7.57",
+        "available": true,
+        "versionMatch": "unverified",
+        "semanticsVerified": false
+      }
+    },
+    "hooks": {
+      "supported": true,
+      "unavailableReason": null,
+      "sendEnabled": false,
+      "receiveEnabled": false,
+      "sdkMvid": "3eb275ee-6770-44ea-96e5-3e2bdd9e29c4",
+      "supportedSdkMvid": "3eb275ee-6770-44ea-96e5-3e2bdd9e29c4",
+      "supportedPeTimestamp": "0x6AC3DCC1",
+      "supportedImageSize": 58789888,
+      "sendRva": 30410928,
+      "receiveRva": 30410896,
+      "sendLayout": "zone_send_call_header32",
+      "sendHeaderBytes": 32,
+      "receiveLayout": "zone_received_ipc_header16",
+      "receiveHeaderBytes": 16,
+      "receiveLengthSource": "zone_dequeue_descriptor_size_u64",
+      "sendLengthSource": "send_call_ipc_size_u64_plus_16",
+      "abiCodeSource": "sdk_original_search_copy",
+      "liveTrafficValidated": false
+    },
+    "coverage": "Bounded in-process zone IPC observation, not TCP/PCAP or all lobby/chat traffic. Send means an attempted call, not server receipt. Opcode labels use region/direction-scoped FFXIVOpcodes data; table/client version compatibility and field semantics remain unverified. Read declaredLength/capturedLength/truncated and invalid/contention counters. Captures stay in memory until replaced or plugin unload.",
+    "opcodeCatalog": {
+      "source": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+      "sha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+      "origin": "network",
+      "loadedAt": "2026-11-01T04:38:16.7918566+00:00",
+      "regions": [
+        {
+          "region": "CN",
+          "version": "7.57",
+          "sendOpcodes": 12,
+          "receiveOpcodes": 170
+        },
+        {
+          "region": "Global",
+          "version": "7.57h",
+          "sendOpcodes": 12,
+          "receiveOpcodes": 170
+        },
+        {
+          "region": "KR",
+          "version": "7.57",
+          "sendOpcodes": 12,
+          "receiveOpcodes": 170
+        },
+        {
+          "region": "TW",
+          "version": "7.25",
+          "sendOpcodes": 4,
+          "receiveOpcodes": 72
+        }
+      ],
+      "versionMatch": "unverified",
+      "semanticsVerified": false,
+      "refreshing": false,
+      "lastRefreshError": null,
+      "cacheError": null,
+      "cacheLoading": false
+    },
+    "buildMvid": "ceaeaedb-093d-45a4-9efd-d4b01f7983f5"
+  }
+}

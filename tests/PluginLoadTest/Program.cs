@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 155;
+    private const int ExpectedTools = 157;
 
     private static int checks;
     private static int failures;
@@ -453,9 +453,9 @@ internal static class Program
         Check("game window control is classified as mutating", Equals(Prop(windowTool, "Mutating"), true));
         var combatTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "combat_recording_configure"));
         Check("combat hook configuration is classified as mutating", Equals(Prop(combatTool, "Mutating"), true));
-        foreach (var name in new[] { "network_capture_start", "network_capture_stop" })
+        foreach (var name in new[] { "network_capture_start", "network_capture_stop", "network_opcode_refresh" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
-        foreach (var name in new[] { "network_capture_status", "network_capture_list", "network_capture_read", "network_capture_decode", "network_capture_compare" })
+        foreach (var name in new[] { "network_capture_status", "network_capture_list", "network_capture_read", "network_capture_decode", "network_capture_compare", "network_opcode_lookup" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         Check("Plugin.ToolCount agrees with the registry", Equals(Prop(plugin, "ToolCount"), toolNames.Count));
 
@@ -613,6 +613,24 @@ internal static class Program
                     JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 220, method = "tools/call", @params = new { name, arguments } })).ConfigureAwait(false);
                 return UnwrapToolResult(response);
             }
+            Check("opcode snapshot and MIT notice are embedded in the shipped assembly",
+                pluginAssembly.GetManifestResourceNames().Contains("DalamudMCP.opcodes.min.json") &&
+                pluginAssembly.GetManifestResourceNames().Contains("DalamudMCP.FFXIVOpcodes.LICENSE"));
+            var opcodeLookup = await NetworkCall("network_opcode_lookup", new { opcodes = new[] { 872 } });
+            using (var document = JsonDocument.Parse(opcodeLookup.Payload!))
+            {
+                var entries = document.RootElement.GetProperty("entries");
+                Check("CN opcode lookup separates send and receive names", !opcodeLookup.Error && entries.GetArrayLength() == 2 &&
+                    entries[0].GetProperty("opcodeName").GetString() == "ClientTrigger" &&
+                    entries[1].GetProperty("opcodeName").GetString() == "FreeCompanyDialog");
+                Check("external opcode table compatibility remains explicitly unverified",
+                    document.RootElement.GetProperty("mapping").GetProperty("versionMatch").GetString() == "unverified");
+            }
+            Set(config, "AllowMutatingTools", false);
+            var blockedRefresh = await NetworkCall("network_opcode_refresh", new { });
+            Check("opcode refresh is rejected by the closed mutation gate before any HTTP request", blockedRefresh.Error &&
+                blockedRefresh.Payload?.Contains("changes game state and is disabled", StringComparison.Ordinal) == true);
+            Set(config, "AllowMutatingTools", true);
             var networkState = await NetworkCall("network_capture_status", new { });
             using (var document = JsonDocument.Parse(networkState.Payload!))
                 Check("network capture is absent and hooks disabled on plugin load", !networkState.Error &&
@@ -1032,6 +1050,8 @@ internal static class Program
                     string text;
                     try
                     {
+                        // Exercise the real mutation refusal without issuing public HTTP in the offline sweep.
+                        if (toolName == "network_opcode_refresh") Set(config, "AllowMutatingTools", false);
                         text = await CallAsync(sweepHttp, baseUrl, sessionId, request).ConfigureAwait(false);
                     }
                     catch (Exception ex)
@@ -1039,6 +1059,7 @@ internal static class Program
                         noAnswer.Add($"{toolName} ({ex.GetType().Name})");
                         continue;
                     }
+                    finally { if (toolName == "network_opcode_refresh") Set(config, "AllowMutatingTools", true); }
 
                     var (toolPayload, toolIsError) = UnwrapToolResult(text);
                     if (toolPayload is null && !toolIsError)

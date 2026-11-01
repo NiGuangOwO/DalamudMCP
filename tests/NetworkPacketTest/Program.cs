@@ -138,6 +138,7 @@ New().Status(() => cleanupCalls++);
 Check(cleanupCalls == 1, "active snapshot does not disable running hooks");
 limited.Status(() => cleanupCalls++);
 Check(cleanupCalls == 2, "capacity-ended snapshot also reconciles hooks");
+checks += await OpcodeTests.Run();
 Console.WriteLine($"{checks} checks passed");
 
 sealed class NativePages : IDisposable

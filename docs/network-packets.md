@@ -49,10 +49,32 @@ The first implementation is deliberately restricted to the inspected CN PE finge
 
 - 时间 1–120 秒，默认 10；最多 1–4096 个包，默认 1000；每包复制 32–4096 字节，默认 512；总字节上限 8 MiB。超过容量即停止，不无限覆盖；原生声明长度必须在合理范围内（最多 1 MiB）。读不全的结构/范围一律拒绝。
 - hook 内只做有界元数据读取、过滤和复制。缓存繁忙时不等待，计入 `contentionDroppedPackets`；`invalidPackets` 统计非法/不可读输入。没有完整底层流量的分母，这些计数不证明网络链路无丢包。
-- 首版不包含 opcode 名称数据库、协议语义自动推断、磁盘导出或跨场比较。可以用字节差异和声明式布局辅助分析未知协议；真实业务含义须与游戏状态/受控实验交叉验证。
+- 从 1.0.0.36 起提供下述 opcode 名称映射；尚不包含协议语义自动推断、游戏包磁盘导出或跨场比较。可以用字节差异和声明式布局辅助分析未知协议；真实业务含义须与游戏状态/受控实验交叉验证。
 - 离线测试：`dotnet run --project tests/NetworkPacketTest -c Release` 覆盖实际进程内存、保护页边界、长度/地址溢出、截断、筛选、字段解码、差异、容量、并发和到期；`PluginLoadTest` 检查实际插件注册、工具联通、会话身份、变更权限与停止；另运行 Debug/Release、协议和 schema 检查。离线通过不证明现场收发、吞吐或与其他 hook 共存。
 
 Capture lasts 1–120 seconds, holds at most 4096 packets / 8 MiB, and copies at most 4096 bytes per packet. Invalid or partially readable native structures are rejected. Counters report observed read/contention failures, not end-to-end network loss. Offline tests do not establish live traffic correctness, throughput or coexistence with other hooks. Consult the release validation record for the actual live coverage.
+
+## Opcode 名称映射 / Opcode name mapping — 1.0.0.36
+
+数据源固定为用户指定的 [FFXIVOpcodes JSON](https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json)。发布时内置快照，启动时在后台读取最后可用缓存，**启动不发起联网请求**。可显式调用 `network_opcode_refresh {}` 下载最新数据，最多 10 秒、1 MiB，下载和缓存读写均不占用游戏线程。刷新需要变更权限；无 URL/路径参数，不上传游戏数据。网络、格式或写盘失败会保留之前可用的映射，错误可在 `network_capture_status.opcodeCatalog` 查看。
+
+按 **region + direction + opcode** 查找。当前捕获后端仅支持已检查的国服构建，因此捕获固定使用 CN，依据不是 UI 语言。发送用 `ClientZoneIpcType`，接收用 `ServerZoneIpcType`；不会跨方向、跨地区猜测。内置快照 CN 版本为 `7.57`（发送 12 个、接收 170 个 opcode）。例如 CN 的 872：发送 `ClientTrigger`，接收 `FreeCompanyDialog`；接收 408 为 `ActorControl`。
+
+```json
+{"region":"CN","direction":"receive","opcodes":[408,872,65535]}
+```
+
+以上参数传给只读工具 `network_opcode_lookup`；也支持 `contains` 名称子串、`cursor`、`count`（1–100）。显式数字查询会返回未知编号，名称搜索只枚举表内记录。可显式查询 Global、CN、KR、TW，不存在的地区返回 `available=false`。
+
+包列表、字节读取、字段解析的 packet 元数据、差异比较的左右 packet 均包含 `opcodeName`、`opcodeNames`、`opcodeMappingStatus`、`opcodeRegion`、`opcodeTableVersion`。唯一匹配的状态为 `named_unverified_version`；未找到为 `unknown`、名称为 null；同一编号有多个名称时保留所有候选，状态 `ambiguous`，不任意选一个。每个捕获在开始时固定一份不可变映射；刷新只影响新捕获和独立查询。完整数据源 URL、SHA-256、载入来源（bundled/cache/network）和时间见场次的 `opcodeMapping`。
+
+`tableVersion` 是第三方表的版本标签；`versionMatch=unverified` 和 `semanticsVerified=false` 明确表示没有独立认证它与当前客户端补丁或业务含义完全一致。名称匹配不自动推断包体结构。源数据及 [MIT 声明](../src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE)一并嵌入程序集。
+
+The fixed source is the linked FFXIVOpcodes JSON. A bundled snapshot and asynchronous last-good cache support offline use; startup performs no HTTP. `network_opcode_refresh` explicitly downloads at most 1 MiB within 10 seconds off the game thread, behind the mutation gate. Failures retain last-good data. There are no caller-supplied URLs/paths or uploads of game data.
+
+Lookups are scoped by region, direction and number: sends use ClientZoneIpcType, receives ServerZoneIpcType. The build-restricted CN backend pins CN mappings, independently of UI language. `network_opcode_lookup` supports explicit numbers, literal name search and bounded paging. Packet metadata carries names, ambiguity/unknown status, region and table version; capture summaries carry source/hash/origin/time. Existing captures retain their mapping after refresh. Table versions and names are external claims, not certified patch compatibility or independently verified semantics. Numeric opcodes and unknown entries remain available.
+
+Snapshot SHA-256: `33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0`. [Live mapping verification](../research/network-opcodes-2026-11-01/live-verification.json).
 
 ## 真实环境验证 / Live follow-up — 2026-11-01
 
