@@ -58,6 +58,26 @@ internal sealed class NetworkPacketTools : IDisposable
         registry.Add("network_capture_status", "Network capture status",
             "Read-only hook availability, active session, budgets, loss counters, opcode catalog/provenance and SDK/build identity. Does not install hooks. " + Coverage,
             Json.Schema(), _ => Status());
+        registry.Add("network_packet_schema", "Inspect bundled packet schemas",
+            "Lists build-pinned elpis packet schemas and their exact FFXIVOpcodes aliases/directions. " +
+            "With exact name, pages that structure's fields; use a returned child structureId with the same name to inspect children. " +
+            "No hooks, scripts or HTTP. Metadata availability and client compatibility are separate; follow nextCursor.",
+            Json.Schema(("name", "string", "Exact canonical schema name; omit to list schemas", false),
+                ("structureId", "string", "Child structure id returned by this schema; requires name", false),
+                ("direction", "string", "send, receive or both, default both", false),
+                ("contains", "string", "Literal name/alias search when listing", false),
+                ("cursor", "integer", "Schema or field offset 0-8192, default 0", false),
+                ("count", "integer", "1-100, default 30", false)), args => PacketSchemas.Bundled.Value.Lookup(args));
+        registry.Add("network_capture_parse", "Parse a captured packet with a bundled schema",
+            "Selects a build-pinned elpis schema using this capture's unique opcode name, explicit provider alias and send/receive direction. " +
+            "Skips the verified capture header automatically (send 32, receive 16). Unknown/ambiguous names do not guess. " +
+            "Optional exact schemaName is a caller-selected interpretation, restricted to the matching zone direction. " +
+            "Returns paged flat field paths, offsets, raw values, enum labels and numeric display conversions; 64-bit integers are strings. " +
+            "Bounds are checked against declared/captured lengths and child layouts. Missing bytes/unsupported transforms are explicit. " +
+            "At most 8192 expanded fields, 128 returned per page. Length match never certifies patch compatibility or semantics.",
+            PacketSchema(("schemaName", "string", "Optional exact canonical schema name; omit for automatic name/alias selection", false),
+                ("cursor", "integer", "Expanded field cursor 0-8192, default 0", false),
+                ("count", "integer", "1-128, default 40", false)), args => PacketSchemas.Bundled.Value.Parse(Packet(args), args));
         registry.Add("network_capture_list", "List captured network packets",
             "Lists packet metadata in capture order without draining. Use sessionId from start/status and lastId as afterId; " +
             "hasMore refers to currently retained matching packets. Capture may still be running.",
@@ -171,6 +191,7 @@ internal sealed class NetworkPacketTools : IDisposable
         {
             ["capture"] = snapshot, ["hooks"] = source.Status(), ["coverage"] = Coverage,
             ["opcodeCatalog"] = opcodeCatalog.Status(),
+            ["packetSchemas"] = PacketSchemas.Bundled.Value.Summary(),
             ["buildMvid"] = typeof(NetworkPacketTools).Assembly.ManifestModule.ModuleVersionId.ToString(),
         };
     }

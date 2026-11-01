@@ -68,7 +68,7 @@ Capture lasts 1–120 seconds, holds at most 4096 packets / 8 MiB, and copies at
 
 包列表、字节读取、字段解析的 packet 元数据、差异比较的左右 packet 均包含 `opcodeName`、`opcodeNames`、`opcodeMappingStatus`、`opcodeRegion`、`opcodeTableVersion`。唯一匹配的状态为 `named_unverified_version`；未找到为 `unknown`、名称为 null；同一编号有多个名称时保留所有候选，状态 `ambiguous`，不任意选一个。每个捕获在开始时固定一份不可变映射；刷新只影响新捕获和独立查询。完整数据源 URL、SHA-256、载入来源（bundled/cache/network）和时间见场次的 `opcodeMapping`。
 
-`tableVersion` 是第三方表的版本标签；`versionMatch=unverified` 和 `semanticsVerified=false` 明确表示没有独立认证它与当前客户端补丁或业务含义完全一致。名称匹配不自动推断包体结构。源数据及 [MIT 声明](../src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE)一并嵌入程序集。
+`tableVersion` 是第三方表的版本标签；`versionMatch=unverified` 和 `semanticsVerified=false` 明确表示没有独立认证它与当前客户端补丁或业务含义完全一致。包体自动解析使用独立的固定 elpis schema；详见[内置包体结构](packet-schemas.md)。名称和长度匹配不等于版本或语义验证。源数据及 [MIT 声明](../src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE)一并嵌入程序集。
 
 The fixed source is the linked FFXIVOpcodes JSON. A bundled snapshot and asynchronous last-good cache support offline use; startup performs no HTTP. `network_opcode_refresh` explicitly downloads at most 1 MiB within 10 seconds off the game thread, behind the mutation gate. Failures retain last-good data. There are no caller-supplied URLs/paths or uploads of game data.
 
@@ -91,3 +91,6 @@ Version 1.0.0.35 fixes an expiry snapshot race found by this test: a query could
 尚未覆盖高负载战斗吞吐、全部通道/插件组合、现场强制登出或关闭变更权限；未知协议语义与服务端送达仍未确认。High-load combat throughput, every channel/plugin combination, forced live logout and mutation-gate closure remain outside this sample. Unknown protocol semantics and server delivery remain unverified.
 
 记录 / Evidence: [综合现场验证](../research/network-packets-2026-11-01/real-traffic-verification.json)、[仅发送验证](../research/network-packets-2026-11-01/send-only-verification.json)、[到期时序失败与清理记录](../research/network-packets-2026-11-01/real-traffic-expiry-race.json)。
+
+
+包体结构 / Packet body schemas: [`network_packet_schema` and `network_capture_parse`](packet-schemas.md).

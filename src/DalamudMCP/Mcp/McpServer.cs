@@ -684,7 +684,9 @@ public sealed class McpServer : IDisposable
                         "For zone network diagnostics use network_capture_status, then a bounded network_capture_start. " +
                         "Capture requires login and mutation access, is restricted to a validated game/SDK ABI, and automatically stops. " +
                         "Read session identity, layout/header size, truncation and loss counters before interpreting bytes. " +
-                        "network_capture_decode uses caller-declared fields; unknown protocol semantics remain unverified. " +
+                        "network_capture_decode uses caller-declared fields; network_packet_schema inspects bundled elpis definitions and " +
+                        "network_capture_parse selects them by captured opcode name/alias/direction with automatic header offsets. " +
+                        "Unknown/ambiguous names do not guess, and schema/length matches do not verify client compatibility or protocol semantics. " +
                         "Opcode names use region/direction-scoped FFXIVOpcodes data. Use network_opcode_lookup to query " +
                         "and network_opcode_refresh to refresh the fixed source with mutation access. Captures pin mapping provenance; " +
                         "unknown or ambiguous names stay explicit and table/client version compatibility is not certified. " +

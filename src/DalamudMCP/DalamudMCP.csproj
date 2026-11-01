@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <PropertyGroup>
-    <Version>1.0.0.36</Version>
+    <Version>1.0.0.37</Version>
     <!--
       Plugin manifest. DalamudPackager (pulled in by the SDK) reads these properties and
       writes DalamudMCP.json next to the assembly on every build:
@@ -39,6 +39,11 @@
     <EmbeddedResource Include="images\icon.png" LogicalName="DalamudMCP.icon.png" />
     <EmbeddedResource Include="Network\Data\opcodes.min.json" LogicalName="DalamudMCP.opcodes.min.json" />
     <EmbeddedResource Include="Network\Data\FFXIVOpcodes.LICENSE" LogicalName="DalamudMCP.FFXIVOpcodes.LICENSE" />
+    <EmbeddedResource Include="Network\Data\elpis-schemas.json" LogicalName="DalamudMCP.elpis-schemas.json" />
+    <EmbeddedResource Include="Network\Data\elpis.LICENSE" LogicalName="DalamudMCP.elpis.LICENSE" />
+    <EmbeddedResource Include="Network\Data\elpis-FFXIVClientStructs.LICENSE" LogicalName="DalamudMCP.elpis-FFXIVClientStructs.LICENSE" />
+    <EmbeddedResource Include="Network\Data\elpis-opcode-worker.LICENSE" LogicalName="DalamudMCP.elpis-opcode-worker.LICENSE" />
+    <Content Include="Network\Data\elpis*.LICENSE" CopyToOutputDirectory="PreserveNewest" TargetPath="licenses\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
