@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0.39",
+  "sourceCommit": "d0f7945a79bb6bbbf194fa101c2b95cfc42b42fe",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.39",
+  "distributionCommit": "566422db1b4aafd0d955e993dc3bdfa4f134c6b6",
+  "indexCommit": "75738a4e756ca7b046bbbc19617b079da8b9348c",
+  "workflow": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/41280161718",
+  "workflowConclusion": "success",
+  "sourceBuildConclusion": "success",
+  "packageSha256": "B5FD785735079886815B0C4D780AE54E62E37C01C0A4C1891E9955C5DC4A7458",
+  "releaseDownloadHashVerified": true,
+  "fixedIndexPackageHashVerified": true,
+  "indexVersionAuthorLinksVerified": true,
+  "indexDownloadLinkHashVerified": true,
+  "validation": {
+    "networkChecks": 403,
+    "releasePluginLoadChecks": 211,
+    "protocolChecks": 59,
+    "liveChecks": 13,
+    "toolCatalogCount": 160,
+    "debugAndReleaseWarnings": 0
+  },
+  "live": {
+    "buildMvid": "50a8dfe8-1281-4a92-93b7-a5266f4cc451",
+    "previousObservedBuildMvid": "3b7a9d14-2bd1-46c2-8d61-ff3501af55f1",
+    "automaticAttemptsPerObservedLoad": 1,
+    "automaticSchemaSourcesComplete": true,
+    "automaticOpcodeApplied": true,
+    "automaticOpcodeCacheSaved": true,
+    "startupSchemaCacheReuseVerified": true,
+    "manualRefreshDispatched": false,
+    "captureStarted": false,
+    "gameplayInputUsed": false,
+    "schemaDefinitionsApplied": false,
+    "closedGateTestedLive": false,
+    "offlineClosedGateAndCancellationCoverage": true,
+    "evidence": "research/network-startup-updates-2026-11-01/live-verification.json"
+  }
+}
