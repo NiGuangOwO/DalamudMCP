@@ -149,6 +149,7 @@ When disabled, mutating tools are omitted from `tools/list` and rejected by `too
 ## Connect an agent
 
 Connection setup and skill installation are separate operations.
+Compatible agents now receive a verified skill auto-sync flow during MCP initialization; pristine installed copies update without routine prompts, while custom edits are preserved. The running build supplies the package without GitHub access. See [agent skill synchronization](docs/agent-guidance.md) for client permissions, offline installation and fallback.
 The [agent setup guide](docs/agent-setup.md) covers MCP registration, skill discovery and installation in other plugin projects.
 The included [Dalamud development skill](.agents/skills/dalamud-development/SKILL.md), repository [AGENTS.md](AGENTS.md)
 and server initialization instructions describe the development workflow. Skill selection depends on the agent's discovery mechanism.

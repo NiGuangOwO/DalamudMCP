@@ -33,7 +33,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path agent-guidance | Out-Null
-          Compress-Archive -Path .agents/skills/dalamud-development -DestinationPath agent-guidance/dalamud-development-skill.zip
+          $manifest = Get-Content src/DalamudMCP/bin/x64/Release/DalamudMCP/DalamudMCP.json -Raw | ConvertFrom-Json
+          dotnet run --project tools/AgentGuidancePack -- $manifest.AssemblyVersion agent-guidance
           Copy-Item docs/agent-setup.md,docs/dalamud-project.AGENTS.md agent-guidance/
 
       - uses: actions/upload-artifact@v4
@@ -41,7 +42,7 @@ jobs:
           name: DalamudMCP-agent-guidance
           path: agent-guidance/*
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 30
 
       - uses: actions/upload-artifact@v4
         with:

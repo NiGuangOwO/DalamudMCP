@@ -19,3 +19,6 @@
 /tests/BuildIdentityTest/obj
 /tests/**/bin
 /tests/**/obj
+/tools/**/bin
+/tools/**/obj
+**/__pycache__/

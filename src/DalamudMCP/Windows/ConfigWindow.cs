@@ -45,6 +45,9 @@ public sealed class ConfigWindow : Window
 
         DrawHeader();
 
+        ImGui.TextWrapped(Localization.T("ui.guidanceRevision", Mcp.AgentGuidance.Bundled.Revision[..12]));
+        ImGui.TextWrapped(Localization.T("ui.guidanceHint"));
+
         ImGui.Separator();
         ImGui.Spacing();
 

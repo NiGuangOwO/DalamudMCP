@@ -1,0 +1,402 @@
+[
+  {
+    "revision": "9171ff86a1ad427b58a8ce26bbf3d90670295687181f64010047cec0a30f1719",
+    "sourceCommit": "5b39730bec122700caaf7d5e7c1592c16f57e8ba",
+    "files": {
+      "SKILL.md": "b6c76b52e04cb2dc09b63f9dceb5a55fefcb9b3745b424677134e556b1d7da2c",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "dd406d6afccb7b0d097ec1aba8dd04f112afd4d2f210afb0e5b09ba989975660",
+      "references/tool-selection.md": "40abd70af58542bb735562060fecb757cc90da1c94fdd4879ae3bc64e043736a"
+    }
+  },
+  {
+    "revision": "98756db78f55452f38b942d36d093fa7e55ad589d73b76c66bc579a74471a515",
+    "sourceCommit": "d0f7945a79bb6bbbf194fa101c2b95cfc42b42fe",
+    "files": {
+      "SKILL.md": "9bbb5d253bfa1d0043c8e8b14ec85b1787805341b3e6551d8ac6ac8a7a015faf",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "2d9f0570cb3a5861c425f3553e35ad0093a0c0066c2ccd3c6d3d75dd214f81b3"
+    }
+  },
+  {
+    "revision": "45eae3319ecd1b29eda95627a86a5ca69cec1f1df35e04deb2747d528cdaaed4",
+    "sourceCommit": "868fcf0939dbfc760c4fd71cab7737304b3a9890",
+    "files": {
+      "SKILL.md": "9bbb5d253bfa1d0043c8e8b14ec85b1787805341b3e6551d8ac6ac8a7a015faf",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "508da6b580b88c1baa68aa4e9cb26454b3e7e3e35cb3fd2baed89bd700588c73"
+    }
+  },
+  {
+    "revision": "c810e21643e2bd4839a037da73bfc0014740571c023a1d0b8000e8c57699a106",
+    "sourceCommit": "e8d127832cec75fef1108664e63c3afced1c7422",
+    "files": {
+      "SKILL.md": "9bbb5d253bfa1d0043c8e8b14ec85b1787805341b3e6551d8ac6ac8a7a015faf",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "068ebd676dc3ac9fed7400227fde46fb9a266fec98c46d04c2ee5c33f00bb1a0"
+    }
+  },
+  {
+    "revision": "d02818ad09802d88937c5d5c2daa3e91afcdd71a2823f3a9a21e2f9a74afcde3",
+    "sourceCommit": "c7a495a183ddfff316259b88ffde7a1564b5a975",
+    "files": {
+      "SKILL.md": "9bbb5d253bfa1d0043c8e8b14ec85b1787805341b3e6551d8ac6ac8a7a015faf",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "09fc45baa5b0c3b7603a9b1c7d61fc53c4d17bf42364ee5fb2ab43ca674854f8"
+    }
+  },
+  {
+    "revision": "5845c85f4b2efbb141bf09ac04a45b5768fbc078987ded3c452741921f0ad4fa",
+    "sourceCommit": "8d64b0d942ebf717a02fdf5616310fcdd559de77",
+    "files": {
+      "SKILL.md": "9bbb5d253bfa1d0043c8e8b14ec85b1787805341b3e6551d8ac6ac8a7a015faf",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "da4fcfc1afc15c4e831ba02ab43c6103947127179176a25ad8b7cc170415412a"
+    }
+  },
+  {
+    "revision": "073e16d9e9e06d4580e02018cb7401893993f04ef67b7fa2d629d9ce86d93f52",
+    "sourceCommit": "9b54b604bf83bb2af6dc1ad9a74428224db0ece2",
+    "files": {
+      "SKILL.md": "9bbb5d253bfa1d0043c8e8b14ec85b1787805341b3e6551d8ac6ac8a7a015faf",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "8ac179c8aaedda43b8483f6fd564de8ffa1206e863902e8c9ae8968a9dfafe7a"
+    }
+  },
+  {
+    "revision": "64972c286580f215003541df05f10ce9790cc776d4ea95c3e0649d701343f628",
+    "sourceCommit": "1835bb964d4fd0f795cb628647e5c40aa010a560",
+    "files": {
+      "SKILL.md": "4ad3b394bd1fb8126f1ba4c4cc02ac7a17a142ea1550d5ddeaac4629d770b59a",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "b34811dd649ec1077f3b6050996a68b096057917b2b83524bbf3bb89bf32ce2e"
+    }
+  },
+  {
+    "revision": "00209ac8eb8f3469ec2d199d13a06645c359896f46951e1c6387a41aeca88197",
+    "sourceCommit": "d9322f01d6e95535dca10d733f7d7cfa8214bad7",
+    "files": {
+      "SKILL.md": "4ad3b394bd1fb8126f1ba4c4cc02ac7a17a142ea1550d5ddeaac4629d770b59a",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "d6dfb2671cda4a8b211df8cd8113941035bbb74b80e483708a7e477966e2d273"
+    }
+  },
+  {
+    "revision": "68ab470578b8bc1baa9d6c2f4ec61c7f31a7355d31394c1d070004d36cb96c58",
+    "sourceCommit": "e4144980ee13952a22985f86d14f0eaef28eab41",
+    "files": {
+      "SKILL.md": "4ad3b394bd1fb8126f1ba4c4cc02ac7a17a142ea1550d5ddeaac4629d770b59a",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "2057c78c954b901c82b2bf32d031cb05f6cb832b32ebc05f410e2662e16fa2f6"
+    }
+  },
+  {
+    "revision": "ddb32b12883a9d5eacef8e3b162e25d262cf4986a578dce531e4c333b6b4ff34",
+    "sourceCommit": "aacf8b7c232cf3b7341d7d902c6b65408744c72c",
+    "files": {
+      "SKILL.md": "d5f5d4e9b9f9b278181dace886ad1b33a3f3bf700b65ec8ed5e71f1cda0c3278",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "374026904de8ad517e0c463efce757655589f69d0e31e8b92e2d6884a597bc7e"
+    }
+  },
+  {
+    "revision": "63c71a72d0431c0e8295b7f52a06c867ecbd41927405423258e3c933d1883d35",
+    "sourceCommit": "33de795d6c2622d152e969653be99aa1e5c7dfaf",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "b2fd224bfc082b3cd1176f950193a87d3a367fce3e266e15d654998b11e4c0f2"
+    }
+  },
+  {
+    "revision": "b2ccf7d6e7d3c32e664c3ec0971ee4c3893a2599b8c28bf039ffb60e5600003a",
+    "sourceCommit": "f323d0300a5b56199aeb642ed845b6a8affc0c40",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "a3a9c2139482fbf72b5182936914b0d12b8285f59b02c6867a91c6e8b4520026"
+    }
+  },
+  {
+    "revision": "b4a5efa86ccb62f0ebdebf1a4716004403cd916001ea94ae34001df4524bf2ff",
+    "sourceCommit": "9a0ed91e9520bbb0ae68a701eaa25ec982ba1c28",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "c42eaf4e565ae30db4498befb6ecade659b9a0ec4ee28b574c5cf91a93d622cf"
+    }
+  },
+  {
+    "revision": "dd4da4ba58f9742e2b2e344d05b4e1d2e88d534737864091002dee24e78a5ca2",
+    "sourceCommit": "5b3983fc4fb7432ec8c92f8e1f85234075b7cc38",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "3daccf3f95fe8614c4f68e31fb20f6d46adf21a09f31443ad8e99c309f4d5bf9"
+    }
+  },
+  {
+    "revision": "d99d7a4fdea5649e9e5988cf9191deafe1eeb295145688c744e49116aa79801b",
+    "sourceCommit": "981e412940aca33f48173c8cc5a364e3ea5e2f54",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "4c4b3603e446b41266426ad1aa5b346f339b525089d25873982d64d25dc9f94d"
+    }
+  },
+  {
+    "revision": "0f4edec39b095b718ac5433fabc0f7264a13780cb44006e8783611907404fb45",
+    "sourceCommit": "4f4f551efad51635963a336c9f47828a869da059",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "5657b63c155bcf89423c248a0a74835a3123d11ed6abf3915df63c7907e4e186"
+    }
+  },
+  {
+    "revision": "643b62964858b5ebf07a6895907db00cadfc83b97209315912ee141e9197ac4a",
+    "sourceCommit": "e934a76a03d0ddf1ee9de923001fd691dffeb026",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "081be484d38a654c4f748228cde6e1bfac3f0498878fada8f1ac45e19be500bf"
+    }
+  },
+  {
+    "revision": "913a9205aa3ae37e333fd8577faff14f7b6758db5dbd2ecec2f431210628fe7f",
+    "sourceCommit": "3d1426dda37fe4ef0c6cb1ef4dc9d3527e01f21f",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "b19cade33b024f339cefb3a54a470d348081d6be02346de0102e6fc6c105b0ab"
+    }
+  },
+  {
+    "revision": "e09a58578ec8d8b39e2a358f01212beb63ec5a8718096a04b5353b6777445bbf",
+    "sourceCommit": "b7b2d8d9eafb7d1f65f09a5811a94b92174d1aa2",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "c0149a532c6af9dc3825eb364e89c2db599d61b9f7c0080110579816299ca44b"
+    }
+  },
+  {
+    "revision": "686fc7f1fc4eaba171df7d0ccf28c702b4ca1a3c7cfe2ddacd3d252e3d845526",
+    "sourceCommit": "99805c911120c11ea27f483ce171fef1293e5b8c",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "03a32b56eefa0e0428f7bbc11018cdb07ca237d75df3aa4ed05d715068c7fafd"
+    }
+  },
+  {
+    "revision": "8ca1602817b9ec5e7ee7b89684cdc5cae0cd391b3e46e3440e47b302286b627c",
+    "sourceCommit": "37c32ac3426ab0297480be54fac09dfdb6cecac1",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "94afc80dbcf601c304416f85fafcabf36066fe808f6c6770c3d195753b1fc46d"
+    }
+  },
+  {
+    "revision": "14e311abdfacbd9c4f546377ca532474e1e3702d496b0527b9a87f170f92f88a",
+    "sourceCommit": "92c437930248412187e5608f67b3662706a9e264",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "a9b7655ace48f0f7524e97be9f54af73ece17acd67372d9ebfdc48420a26d0c6"
+    }
+  },
+  {
+    "revision": "d30381e4f00d8e78e92c28085b6b78d91890a726a3e73f2656bdec0efbad2acd",
+    "sourceCommit": "b3f30ca016d84f3a6c1c64470ec3c5ead22975dc",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "a6fb33aff1af54634666cf08dbce619afb09a4ce74e116e653610b917141d456"
+    }
+  },
+  {
+    "revision": "c3ff4b9a593399b23c8006bfaf340b2c20a9408861107b42d9138c7573bb28b1",
+    "sourceCommit": "14d39ec6b90313a556c8e15522dbad2dd6f93e6c",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "b3b5423ac43827583136ef3a765e9b164a2508a4a4fae0b9e56a48edcac053d5"
+    }
+  },
+  {
+    "revision": "c43c64573cd8d56cb3de4a4b4403105e454858965159440cdb77ca44a524e670",
+    "sourceCommit": "942e55dad4518300549565b219b7c5319e67fb35",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "dabcb64bf7faa4e221810005159e83826b3498c93a67c75fc329bfc933339e59"
+    }
+  },
+  {
+    "revision": "3fdf53cf83327c0bd8b76a5699e0ea2ebd2bce3ceb36f19f8f471cf8b1b58f23",
+    "sourceCommit": "c5d82731c5603b46c588608d0ccf0613599537c0",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "36f2023f2f4eb29346b26356e50a0a913550d7b78d9fb75fda55ba7272701b5a"
+    }
+  },
+  {
+    "revision": "fc510028df4182fbac0dbcf3bde690cb9692fcd5ec9b5a101969ba24c53a775c",
+    "sourceCommit": "89f6397d52bf94d623eabb09065db52964821384",
+    "files": {
+      "SKILL.md": "5d583ad16c43cb3ff8c944d93bacc73e97f98d62ce6ae79e201749b53a469140",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "9111b8f492c68dc422f156c3ea9f13c8fb536b557c7241d8eadffbee087b05fd"
+    }
+  },
+  {
+    "revision": "2481d6228511b930f21a805e08fe5be6c0e44697bed088ba16fee156b7c08d33",
+    "sourceCommit": "da503774db04a2fa43e35babed6c6da938ba0b06",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "9111b8f492c68dc422f156c3ea9f13c8fb536b557c7241d8eadffbee087b05fd"
+    }
+  },
+  {
+    "revision": "597794ae7297d7af75e1e905c16059bb8eb412aa274d9f0a2e8e1cf1b4740a3d",
+    "sourceCommit": "3a59b9a083674728a61386f705199b9abd0f958a",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "12961eb250705a923ab865712a12dd645e4a22428c4e9acb169057c1d6f14102"
+    }
+  },
+  {
+    "revision": "7cbe98f2a9660d6a81a6a74faf51073fa4d3cc831d4c454ea78031899992a3e2",
+    "sourceCommit": "7193cfbed030578a9b6d25307ea6de67f08d2c99",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "7a8a7ec804a02836c1d204dd552ddd4bbb88273047b146ace87a7e173f79fe0b"
+    }
+  },
+  {
+    "revision": "9a9d4b32c7c95f7dcc8326b9fe522edd32a760b7b1f15796882ddb7c0879a657",
+    "sourceCommit": "292c1bbb377f38cc5b8d2f2198a2464127b0ace2",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "ab775ca09ce2ebe40eb80a6e2ff9633fd982f21b77552a70a2012fc121f602d6"
+    }
+  },
+  {
+    "revision": "7d91c2abc5c2d5768e7fa9fbc32c08658a8896a012bacaa20365a7eca04b8121",
+    "sourceCommit": "46de85871ca7c8f74b45259b9f23e52a2016bfd7",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "8c47ef1f5fc1debf94cb610fa14879c6bb7bcfdd79947f037b56f54d5b95daf8"
+    }
+  },
+  {
+    "revision": "e32cdecc42f9159c972e9b2fa3db8d878f21d650fa10e5ea836b586dc25d7017",
+    "sourceCommit": "6b674f2715d87b35117d2af99d29f499b662fc9e",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "034bb1e62acb70cf25a4c4552449928dcb1449412a1f0527424ca12651054728"
+    }
+  },
+  {
+    "revision": "59bba972a949b6c04384b48a9697360589796dec692e8b95c94660f26a1f5e69",
+    "sourceCommit": "53447b3433337471596d59009c6f6b8840efee39",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "cbacc58c641defb0f5c47d3864b5278e6b40988e1f8c7e59d3345ae1360f4907"
+    }
+  },
+  {
+    "revision": "7d1a7e8bcb047b637fa7ff6ce4b769b08df9e0b39f724a2d7860acf7aa885555",
+    "sourceCommit": "6c10a72aa2df18e0a2acb93e23b40b1b47d62519",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "e4e644a8030fbd21f0ffe89a83d876290ead6eee474da17767d00d8a3e0d67e3",
+      "references/tool-selection.md": "57905ec8b4de7506f2c3720be499b3987227126b673047b68b796c0605001bc0"
+    }
+  },
+  {
+    "revision": "873ad90b9cd7ac0b5af526cd5eed4a7f553a841d77bbf640064cf6e6d4ee426d",
+    "sourceCommit": "5225fdaf766c0613b5861593a25b48570cbe84a3",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "d4d7a3f24a244ba6e1322b309b15e52e372e4afab415e8556c779ef6c9ee9136",
+      "references/tool-selection.md": "57905ec8b4de7506f2c3720be499b3987227126b673047b68b796c0605001bc0"
+    }
+  },
+  {
+    "revision": "a34582058142a111db65ceb103788d324ff4187d9e95b9229fc5baf747c293c6",
+    "sourceCommit": "38a04b8f4e84f086688294fee2e1667492370020",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "d4d7a3f24a244ba6e1322b309b15e52e372e4afab415e8556c779ef6c9ee9136",
+      "references/tool-selection.md": "b8fd775f20049001b10da25080c8868b73b22565aed90a3d17abe39922080557"
+    }
+  },
+  {
+    "revision": "fc9be19599302c9c996d62ed2a64e4deba959355b53766cbea096abb40a29feb",
+    "sourceCommit": "0be9bbf8853c1f759ccbc17568a2c4a5d3615b9a",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "d4d7a3f24a244ba6e1322b309b15e52e372e4afab415e8556c779ef6c9ee9136",
+      "references/tool-selection.md": "d98934958f04bdab82282d2c0e5d880c960469f722ac382473d9e8f05155b486"
+    }
+  },
+  {
+    "revision": "796d89a9bd88af27a70f27ca13957ff82f8d3b997a4035b666a14061195fd27d",
+    "sourceCommit": "43a66827f6c12ce9716665011c31ea8c68b516c3",
+    "files": {
+      "SKILL.md": "6347ec6e6b8a8946e2aaa96b6f7e5135f68e12aef5d3403ffb51e43191b48559",
+      "agents/openai.yaml": "1118c3454f22be9a82f3af90f1c4f75ce48d8c32f9610a12c70f6c5b6a37313b",
+      "references/native-debugging.md": "d4d7a3f24a244ba6e1322b309b15e52e372e4afab415e8556c779ef6c9ee9136",
+      "references/tool-selection.md": "3be39a9acdc34846b29c8d50226be76a8bdbc201535479feecbcc7a3c3447953"
+    }
+  }
+]

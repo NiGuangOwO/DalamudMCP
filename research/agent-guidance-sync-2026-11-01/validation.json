@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0.41",
+  "debugBuild": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "releaseBuild": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "tests": {
+    "guidanceCatalogChecks": 21,
+    "pythonSyncTests": 23,
+    "legacyRevisionsMigrated": 40,
+    "releasePluginLoadChecks": 215,
+    "protocolChecks": 62,
+    "liveAssertions": 18
+  },
+  "skillValidated": true,
+  "relativeLinksChecked": 81,
+  "debugBuildMvid": "48e2c260-b7d7-4d3e-948c-29af62ca8751",
+  "pluginPackageSha256": "9b6a8b08c1e85268bc5a77e15d53dbc1dd10e6d1d7130f3b483209d8b6f1981b",
+  "guidanceRevision": "ba5146bcca65c968cf297bcad272a45ecb725401b4a51bf2283f860a08048a15",
+  "guidancePackageSha256": "7cb571e3883dbabc9bbf7c3ac206121014f66df2a4562a1b122117cbf652e060",
+  "independentModelComplianceTested": false,
+  "realUserSkillChanged": false,
+  "closedMutationGateTestedOffline": true
+}

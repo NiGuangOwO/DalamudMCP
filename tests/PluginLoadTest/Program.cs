@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 162;
+    private const int ExpectedTools = 163;
 
     private static int checks;
     private static int failures;
@@ -533,6 +533,12 @@ internal static class Program
                     name="get_tribal_quest_state",arguments=new {} } })).ConfigureAwait(false);
             Check("tribal state refuses logged-out clients before native access", UnwrapToolResult(tribalOffline).IsError);
             Set(config, "AllowMutatingTools", false);
+            var guidanceReply = await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc="2.0", id=2320, method="tools/call", @params=new {name="get_agent_guidance",arguments=new {}} })).ConfigureAwait(false);
+            var (guidanceText, guidanceError) = UnwrapToolResult(guidanceReply);
+            using (var guidanceDoc = JsonDocument.Parse(guidanceText ?? "{}"))
+                Check("bundled guidance is readable while mutations are disabled", !guidanceError &&
+                    guidanceDoc.RootElement.GetProperty("manifest").GetProperty("clientInstallState").GetString() == "unknown");
             var holdingsOffline = await CallAsync(http, baseUrl, sessionId,
                 JsonSerializer.Serialize(new { jsonrpc="2.0", id=236, method="tools/call", @params=new {
                     name="search_item_holdings", arguments=new { itemId=10 } } })).ConfigureAwait(false);
@@ -561,7 +567,7 @@ internal static class Program
                     addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
                 Check("screenshot capture is not advertised in tools/list",
                     toolsList.All(t => t.GetProperty("name").GetString() != "capture_game_screenshot"));
-                foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin" })
+                foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin", "get_agent_guidance" })
                     Check(name + " is advertised as read-only",
                         toolsList.Single(t => t.GetProperty("name").GetString() == name)
                             .GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean());

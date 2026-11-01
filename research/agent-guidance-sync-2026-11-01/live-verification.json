@@ -1,0 +1,80 @@
+{
+  "checks": [
+    "complete running catalog has 163 tools",
+    "guidance transfer is advertised read-only",
+    "handshake advertises current revision and bootstrap independently of old skill",
+    "metadata detects stale reported revision without claiming client installation or transferring bundle",
+    "health exposes the same current bundled manifest",
+    "running MVID matches final tested debug assembly",
+    "transferred bootstrap script matches manifest hash before execution",
+    "running bundle and offline release package are byte-for-byte equivalent",
+    "running package carries all 40 original legacy fingerprints",
+    "published 1.0.0.40 pristine client copy upgrades automatically from live MCP payload",
+    "all installed file hashes match live manifest",
+    "unmanaged client files are preserved",
+    "repeat synchronization makes no writes or routine changes",
+    "customized client workflow is preserved and reported as conflict",
+    "client without an installed copy can bootstrap into its selected directory",
+    "clients without local execution can read matching current instructions",
+    "current reported revision remains distinct from server-certified installation",
+    "validation did not change the global mutation gate"
+  ],
+  "gameplayInputUsed": false,
+  "gameMutationsDispatched": false,
+  "realClientSkillOverwritten": false,
+  "independentModelComplianceTested": false,
+  "catalogPages": [
+    100,
+    63
+  ],
+  "manifest": {
+    "schemaVersion": 1,
+    "skill": "dalamud-development",
+    "revision": "ba5146bcca65c968cf297bcad272a45ecb725401b4a51bf2283f860a08048a15",
+    "publishedForPluginVersion": "1.0.0.41",
+    "files": {
+      "SKILL.md": "a7e28cc5b453ead98ceb8314280e667d206d403eb2245e7d45d68146040bad98",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "dd406d6afccb7b0d097ec1aba8dd04f112afd4d2f210afb0e5b09ba989975660",
+      "references/tool-selection.md": "bb2a5a12ca737d7a26c0966be697d2ebb175120a51dc057b0a989e86f86588af",
+      "scripts/sync_skill.py": "e5297c872c2278e5911cf0779371e693d290bfab65c8365a5dd1304cf3e58000"
+    },
+    "archiveSha256": "7cb571e3883dbabc9bbf7c3ac206121014f66df2a4562a1b122117cbf652e060",
+    "archiveBytes": 17440,
+    "downloadUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.41/dalamud-development-skill.zip",
+    "clientInstallState": "unknown"
+  },
+  "health": {
+    "status": "ok",
+    "server": "dalamud-mcp",
+    "version": "1.0.0",
+    "buildMvid": "48e2c260-b7d7-4d3e-948c-29af62ca8751",
+    "protocolVersions": [
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05"
+    ],
+    "tools": 163,
+    "mutatingToolsEnabled": true,
+    "sessions": 1,
+    "authRequired": false,
+    "agentGuidance": {
+      "schemaVersion": 1,
+      "skill": "dalamud-development",
+      "revision": "ba5146bcca65c968cf297bcad272a45ecb725401b4a51bf2283f860a08048a15",
+      "publishedForPluginVersion": "1.0.0.41",
+      "files": {
+        "SKILL.md": "a7e28cc5b453ead98ceb8314280e667d206d403eb2245e7d45d68146040bad98",
+        "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+        "references/native-debugging.md": "dd406d6afccb7b0d097ec1aba8dd04f112afd4d2f210afb0e5b09ba989975660",
+        "references/tool-selection.md": "bb2a5a12ca737d7a26c0966be697d2ebb175120a51dc057b0a989e86f86588af",
+        "scripts/sync_skill.py": "e5297c872c2278e5911cf0779371e693d290bfab65c8365a5dd1304cf3e58000"
+      },
+      "archiveSha256": "7cb571e3883dbabc9bbf7c3ac206121014f66df2a4562a1b122117cbf652e060",
+      "archiveBytes": 17440,
+      "downloadUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.41/dalamud-development-skill.zip",
+      "clientInstallState": "unknown"
+    }
+  },
+  "completed": true
+}

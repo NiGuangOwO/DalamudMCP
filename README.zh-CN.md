@@ -150,6 +150,7 @@ dotnet build src\DalamudMCP\DalamudMCP.csproj -p:Platform=x64 -c Release
 ## 连接 Agent
 
 MCP 连接配置与 Skill 安装为独立步骤。
+支持的 Agent 现可在 MCP 握手后按指引自动同步已验证的 Skill，原版副本无需额外确认，本地修改予以保留。技能包由运行中的插件提供，无需访问 GitHub。客户端权限、离线安装及回退方式见[技能同步说明](docs/agent-guidance.md)。
 [Agent 接入说明](docs/agent-setup.md)涵盖 MCP 注册、Skill 发现及其在其他插件项目中的安装方式。
 附带的 [Dalamud 开发 Skill](.agents/skills/dalamud-development/SKILL.md)、仓库 [AGENTS.md](AGENTS.md)
 和服务器初始化指令共同描述开发流程；Skill 是否自动选用取决于 Agent 的发现机制。

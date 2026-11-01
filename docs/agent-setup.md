@@ -25,6 +25,10 @@ Begin a live task by calling `get_client_state` and `get_local_player`. The norm
 
 ## 2. Make the skill discoverable / 让 Skill 可发现
 
+From 1.0.0.41, the MCP handshake guides compatible agents to install/update the active skill automatically from the running build using `get_agent_guidance`. No GitHub download is needed. The verified updater preserves custom edits and unknown/newer revisions; client permissions and update policies still apply. See [automatic synchronization and fallback](agent-guidance.md). Manual installation below remains available.
+
+从 1.0.0.41 起，MCP 握手会引导支持的 Agent 通过 `get_agent_guidance` 自动安装或更新实际使用的 Skill，无需访问 GitHub。同步器保留本地修改及未知／较新修订，遵循客户端权限与用户策略。详见[自动同步与回退](agent-guidance.md)。仍可按下方方式手动安装。
+
 The canonical source is `.agents/skills/dalamud-development/`. Codex discovers `.agents/skills` from its working directory up to the repository root. Working inside a clone of this repository therefore requires no extra skill copy. Other clients may require installing/registering the folder in their own skill location or explicitly reading `SKILL.md`.
 
 Skill 源码放在 `.agents/skills/dalamud-development/`。在本仓库内运行 Codex 时，可通过标准项目目录发现它；其他客户端应按其规范安装或注册 Skill，不能假设所有 Agent 都读取相同路径。
@@ -52,9 +56,9 @@ For personal use across repositories, choose `$skillParent = Join-Path ([Environ
 
 个人跨项目使用时，可改用用户目录下的 `.agents\skills`，并保留同样的目标检查和复制步骤。项目级与用户级通常选择一种，避免重名重复出现。升级时比对并合并差异。
 
-CI uploads a separate `DalamudMCP-agent-guidance` artifact containing `dalamud-development-skill.zip`, this guide and the project template. Extract the skill ZIP and use the extracted `dalamud-development` folder as `$skillSource`. The game's `latest.zip` remains the normal plugin package; putting Markdown beside a game DLL does not make an agent load it.
+GitHub Releases include `dalamud-development-skill.zip`, its manifest and an offline synchronization payload. CI also uploads `DalamudMCP-agent-guidance` with 30-day retention. Extract the skill ZIP and use the extracted `dalamud-development` folder as `$skillSource`. The game's `latest.zip` remains the normal plugin package with embedded guidance; the client's agent performs any local installation rather than loading Markdown beside a DLL automatically.
 
-CI 另提供 `DalamudMCP-agent-guidance` 产物，包含 Skill ZIP、本文和项目模板。解压后把 `dalamud-development` 目录作为复制源即可。游戏插件 `latest.zip` 保持正常插件包结构；把 Markdown 放在 DLL 旁不会让 Agent 自动加载它。
+GitHub Release 提供 Skill ZIP、清单及离线同步 payload；CI 另提供保留 30 天的技能产物。手动安装时，解压后把 `dalamud-development` 目录作为复制源。游戏插件保持正常包结构并内置指引，由客户端 Agent 执行本地同步，DLL 旁的 Markdown 不会自行成为已安装技能。
 
 ## 3. Route project work / 配置项目入口
 

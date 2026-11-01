@@ -165,6 +165,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginDiscoveryTools.Register(registry, services);
         TribalQuestTools.Register(registry, services);
         DevPluginTools.Register(registry, services);
+        AgentGuidance.Bundled.Register(registry);
         PluginBridgeTools.Register(registry, services, ipcHub);
         EventTools.Register(registry, services, eventHub);
         combatRecorder = new CombatRecorder(registry, services);
@@ -235,6 +236,8 @@ public sealed class Plugin : IDalamudPlugin
                 // Read live so editing the token takes effect without a restart.
                 TokenProvider = () => string.IsNullOrEmpty(Config.AuthToken) ? null : Config.AuthToken,
                 LogRequests = () => Config.LogRequests,
+                GuidanceMetadataProvider = () => (Newtonsoft.Json.Linq.JObject)AgentGuidance.Bundled.Manifest.DeepClone(),
+                GuidanceInstructions = AgentGuidance.Bundled.BootstrapInstructions,
             };
 
             server.Start(Config.Port);

@@ -1,0 +1,8 @@
+<Project>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../.agents/skills/dalamud-development/**/*.md;$(MSBuildThisFileDirectory)../.agents/skills/dalamud-development/**/*.yaml;$(MSBuildThisFileDirectory)../.agents/skills/dalamud-development/**/*.py">
+      <LogicalName>DalamudMCP.Guidance/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)guidance-baselines.json" LogicalName="DalamudMCP.GuidanceBaselines.json" />
+  </ItemGroup>
+</Project>

@@ -59,6 +59,10 @@ public sealed class McpServer : IDisposable
     /// <summary>Supplies the auth token required on requests, or null when auth is disabled.</summary>
     public Func<string?> TokenProvider { get; set; } = () => null;
 
+    /// <summary>Current bundled guidance; optional so standalone protocol hosts stay independent.</summary>
+    public Func<JObject?>? GuidanceMetadataProvider { get; set; }
+    public string GuidanceInstructions { get; set; } = string.Empty;
+
     /// <summary>
     /// When this returns true, every JSON-RPC request and its outcome (method, id, tool name,
     /// elapsed ms) is written to the plugin log. Read live, so toggling it in the settings window
@@ -208,6 +212,7 @@ public sealed class McpServer : IDisposable
             mutatingToolsEnabled = allowMutating,
             sessions = SessionCount(),
             authRequired = !string.IsNullOrEmpty(TokenProvider()),
+            agentGuidance = GuidanceMetadataProvider?.Invoke(),
         })).ConfigureAwait(false);
     }
 
@@ -633,7 +638,7 @@ public sealed class McpServer : IDisposable
                         ["title"] = "DalamudMCP",
                     },
                     ["instructions"] =
-                        "Use DalamudMCP proactively for Dalamud/FFXIV plugin runtime investigation, native addon UI " +
+                        GuidanceInstructions + "Use DalamudMCP proactively for Dalamud/FFXIV plugin runtime investigation, native addon UI " +
                         "nodes/callbacks, IPC and in-game validation. If installed, use the dalamud-development skill " +
                         "for the development workflow. Start with get_client_state and get_local_player; when the client " +
                         "is unavailable, continue independent source/build work and report the live-validation gap. " +

@@ -85,6 +85,8 @@ public static class Program
 
         using var server = new McpServer(registry, new InlineGameThread(), Capture);
         server.TokenProvider = () => null;
+        server.GuidanceInstructions = "Bundled guidance bootstrap sentinel. ";
+        server.GuidanceMetadataProvider = () => new JObject { ["revision"] = "guidance-test-revision", ["clientInstallState"] = "unknown" };
         server.Start(0); // 0 = let the OS pick a free port
 
         var baseUrl = $"http://127.0.0.1:{server.Port}";
@@ -103,6 +105,9 @@ public static class Program
         Check("GET /health returns 200", health.StatusCode == System.Net.HttpStatusCode.OK);
         var healthJson = JObject.Parse(await health.Content.ReadAsStringAsync());
         Check("health reports ok", healthJson["status"]?.Value<string>() == "ok");
+        Check("health serves guidance metadata without claiming a client install",
+            healthJson["agentGuidance"]?.Value<string>("revision") == "guidance-test-revision" &&
+            healthJson["agentGuidance"]?.Value<string>("clientInstallState") == "unknown");
 
         // ---------------------------------------------------------- GET /tools
         var catalog = await http.GetAsync("/tools");
@@ -139,6 +144,7 @@ public static class Program
         Check("initialize result advertises tools capability",
             initJson["result"]?["capabilities"]?["tools"] is not null);
         var instructions = initJson["result"]?["instructions"]?.Value<string>() ?? string.Empty;
+        Check("initialize includes bundled bootstrap independently of installed skills", instructions.StartsWith(server.GuidanceInstructions, StringComparison.Ordinal));
         Check("initialize instructions prefer addon text and do not offer screenshot capture",
             instructions.Contains("read_addon_text first", StringComparison.Ordinal) &&
             instructions.Contains("Screenshot capture is not provided", StringComparison.Ordinal) &&
