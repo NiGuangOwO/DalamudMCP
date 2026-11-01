@@ -680,7 +680,12 @@ public sealed class McpServer : IDisposable
                         "Combat recording runs in the background by default while the mutation gate permits, independently " +
                         "of MCP clients/listener. Completed fights are compressed with bounded retention. Use combat_recording_status " +
                         "to inspect capture/archive failures; read partial-start, truncation and packet-loss metadata. Server effects are " +
-                        "not a complete FFLogs parser or confirmed effective damage/healing.",
+                        "not a complete FFLogs parser or confirmed effective damage/healing. " +
+                        "For zone network diagnostics use network_capture_status, then a bounded network_capture_start. " +
+                        "Capture requires login and mutation access, is restricted to a validated game/SDK ABI, and automatically stops. " +
+                        "Read session identity, layout/header size, truncation and loss counters before interpreting bytes. " +
+                        "network_capture_decode uses caller-declared fields; unknown protocol semantics remain unverified. " +
+                        "Send observations do not prove server receipt; this does not cover TCP, lobby or all chat traffic.",
                 };
 
                 if (session.ProtocolVersion == "2024-11-05") result["sessionId"] = session.Id;

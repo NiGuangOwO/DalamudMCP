@@ -47,6 +47,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ToolRegistry registry;
     private readonly AddonProbeTools addonProbe;
     private readonly CombatRecorder combatRecorder;
+    private readonly NetworkPacketTools networkPackets;
     private readonly ItemHoldingsTools itemHoldings;
     private readonly PluginInstallerTools pluginInstaller;
     private readonly WindowSystem windowSystem = new("DalamudMCP");
@@ -167,6 +168,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginBridgeTools.Register(registry, services, ipcHub);
         EventTools.Register(registry, services, eventHub);
         combatRecorder = new CombatRecorder(registry, services);
+        networkPackets = new NetworkPacketTools(registry, services);
         ChatLogTools.Register(registry, chatLogHub);
         DalamudLogTools.Register(registry, dalamudLogHub);
         CallbackProbe.Initialize(interop, sigScanner);
@@ -381,6 +383,7 @@ public sealed class Plugin : IDalamudPlugin
         dalamudLogHub.Dispose();
         itemHoldings.Dispose();
         combatRecorder.Dispose();
+        networkPackets.Dispose();
         addonProbe.Dispose();
         commandManager.RemoveHandler(CommandName);
 

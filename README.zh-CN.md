@@ -450,6 +450,8 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 
 允许变更工具时，默认在后台按进出战斗记录服务端技能效果，不依赖 MCP 客户端或监听器。新配置默认记录 `all` 附近单位，已保存的有效范围会保留。每场结束自动压缩保存，最多保留 7 天、1000 场、总计 100 MiB。五个 `combat_recording_*` 工具可查询/配置，并在重载后读取归档。详见[战斗记录](docs/combat-recording.md)的使用方式、容量和覆盖范围。
 
+七个 `network_capture_*` 工具提供实验性的区域 IPC 捕获、按数字 opcode/方向筛选、十六进制和 ASCII 分页、声明式字段解析与包差异比较。捕获默认 10 秒，需要登录并开启变更权限。原生桥目前仅接受已检查的国服游戏二进制和 SDK 构建，其他版本会拒绝启用。数据仅保留在内存，开始新场或卸载后失效；发送观测不代表服务器收到了消息，未知字段含义仍需验证。详见[网络包诊断](docs/network-packets.md)的容量、包头布局与验证范围。
+
 事件采集器随框架更新记录状态变化，使用容量为 2000 的环形缓冲区。
 支持 `hp_change`、`mp_change`、`gp_change`、`player_move`、`job_change`、`target_change`、
 `focus_target_change`、`target_hp_change`、`combat_damage`、`combat_start`、`combat_end`、`map_change`、

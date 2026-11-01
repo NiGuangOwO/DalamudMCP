@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 148;
+    private const int ExpectedTools = 155;
 
     private static int checks;
     private static int failures;
@@ -453,6 +453,10 @@ internal static class Program
         Check("game window control is classified as mutating", Equals(Prop(windowTool, "Mutating"), true));
         var combatTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "combat_recording_configure"));
         Check("combat hook configuration is classified as mutating", Equals(Prop(combatTool, "Mutating"), true));
+        foreach (var name in new[] { "network_capture_start", "network_capture_stop" })
+            Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
+        foreach (var name in new[] { "network_capture_status", "network_capture_list", "network_capture_read", "network_capture_decode", "network_capture_compare" })
+            Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         Check("Plugin.ToolCount agrees with the registry", Equals(Prop(plugin, "ToolCount"), toolNames.Count));
 
         // ------------------------------------------------------------- running
@@ -601,6 +605,70 @@ internal static class Program
             var (invalidCombatPayload, invalidCombatError) = UnwrapToolResult(invalidCombat);
             Check("combat recorder refuses string booleans before native setup", invalidCombatError &&
                 invalidCombatPayload?.Contains("boolean", StringComparison.Ordinal) == true);
+
+            // Exercise the shipped network handlers against owned synthetic bytes, never live hooks.
+            async Task<(string? Payload, bool Error)> NetworkCall(string name, object arguments)
+            {
+                var response = await CallAsync(http, baseUrl, sessionId,
+                    JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 220, method = "tools/call", @params = new { name, arguments } })).ConfigureAwait(false);
+                return UnwrapToolResult(response);
+            }
+            var networkState = await NetworkCall("network_capture_status", new { });
+            using (var document = JsonDocument.Parse(networkState.Payload!))
+                Check("network capture is absent and hooks disabled on plugin load", !networkState.Error &&
+                    document.RootElement.GetProperty("capture").ValueKind == JsonValueKind.Null &&
+                    !document.RootElement.GetProperty("hooks").GetProperty("sendEnabled").GetBoolean() &&
+                    !document.RootElement.GetProperty("hooks").GetProperty("receiveEnabled").GetBoolean());
+            var loggedOutNetwork = await NetworkCall("network_capture_start", new { durationSeconds = 1 });
+            Check("network capture refuses logout before native setup", loggedOutNetwork.Error && loggedOutNetwork.Payload?.Contains("logged-in", StringComparison.Ordinal) == true);
+            var invalidNetwork = await NetworkCall("network_capture_start", new { durationSeconds = 121 });
+            Check("network duration validated before client access", invalidNetwork.Error && invalidNetwork.Payload?.Contains("durationSeconds", StringComparison.Ordinal) == true);
+            var networkInstance = pluginType.GetField("networkPackets", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(plugin)!;
+            var networkCaptureField = networkInstance.GetType().GetField("capture", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var networkCaptureType = pluginAssembly.GetType("DalamudMCP.Network.PacketCapture", true)!;
+            var testCapture = Activator.CreateInstance(networkCaptureType, BindingFlags.Instance | BindingFlags.NonPublic, null,
+                new object[] { "both", Array.Empty<ushort>(), 120, 100, 512 }, null)!;
+            var addPacket = networkCaptureType.GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            addPacket.Invoke(testCapture, new object?[] { "send", (ushort)12, null, 4, new byte[] { 1, 2, 3, 4 }, "synthetic" });
+            addPacket.Invoke(testCapture, new object?[] { "send", (ushort)12, null, 4, new byte[] { 1, 2, 5, 4 }, "synthetic" });
+            var testSession = (string)networkCaptureType.GetField("SessionId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(testCapture)!;
+            networkCaptureField.SetValue(networkInstance, testCapture);
+            try
+            {
+                var listedNetwork = await NetworkCall("network_capture_list", new { sessionId = testSession, count = 1 });
+                using (var document = JsonDocument.Parse(listedNetwork.Payload!))
+                    Check("network metadata paging preserves cursor without draining", !listedNetwork.Error && document.RootElement.GetProperty("lastId").GetInt32() == 1 && document.RootElement.GetProperty("hasMore").GetBoolean());
+                var filteredNetwork = await NetworkCall("network_capture_list", new { sessionId = testSession, direction = "receive" });
+                using (var document = JsonDocument.Parse(filteredNetwork.Payload!))
+                    Check("network list applies direction filter", !filteredNetwork.Error && document.RootElement.GetProperty("count").GetInt32() == 0);
+                var bytesNetwork = await NetworkCall("network_capture_read", new { sessionId = testSession, packetId = 1, offset = 1, count = 2 });
+                Check("network read serves exact owned byte range", !bytesNetwork.Error && ReadString(bytesNetwork.Payload, "hex") == "0203");
+                var decodedNetwork = await NetworkCall("network_capture_decode", new { sessionId = testSession, packetId = 1,
+                    fields = new[] { new { name = "test", type = "u16", offset = 1 } } });
+                using (var document = JsonDocument.Parse(decodedNetwork.Payload!))
+                    Check("network decoder is wired to captured bytes", !decodedNetwork.Error && document.RootElement.GetProperty("fields")[0].GetProperty("value").GetInt32() == 770);
+                var differenceNetwork = await NetworkCall("network_capture_compare", new { sessionId = testSession, leftPacketId = 1, rightPacketId = 2 });
+                using (var document = JsonDocument.Parse(differenceNetwork.Payload!))
+                    Check("network comparison is wired to two retained packets", !differenceNetwork.Error && document.RootElement.GetProperty("differences")[0].GetProperty("offset").GetInt32() == 2);
+                var staleNetwork = await NetworkCall("network_capture_read", new { sessionId = "stale", packetId = 1 });
+                Check("network packet ids cannot cross session identity", staleNetwork.Error && staleNetwork.Payload?.Contains("Unknown/replaced", StringComparison.Ordinal) == true);
+                var duplicateNetwork = await NetworkCall("network_capture_start", new { });
+                Check("active network capture cannot be silently replaced", duplicateNetwork.Error && duplicateNetwork.Payload?.Contains("capture is active", StringComparison.Ordinal) == true);
+                Set(config, "AllowMutatingTools", false);
+                var blockedNetwork = await NetworkCall("network_capture_start", new { });
+                Check("closed mutation gate refuses native network capture", blockedNetwork.Error && blockedNetwork.Payload?.Contains("changes game state and is disabled", StringComparison.Ordinal) == true);
+                var networkWatch = frameworkUpdates.Single(d => d.Method.Name == "Watch" && d.Method.DeclaringType?.Name == "NetworkPacketTools");
+                networkWatch.DynamicInvoke(services[Array.FindIndex(parameters, p => p.ParameterType.Name == "IFramework")]);
+                var stoppedNetwork = await NetworkCall("network_capture_status", new { });
+                using (var document = JsonDocument.Parse(stoppedNetwork.Payload!))
+                    Check("mutation gate closure stops active network session", !stoppedNetwork.Error && document.RootElement.GetProperty("capture").GetProperty("stopReason").GetString() == "mutation_gate_closed");
+                var retainedNetwork = await NetworkCall("network_capture_read", new { sessionId = testSession, packetId = 1 });
+                Check("copied packets remain readable while mutation access is closed", !retainedNetwork.Error && ReadString(retainedNetwork.Payload, "hex") == "01020304");
+                Set(config, "AllowMutatingTools", true);
+                var stopAgain = await NetworkCall("network_capture_stop", new { sessionId = testSession });
+                Check("stopping an ended network capture remains idempotent", !stopAgain.Error);
+            }
+            finally { Set(config, "AllowMutatingTools", true); networkCaptureField.SetValue(networkInstance, null); }
 
             // get_module_info reads only scalar SigScanner properties, so it must survive
             // inert services too - a second handler exercising a different service.
