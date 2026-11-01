@@ -130,7 +130,14 @@ var ids = concurrent.Snapshot().Select(p=>p.Id).ToArray();
 Check(ids.SequenceEqual(Enumerable.Range(1,ids.Length)) && ids.Length <= 4096, "concurrent capture preserves stable sequential packet ids");
 var timed = new PacketCapture("both",[],1,100,32);
 await Task.Delay(1100);
-Check(!timed.Active && timed.Status().Value<string>("stopReason") == "timeout", "monotonic deadline ends capture without client polling");
+var cleanupCalls = 0;
+var timedStatus = timed.Status(() => cleanupCalls++);
+Check(!timedStatus.Value<bool>("active") && timedStatus.Value<string>("stopReason") == "timeout", "monotonic deadline ends capture without client polling");
+Check(cleanupCalls == 1, "first deadline snapshot reconciles inactive hooks before returning without a framework tick");
+New().Status(() => cleanupCalls++);
+Check(cleanupCalls == 1, "active snapshot does not disable running hooks");
+limited.Status(() => cleanupCalls++);
+Check(cleanupCalls == 2, "capacity-ended snapshot also reconciles hooks");
 Console.WriteLine($"{checks} checks passed");
 
 sealed class NativePages : IDisposable

@@ -53,3 +53,19 @@ The first implementation is deliberately restricted to the inspected CN PE finge
 - 离线测试：`dotnet run --project tests/NetworkPacketTest -c Release` 覆盖实际进程内存、保护页边界、长度/地址溢出、截断、筛选、字段解码、差异、容量、并发和到期；`PluginLoadTest` 检查实际插件注册、工具联通、会话身份、变更权限与停止；另运行 Debug/Release、协议和 schema 检查。离线通过不证明现场收发、吞吐或与其他 hook 共存。
 
 Capture lasts 1–120 seconds, holds at most 4096 packets / 8 MiB, and copies at most 4096 bytes per packet. Invalid or partially readable native structures are rejected. Counters report observed read/contention failures, not end-to-end network loss. Offline tests do not establish live traffic correctness, throughput or coexistence with other hooks. Consult the release validation record for the actual live coverage.
+
+## 真实环境验证 / Live follow-up — 2026-11-01
+
+登录后在实际游戏进程中验证了 1.0.0.35 的 Debug 构建，MVID `a3a1ac74-f6cf-4f59-8fd7-f92c35b8f897`。全程仅被动观察，没有发送聊天、移动、技能或构造/重发网络包。10 秒双向捕获得到 **84 包（发送 16、接收 68）**；非法输入和缓存争用丢弃均为 0。独立 20 秒仅发送捕获另得到 **3 个发送包**。这只证明本次样本内可用，计数不代表链路无丢包。
+
+真实数据的字节分页、opcode/发送长度解码、越界字段拒绝、独立字节差异计算、方向筛选、opcode 白名单、64 字节截断、包数上限、旧会话拒绝、重复开始拒绝及停止清理通过，共 114 项综合现场断言，另有仅发送观察记录。接收白名单样本保留 3 个 opcode 408，排除 8 个其他 opcode。最终两个 hook 均关闭，同一客户端仍登录，未见本次构建生命周期内的 Error 级日志。
+
+测试发现并在 1.0.0.35 修复了到期查询时序：状态查询可能先观察到期限，将缓存标成结束，而 hook 尚待下一帧关闭。现在返回结束快照前会同步清理该捕获的 hook。离线回归覆盖首次由状态查询观察到期、活动场不误停、容量结束场清理。
+
+Live verification used the actual logged-in game and Debug build MVID above, with passive observation only. A 10-second bidirectional sample captured **84 messages (16 sends, 68 receives)** with zero invalid-input or cache-contention drops; a separate 20-second send-only sample captured **3 sends**. Real-byte paging, opcode/send-size decoding, out-of-range refusal, independently computed differences, filters, truncation, packet limits, session guards and stop cleanup passed 114 comprehensive assertions. The receive opcode allowlist retained 3 opcode-408 messages and filtered 8 others. Both hooks were disabled at the end, the same client remained logged in, and no Error-level log entries were observed in the tested build's lifetime.
+
+Version 1.0.0.35 fixes an expiry snapshot race found by this test: a query could report an ended buffer before the next frame disabled its hooks. Ended status snapshots now reconcile hook cleanup before returning. Offline regressions cover query-observed expiry, active captures and capacity-ended captures.
+
+尚未覆盖高负载战斗吞吐、全部通道/插件组合、现场强制登出或关闭变更权限；未知协议语义与服务端送达仍未确认。High-load combat throughput, every channel/plugin combination, forced live logout and mutation-gate closure remain outside this sample. Unknown protocol semantics and server delivery remain unverified.
+
+记录 / Evidence: [综合现场验证](../research/network-packets-2026-11-01/real-traffic-verification.json)、[仅发送验证](../research/network-packets-2026-11-01/send-only-verification.json)、[到期时序失败与清理记录](../research/network-packets-2026-11-01/real-traffic-expiry-race.json)。

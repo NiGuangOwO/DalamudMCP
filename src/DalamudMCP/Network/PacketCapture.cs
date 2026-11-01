@@ -84,10 +84,11 @@ internal sealed class PacketCapture
         }
     }
 
-    internal JObject Status()
+    internal JObject Status(Action? onInactive = null)
     {
         var isActive = Active;
-        lock (sync) return new JObject
+        JObject result;
+        lock (sync) result = new JObject
         {
             ["sessionId"] = SessionId, ["active"] = isActive && Volatile.Read(ref active) != 0,
             ["startedAt"] = StartedAt, ["expiresAt"] = StartedAt.AddSeconds(DurationSeconds),
@@ -97,6 +98,10 @@ internal sealed class PacketCapture
             ["byteBudget"] = ByteBudget, ["filteredPackets"] = Interlocked.Read(ref filtered),
             ["invalidPackets"] = Interlocked.Read(ref invalid), ["contentionDroppedPackets"] = Interlocked.Read(ref contention),
         };
+        // The snapshot may be the first observer of the deadline, before a framework
+        // tick. Reconcile native hooks outside the buffer lock before publishing it.
+        if (!result.Value<bool>("active")) onInactive?.Invoke();
+        return result;
     }
 
     internal CapturedPacket[] Snapshot() { lock (sync) return packets.ToArray(); }

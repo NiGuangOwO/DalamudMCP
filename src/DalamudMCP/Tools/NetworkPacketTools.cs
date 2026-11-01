@@ -139,11 +139,17 @@ internal sealed class NetworkPacketTools : IDisposable
             ["lastId"] = page.Length == 0 ? after : page[^1].Id, ["hasMore"] = rows.Length > count };
     }
 
-    private object Status() => new JObject
+    private object Status()
     {
-        ["capture"] = capture?.Status(), ["hooks"] = source.Status(), ["coverage"] = Coverage,
-        ["buildMvid"] = typeof(NetworkPacketTools).Assembly.ManifestModule.ModuleVersionId.ToString(),
-    };
+        // Reading the capture snapshot can itself observe its monotonic deadline before
+        // the next framework watcher. Reconcile hooks before returning an ended snapshot.
+        var snapshot = capture?.Status(source.Stop);
+        return new JObject
+        {
+            ["capture"] = snapshot, ["hooks"] = source.Status(), ["coverage"] = Coverage,
+            ["buildMvid"] = typeof(NetworkPacketTools).Assembly.ManifestModule.ModuleVersionId.ToString(),
+        };
+    }
 
     private void Watch(IFramework _)
     {

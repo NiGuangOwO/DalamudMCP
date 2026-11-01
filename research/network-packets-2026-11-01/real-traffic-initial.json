@@ -1,0 +1,173 @@
+{
+  "checks": [
+    "running build MVID equals tested DLL",
+    "all 155 tools discovered across every page, including seven network tools",
+    "classification network_capture_start",
+    "classification network_capture_stop",
+    "classification network_capture_status",
+    "classification network_capture_list",
+    "classification network_capture_read",
+    "classification network_capture_decode",
+    "classification network_capture_compare",
+    "running executable and SDK satisfy the inspected ABI checks",
+    "status query leaves both hooks disabled",
+    "no capture is started implicitly",
+    "bounded capture stops automatically and disables hooks",
+    "captured hex matches returned byte count",
+    "decoded opcode equals observed metadata",
+    "captured hex matches returned byte count",
+    "decoded opcode equals observed metadata",
+    "verification leaves no network hook enabled"
+  ],
+  "liveTrafficVerified": true,
+  "health": {
+    "status": "ok",
+    "server": "dalamud-mcp",
+    "version": "1.0.0",
+    "buildMvid": "0b0925a4-2cec-4ed2-8dd6-b3f91f48173f",
+    "protocolVersions": [
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05"
+    ],
+    "tools": 155,
+    "mutatingToolsEnabled": true,
+    "sessions": 2,
+    "authRequired": false
+  },
+  "client": {
+    "loggedIn": true,
+    "territoryType": 129,
+    "territoryName": "s1t2",
+    "mapId": 12,
+    "instance": 0,
+    "language": "ChineseSimplified",
+    "isPvP": false,
+    "isPvPExcludingDen": false,
+    "isGPosing": false,
+    "isClientIdle": true,
+    "blockingCondition": null,
+    "localPlayerLoaded": true,
+    "frameworkUpdateDeltaMs": 19.0,
+    "lastUpdate": "2026-11-01T12:11:36.2724585+08:00",
+    "processId": 22352,
+    "pointerSize": 64
+  },
+  "playerLoggedIn": true,
+  "catalogPageSizes": [
+    100,
+    55
+  ],
+  "initialStatus": {
+    "capture": null,
+    "hooks": {
+      "supported": true,
+      "unavailableReason": null,
+      "sendEnabled": false,
+      "receiveEnabled": false,
+      "sdkMvid": "3eb275ee-6770-44ea-96e5-3e2bdd9e29c4",
+      "supportedSdkMvid": "3eb275ee-6770-44ea-96e5-3e2bdd9e29c4",
+      "supportedPeTimestamp": "0x6AC3DCC1",
+      "supportedImageSize": 58789888,
+      "sendRva": 30410928,
+      "receiveRva": 30410896,
+      "sendLayout": "zone_send_call_header32",
+      "sendHeaderBytes": 32,
+      "receiveLayout": "zone_received_ipc_header16",
+      "receiveHeaderBytes": 16,
+      "receiveLengthSource": "zone_dequeue_descriptor_size_u64",
+      "sendLengthSource": "send_call_ipc_size_u64_plus_16",
+      "abiCodeSource": "sdk_original_search_copy",
+      "liveTrafficValidated": false
+    },
+    "coverage": "Bounded in-process zone IPC observation, not TCP/PCAP or all lobby/chat traffic. Send means an attempted call, not server receipt. No opcode-name database or automatic unknown-field semantics. Read declaredLength/capturedLength/truncated and invalid/contention counters. Captures stay in memory until replaced or plugin unload.",
+    "buildMvid": "0b0925a4-2cec-4ed2-8dd6-b3f91f48173f"
+  },
+  "capturedPacketMetadata": {
+    "sessionId": "fdcdebf0466d44cc9a98d1b2925f3399",
+    "active": false,
+    "packets": [
+      {
+        "packetId": 1,
+        "timestamp": "2026-11-01T04:11:36.5542195+00:00",
+        "direction": "receive",
+        "opcode": 486,
+        "opcodeHex": "0x01E6",
+        "targetId": 268926144,
+        "declaredLength": 56,
+        "capturedLength": 56,
+        "truncated": false,
+        "layout": "zone_received_ipc_header16"
+      },
+      {
+        "packetId": 2,
+        "timestamp": "2026-11-01T04:11:36.7782234+00:00",
+        "direction": "receive",
+        "opcode": 189,
+        "opcodeHex": "0x00BD",
+        "targetId": 268698024,
+        "declaredLength": 140,
+        "capturedLength": 64,
+        "truncated": true,
+        "layout": "zone_received_ipc_header16"
+      },
+      {
+        "packetId": 3,
+        "timestamp": "2026-11-01T04:11:36.8584967+00:00",
+        "direction": "receive",
+        "opcode": 718,
+        "opcodeHex": "0x02CE",
+        "targetId": 268698024,
+        "declaredLength": 400,
+        "capturedLength": 64,
+        "truncated": true,
+        "layout": "zone_received_ipc_header16"
+      }
+    ],
+    "count": 3,
+    "lastId": 3,
+    "hasMore": false
+  },
+  "liveGap": "Passive sample only; no full channel, throughput, server-delivery or other-hook coexistence certification.",
+  "finalStatus": {
+    "capture": {
+      "sessionId": "fdcdebf0466d44cc9a98d1b2925f3399",
+      "active": false,
+      "startedAt": "2026-11-01T04:11:36.3887672+00:00",
+      "expiresAt": "2026-11-01T04:11:37.3887672+00:00",
+      "stopReason": "timeout",
+      "direction": "both",
+      "opcodes": [],
+      "packets": 3,
+      "capturedBytes": 184,
+      "maxPackets": 8,
+      "maxBytesPerPacket": 64,
+      "byteBudget": 8388608,
+      "filteredPackets": 0,
+      "invalidPackets": 0,
+      "contentionDroppedPackets": 0
+    },
+    "hooks": {
+      "supported": true,
+      "unavailableReason": null,
+      "sendEnabled": false,
+      "receiveEnabled": false,
+      "sdkMvid": "3eb275ee-6770-44ea-96e5-3e2bdd9e29c4",
+      "supportedSdkMvid": "3eb275ee-6770-44ea-96e5-3e2bdd9e29c4",
+      "supportedPeTimestamp": "0x6AC3DCC1",
+      "supportedImageSize": 58789888,
+      "sendRva": 30410928,
+      "receiveRva": 30410896,
+      "sendLayout": "zone_send_call_header32",
+      "sendHeaderBytes": 32,
+      "receiveLayout": "zone_received_ipc_header16",
+      "receiveHeaderBytes": 16,
+      "receiveLengthSource": "zone_dequeue_descriptor_size_u64",
+      "sendLengthSource": "send_call_ipc_size_u64_plus_16",
+      "abiCodeSource": "sdk_original_search_copy",
+      "liveTrafficValidated": false
+    },
+    "coverage": "Bounded in-process zone IPC observation, not TCP/PCAP or all lobby/chat traffic. Send means an attempted call, not server receipt. No opcode-name database or automatic unknown-field semantics. Read declaredLength/capturedLength/truncated and invalid/contention counters. Captures stay in memory until replaced or plugin unload.",
+    "buildMvid": "0b0925a4-2cec-4ed2-8dd6-b3f91f48173f"
+  }
+}
