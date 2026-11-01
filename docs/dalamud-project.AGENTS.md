@@ -2,7 +2,7 @@
 
 When a task depends on live FFXIV state, addon UI nodes/callbacks, plugin IPC, or in-game validation, proactively use the connected DalamudMCP server and the `dalamud-development` skill. Do not wait for the user to say "use MCP". Read `.agents/skills/dalamud-development/SKILL.md` when installed in this project, or use the installed user-scoped skill.
 
-Start live work with `get_client_state` and `get_local_player`. Read the available tool schemas and complete catalog; mutating tools may be hidden by configuration. After building a development plugin, use `load_dev_plugin` to verify the running build before test commands. Verify resulting game state after dispatching an action.
+Start live work with `get_client_state` and `get_local_player`. Read the available tool schemas and complete catalog; mutating tools may be hidden by configuration. For local development plugins inspect `get_dev_plugin_state` by exact DLL path first. If auto-reload is enabled, use read-only `wait_for_dev_plugin` after building instead of `load_dev_plugin`; require `buildVerified=true` and the matching `buildMvid` before test commands. Use `load_dev_plugin` only for registration/loading or an explicit watcher change; omitted `autoReload` preserves existing settings. Reconnect after MCP host reload and compare `/health.buildMvid`. Verify resulting game state after dispatching an action.
 
 If a required capability is missing and the task includes MCP development, improve and validate the tool before continuing the dependent plugin work. If MCP is unavailable, continue independent source/build work and state what could not be tested live. Routine source-only or documentation changes do not require a game session.
 

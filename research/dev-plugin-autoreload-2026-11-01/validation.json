@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0.40",
+  "debugBuild": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "releaseBuild": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "tests": {
+    "DevPluginTest": 50,
+    "BuildIdentityTest": 3,
+    "PluginLoadTestRelease": 213,
+    "ProtocolSmokeTest": 60,
+    "live": 12
+  },
+  "packageSha256": "f78d64e679f7a6cd6748e939f95114c2c1bd5c678aad89fc62634d3a44ed24e8",
+  "manifestMatches": true,
+  "packageDllMatchesBuild": true,
+  "licenses": 3,
+  "relativeLinksChecked": 26,
+  "skillValidated": true,
+  "debugBuildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+  "mutatingLiveLoaderTested": false,
+  "closedGateTestedLive": false
+}

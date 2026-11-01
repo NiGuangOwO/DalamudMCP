@@ -1,0 +1,88 @@
+{
+  "checks": [
+    "complete running catalog has 162 tools",
+    "get_dev_plugin_state is advertised as read-only",
+    "wait_for_dev_plugin is advertised as read-only",
+    "running initialization instructions route auto-reload to read-only wait",
+    "actual MCP developer registration is loaded with auto-reload enabled",
+    "file, loaded assembly and health MVID match the new running build",
+    "read-only wait verifies exact running build after stable 750ms",
+    "read-only inspection and wait preserve observed watcher, registration and build state",
+    "mismatched expectedBuildMvid is refused in game",
+    "unregistered DLL reports unknown watcher without registration",
+    "missing registration times out without loading the DLL",
+    "timed-out wait leaves the copied DLL unregistered"
+  ],
+  "loadDevPluginCalled": false,
+  "configurationMutated": false,
+  "gameplayInputUsed": false,
+  "loggedIn": true,
+  "catalogPages": [
+    100,
+    62
+  ],
+  "before": {
+    "filePath": "C:\\Github\\DalamudMCP\\src\\DalamudMCP\\bin\\x64\\Debug\\DalamudMCP.dll",
+    "registered": true,
+    "internalName": "DalamudMCP",
+    "isDev": true,
+    "isLoaded": true,
+    "autoReload": true,
+    "state": "Loaded",
+    "fileBuildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "loadedBuildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "buildMatches": true
+  },
+  "health": {
+    "status": "ok",
+    "server": "dalamud-mcp",
+    "version": "1.0.0",
+    "buildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "protocolVersions": [
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05"
+    ],
+    "tools": 162,
+    "mutatingToolsEnabled": true,
+    "sessions": 1,
+    "authRequired": false
+  },
+  "ready": {
+    "filePath": "C:\\Github\\DalamudMCP\\src\\DalamudMCP\\bin\\x64\\Debug\\DalamudMCP.dll",
+    "registered": true,
+    "internalName": "DalamudMCP",
+    "isDev": true,
+    "isLoaded": true,
+    "autoReload": true,
+    "state": "Loaded",
+    "fileBuildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "loadedBuildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "buildMatches": true,
+    "status": "ready",
+    "buildVerified": true,
+    "buildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "stableMs": 750,
+    "elapsedMs": 807,
+    "fileReadError": null
+  },
+  "timeout": {
+    "filePath": "C:\\Users\\25898\\AppData\\Local\\Temp\\mcp-readonly-dev-wait-_fupisn7\\Unregistered.dll",
+    "registered": false,
+    "internalName": null,
+    "isDev": false,
+    "isLoaded": false,
+    "autoReload": null,
+    "state": null,
+    "fileBuildMvid": "a5f59ef7-3e48-44fe-a646-aae9b366873a",
+    "loadedBuildMvid": null,
+    "buildMatches": false,
+    "status": "timeout",
+    "buildVerified": false,
+    "buildMvid": null,
+    "stableMs": 750,
+    "elapsedMs": 1001,
+    "fileReadError": null
+  },
+  "completed": true
+}

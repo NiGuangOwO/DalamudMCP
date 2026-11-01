@@ -143,6 +143,10 @@ public static class Program
             instructions.Contains("read_addon_text first", StringComparison.Ordinal) &&
             instructions.Contains("Screenshot capture is not provided", StringComparison.Ordinal) &&
             !instructions.Contains("capture_game_screenshot", StringComparison.Ordinal));
+        Check("initialize instructions prefer read-only auto-reload readiness and preserve watcher settings",
+            instructions.Contains("get_dev_plugin_state", StringComparison.Ordinal) &&
+            instructions.Contains("When autoReload=true, use read-only wait_for_dev_plugin", StringComparison.Ordinal) &&
+            instructions.Contains("omitted autoReload preserves existing settings", StringComparison.Ordinal));
 
         var sid = sessionId!;
 

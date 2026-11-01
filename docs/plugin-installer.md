@@ -2,6 +2,8 @@
 
 Added in 1.0.0.33. The tools use the installed Dalamud managed plugin manager, with signature checks before accessing its internal APIs. They do not inspect target-plugin source, guess chat commands, or operate the installer through mouse coordinates. They work without a logged-in character once Dalamud's plugins are ready.
 
+For **local development DLLs**, use `get_dev_plugin_state` to inspect the actual auto-reload setting and loaded/file MVID. When auto-reload is enabled, build and use read-only `wait_for_dev_plugin`; require `buildVerified=true` before testing rather than calling the mutating loader. `load_dev_plugin` is for registration/loading or an explicit watcher change; it preserves existing settings when `autoReload` is omitted. See [development build readiness](addon-probes-and-dev-loader.md#development-plugin-loader). Repository installation operations below do not manage developer watchers.
+
 | Tool | Arguments and result |
 | --- | --- |
 | `list_plugin_repositories` | Read-only, paged `cursor` / `limit` (1–100). Lists configured and effective runtime repositories, main/preset protection, enabled state, refresh status and configuration/runtime agreement. |

@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 160;
+    private const int ExpectedTools = 162;
 
     private static int checks;
     private static int failures;
@@ -561,6 +561,10 @@ internal static class Program
                     addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
                 Check("screenshot capture is not advertised in tools/list",
                     toolsList.All(t => t.GetProperty("name").GetString() != "capture_game_screenshot"));
+                foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin" })
+                    Check(name + " is advertised as read-only",
+                        toolsList.Single(t => t.GetProperty("name").GetString() == name)
+                            .GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean());
                 Check("ImGui input exposes target guards and bounded key leases",
                     new[] { "imgui_mouse_click", "imgui_mouse_scroll", "imgui_key_press", "imgui_key", "imgui_text" }.All(name =>
                         toolsList.Single(t => t.GetProperty("name").GetString() == name).GetProperty("inputSchema")

@@ -672,8 +672,12 @@ public sealed class McpServer : IDisposable
                         "and match its actual container/slot with get_inventory before menu actions. UI slot order is not physical inventory order. " +
                         "Use bounded snapshots/sampling for UI investigation. Values are " +
                         "read live; pointers must be re-resolved after object, addon or process lifetime changes. " +
-                        "After building another development plugin, load_dev_plugin verifies its running buildMvid " +
-                        "before test commands; the MCP host instead exposes its buildMvid at /health. Verify resulting " +
+                        "For local development plugins, inspect get_dev_plugin_state by exact DLL path first. " +
+                        "When autoReload=true, use read-only wait_for_dev_plugin after building, not load_dev_plugin. " +
+                        "Require buildVerified=true and the matching buildMvid before test commands. " +
+                        "Use load_dev_plugin only when registration/loading or an explicit watcher change is needed; " +
+                        "omitted autoReload preserves existing settings. For the MCP host reconnect after reload " +
+                        "and verify /health.buildMvid. Verify resulting " +
                         "state after actions: a dispatched command/event does not prove success. If a necessary capability " +
                         "is missing and MCP development is in scope, add and test a reusable bounded tool before dependent " +
                         "plugin work. Reproduce native crashes offline before retrying the affected live path. " +
