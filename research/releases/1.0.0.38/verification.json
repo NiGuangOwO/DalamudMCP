@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0.38",
+  "sourceCommit": "868fcf0939dbfc760c4fd71cab7737304b3a9890",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.38",
+  "distributionCommit": "3248be0fb2c75a7aa5d7ad3229a0f66d368c4667",
+  "indexCommit": "b70e8a63a013d3adc0f6e5e1522d1c2b9d6ff1e5",
+  "workflow": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/41278667018",
+  "workflowConclusion": "success",
+  "sourceBuildConclusion": "success",
+  "packageSha256": "0CFD26A4DF032E398A6D7A5A0DBB2B7DBB0B6A98EE4DA4DF41C1D1E643EA74A0",
+  "releaseDownloadHashVerified": true,
+  "fixedIndexPackageHashVerified": true,
+  "indexVersionAuthorLinksVerified": true,
+  "indexDownloadLinkHashVerified": true,
+  "validation": {
+    "networkChecks": 385,
+    "releasePluginLoadChecks": 209,
+    "protocolChecks": 59,
+    "liveChecks": 14,
+    "toolCatalogCount": 160,
+    "debugAndReleaseWarnings": 0,
+    "schemaRegenerationHashVerified": true,
+    "priorReleasePacketDefinitionsUnchanged": true
+  },
+  "live": {
+    "buildMvid": "8a258eee-b852-4297-8023-b859dc21dd43",
+    "allFourSourcesComplete": true,
+    "publishedVersions": {
+      "@ffcafe/elpis-network": "0.1.0",
+      "@ffcafe/elpis-struct": "0.1.0"
+    },
+    "publishedUpdateAvailable": false,
+    "referenceChanged": false,
+    "cacheHitVerified": true,
+    "schemaHashUnchangedVerified": true,
+    "captureHooksOpcodeCatalogUnchangedVerified": true,
+    "gameplayInputUsed": false,
+    "newCaptureStarted": false,
+    "definitionsApplied": false,
+    "compatibilityVerified": false,
+    "evidence": "research/network-schema-updates-2026-11-01/live-verification.json"
+  }
+}
