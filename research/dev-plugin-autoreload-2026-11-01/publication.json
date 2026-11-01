@@ -1,0 +1,55 @@
+{
+  "sourceCommit": "5b39730bec122700caaf7d5e7c1592c16f57e8ba",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.40",
+  "releaseId": 430434956,
+  "assets": [
+    {
+      "name": "latest.zip",
+      "id": 697688406,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.40/latest.zip",
+      "sha256": "f78d64e679f7a6cd6748e939f95114c2c1bd5c678aad89fc62634d3a44ed24e8",
+      "downloadedSha256": "f78d64e679f7a6cd6748e939f95114c2c1bd5c678aad89fc62634d3a44ed24e8"
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 697688448,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.40/DalamudMCP.json",
+      "sha256": "86ff0439fe4b88b888c78d690d82ba238a097e421bbdbe1db366cec2451f275f",
+      "downloadedSha256": "86ff0439fe4b88b888c78d690d82ba238a097e421bbdbe1db366cec2451f275f"
+    }
+  ],
+  "bilingualNotesVerified": true,
+  "distributionCommit": "7776a4950eb565bac0ec9319c56ab1803d6ff742",
+  "indexWorkflow": {
+    "id": 41286478906,
+    "url": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/41286478906",
+    "conclusion": "success"
+  },
+  "indexCommit": "ab0adb5da255065e7a8bea9252e0c1d43be696cb",
+  "indexEntry": {
+    "Author": "NiGuangOwO",
+    "Name": "DalamudMCP",
+    "Punchline": "Expose FFXIV game memory to AI agents over MCP.",
+    "Description": "Hosts a Model Context Protocol (MCP) server on a local port so that agents can read FINAL FANTASY XIV game memory via Dalamud and FFXIVClientStructs.",
+    "Tags": [
+      "mcp",
+      "agent",
+      "memory",
+      "api"
+    ],
+    "InternalName": "DalamudMCP",
+    "RepoUrl": "https://github.com/NiGuangOwO/DalamudMCP",
+    "AssemblyVersion": "1.0.0.40",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudMCP/main/src/DalamudMCP/images/icon.png",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudPlugins/raw/main/plugins/DalamudMCP/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudPlugins/raw/main/plugins/DalamudMCP/latest.zip",
+    "DownloadCount": 0,
+    "LastUpdate": "1793519543"
+  },
+  "fixedDistributionPackageSha256": "f78d64e679f7a6cd6748e939f95114c2c1bd5c678aad89fc62634d3a44ed24e8",
+  "rawMainIndexObservedVersion": "1.0.0.40",
+  "rawMainIndexFresh": true,
+  "verified": true
+}
