@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0.37",
+  "sourceCommit": "15a1e6d9a2934bfdebd5efa5645a69c8d19095c5",
+  "implementationCommit": "e8d127832cec75fef1108664e63c3afced1c7422",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.37",
+  "distributionCommit": "69e4ebfa76be542f5ff498f61bfd867f25c2109b",
+  "indexCommit": "2994aa916d77bcf855b1bdea1f6670a54e0fc93a",
+  "workflow": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/41277683547",
+  "workflowConclusion": "success",
+  "sourceBuildConclusion": "success",
+  "packageSha256": "E3E9EC6F2794011E3B922F4648C75804AF61821439337646DC626D4A1A94D26D",
+  "releaseDownloadVerified": true,
+  "fixedCommitPackageVerified": true,
+  "indexVersionAuthorLinksVerified": true,
+  "indexDownloadLinkHashVerified": true,
+  "validation": {
+    "networkPacketChecks": 333,
+    "releasePluginLoadChecks": 207,
+    "protocolChecks": 59,
+    "liveAssertions": 3091,
+    "debugBuildWarnings": 0,
+    "releaseBuildWarnings": 0,
+    "toolCatalogCount": 159
+  },
+  "schema": {
+    "packageVersion": "0.1.0",
+    "packetSchemas": 177,
+    "structures": 218,
+    "zoneMappings": 170,
+    "metadataUnavailable": 7,
+    "sha256": "E1BA99ADDA33C578F31A1348E726A4F880908F21C1CB7193C6BC0257C7A6873A",
+    "regenerationHashVerified": true
+  },
+  "live": {
+    "buildMvid": "6faed091-9e91-4b17-9775-6e50180c8548",
+    "packets": 80,
+    "send": 5,
+    "receive": 75,
+    "matchedSchemaTypes": 11,
+    "fieldsIndependentlyCompared": 1431,
+    "decodedUnverified": 65,
+    "shortPayload": 4,
+    "opcodeNameUnavailable": 9,
+    "schemaUnavailable": 2,
+    "actionRequestDeclaredPayloadLength": 32,
+    "actionRequestSchemaMinimumLength": 40,
+    "gameplayInputUsed": false,
+    "packetInjectionUsed": false,
+    "hooksDisabledAfterTest": true,
+    "semanticsVerified": false,
+    "evidence": "research/network-schemas-2026-11-01/live-verification.json"
+  }
+}
