@@ -24,4 +24,6 @@ If the complete tool catalog and mutation gate show that the required discovery 
 
 The repository owner authorizes unattended versioning and publication for each completed, validated update to the DalamudMCP plugin. A source push alone does not complete such an update: increment the plugin version, build the release package, create a GitHub Release, and publish the same package to `NiGuangOwO/DalamudPlugins`. Follow [the release procedure](docs/releasing.md), including remote index and package verification. Do not ask for publication approval again within this scope. Report failures accurately instead of treating a dispatched workflow as publication success.
 
+Write future GitHub Release descriptions in both Simplified Chinese and English. Both versions must cover the same behavior changes, validation results and actual limitations.
+
 This requirement applies to changes shipped in the plugin, including native tools, server behavior, dependencies, assets and plugin metadata. Documentation-only edits, release bookkeeping and changes limited to another development plugin do not recursively trigger a DalamudMCP binary release. Do not start or reopen the game solely for publication; report unavailable live validation and retain completed offline evidence.
