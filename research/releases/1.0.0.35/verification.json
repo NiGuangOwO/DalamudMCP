@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0.35",
+  "sourceCommit": "995be9782601e0d1965d0c41c7d1bea3aae33fa4",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.35",
+  "distributionCommit": "60ec3b91b9c6cc2f4214cccafd2c26322e709772",
+  "indexCommit": "65dcee3e0d71f67bd5c73a98231018add3225e5d",
+  "workflow": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/41272758207",
+  "workflowConclusion": "success",
+  "packageSha256": "0CA819B89ABA6EABC935525585C807F3B3F5C5A217812478428AEF8B6638DFE8",
+  "packageDownloadVerified": true,
+  "indexVersionAuthorLinksVerified": true,
+  "fixedCommitVerification": true,
+  "indexDownloadLinkHashVerified": true,
+  "liveTrafficVerified": true,
+  "validation": {
+    "networkPacketChecks": 62,
+    "releasePluginLoadChecks": 197,
+    "protocolChecks": 59,
+    "schemaChecks": 11,
+    "liveComprehensiveChecks": 114
+  }
+}
