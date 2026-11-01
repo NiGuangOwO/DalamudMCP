@@ -687,6 +687,8 @@ public sealed class McpServer : IDisposable
                         "network_capture_decode uses caller-declared fields; network_packet_schema inspects bundled elpis definitions and " +
                         "network_capture_parse selects them by captured opcode name/alias/direction with automatic header offsets. " +
                         "network_packet_schema_check_updates checks fixed upstream metadata on demand without replacing bundled schemas; " +
+                        "by default each plugin load also checks schemas and checks/refreshes opcode JSON once in the background. " +
+                        "Read network_capture_status.startupUpdates; opcode application requires the mutation gate, and listener restarts do not repeat checks. " +
                         "check per-source failures and distinguish published packages from unpublished reference-directory changes. " +
                         "Unknown/ambiguous names do not guess, and schema/length matches do not verify client compatibility or protocol semantics. " +
                         "Opcode names use region/direction-scoped FFXIVOpcodes data. Use network_opcode_lookup to query " +

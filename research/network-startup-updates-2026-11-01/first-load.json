@@ -1,0 +1,126 @@
+{
+  "buildMvid": "3b7a9d14-2bd1-46c2-8d61-ff3501af55f1",
+  "startupUpdates": {
+    "state": "completed",
+    "attempts": 1,
+    "enabledOnLoad": true,
+    "startedAt": "2026-11-01T06:10:04.3817991+00:00",
+    "schemas": {
+      "state": "completed",
+      "result": {
+        "checkedAt": "2026-11-01T06:10:04.3847346+00:00",
+        "completedAt": "2026-11-01T06:10:05.9159504+00:00",
+        "cached": false,
+        "status": "complete",
+        "packages": [
+          {
+            "name": "@ffcafe/elpis-network",
+            "url": "https://registry.npmjs.org/@ffcafe%2felpis-network/latest",
+            "currentVersion": "0.1.0",
+            "currentIntegrity": "sha512-h5B6cVd3/ij3CeeQ+tKCQzGdsCn+jyXfoeC+fw/3/UJf3WzuSdNi4+Xp419R5Onh4sQ/dTbnLbd9WgqBDXOAhA==",
+            "latestVersion": "0.1.0",
+            "latestIntegrity": "sha512-h5B6cVd3/ij3CeeQ+tKCQzGdsCn+jyXfoeC+fw/3/UJf3WzuSdNi4+Xp419R5Onh4sQ/dTbnLbd9WgqBDXOAhA==",
+            "comparison": "same",
+            "newerVersion": false,
+            "artifactChanged": false,
+            "status": "ok"
+          },
+          {
+            "name": "@ffcafe/elpis-struct",
+            "url": "https://registry.npmjs.org/@ffcafe%2felpis-struct/latest",
+            "currentVersion": "0.1.0",
+            "currentIntegrity": "sha512-/BUfpRsFqKbNedTo/u/7dX1jMfgH5dJtYM1d0m1evsQ8veX8xLqPWe9Bgtf9C/pDR8qy6PEXa+rHZDuoT7Zmtg==",
+            "latestVersion": "0.1.0",
+            "latestIntegrity": "sha512-/BUfpRsFqKbNedTo/u/7dX1jMfgH5dJtYM1d0m1evsQ8veX8xLqPWe9Bgtf9C/pDR8qy6PEXa+rHZDuoT7Zmtg==",
+            "comparison": "same",
+            "newerVersion": false,
+            "artifactChanged": false,
+            "status": "ok"
+          }
+        ],
+        "referenceStructures": {
+          "url": "https://codeload.github.com/thewakingsands/elpis/zip/refs/heads/main",
+          "path": "packages/network/src/definitions/ipc",
+          "baseline": {
+            "commit": "c2ffacb0335cc080ab6f014f57be85632be610d1",
+            "path": "packages/network/src/definitions/ipc",
+            "treeSha": "d091bd7af1ad9a6bc60fa2d9405c63cc00460140",
+            "directorySha256": "D631F19C179C17D447936E633153834880DEEFB8E715C53382603508D0FD8A24",
+            "digestAlgorithm": "sha256(sorted(relativePath + NUL + lowercaseFileSha256 + LF))"
+          },
+          "comparisonScope": "directory_content_against_reviewed_reference_not_npm_release_commit",
+          "latestDirectorySha256": "D631F19C179C17D447936E633153834880DEEFB8E715C53382603508D0FD8A24",
+          "changed": false,
+          "status": "ok"
+        },
+        "aliasCatalog": {
+          "url": "https://raw.githubusercontent.com/zhyupe/ffxiv-opcode-worker/master/packets.yaml",
+          "baselineSource": "https://raw.githubusercontent.com/zhyupe/ffxiv-opcode-worker/06df8d0ddf52e230c73826006cfbc50e6c2891a6/packets.yaml",
+          "baselineSha256": "5676E22E0C9ED24BE698A893615BFF60F382815497A4DA73831FF981CBAF6EAF",
+          "latestSha256": "5676E22E0C9ED24BE698A893615BFF60F382815497A4DA73831FF981CBAF6EAF",
+          "changed": false,
+          "comparisonScope": "raw_catalog_content_not_protocol_compatibility",
+          "status": "ok"
+        },
+        "publishedUpdateAvailable": false,
+        "packageArtifactChanged": false,
+        "referenceChanged": false,
+        "latestPackageVersionsAligned": true,
+        "currentSchemaSha256": "6CE530514E28B113F46EE0C3DE83951C7F5D8266AAF10822C45A350D77B76E0E",
+        "applied": false,
+        "compatibilityVerified": false,
+        "nextStep": "Review changes, update importer pins, regenerate, validate and publish a plugin update. No remote definitions were applied."
+      }
+    },
+    "opcodes": {
+      "state": "completed",
+      "result": {
+        "checked": true,
+        "updateAvailable": false,
+        "applied": true,
+        "refreshed": true,
+        "cacheSaved": true,
+        "catalog": {
+          "source": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+          "sha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+          "origin": "network",
+          "loadedAt": "2026-11-01T06:10:04.9739371+00:00",
+          "regions": [
+            {
+              "region": "CN",
+              "version": "7.57",
+              "sendOpcodes": 12,
+              "receiveOpcodes": 170
+            },
+            {
+              "region": "Global",
+              "version": "7.57h",
+              "sendOpcodes": 12,
+              "receiveOpcodes": 170
+            },
+            {
+              "region": "KR",
+              "version": "7.57",
+              "sendOpcodes": 12,
+              "receiveOpcodes": 170
+            },
+            {
+              "region": "TW",
+              "version": "7.25",
+              "sendOpcodes": 4,
+              "receiveOpcodes": 72
+            }
+          ],
+          "versionMatch": "unverified",
+          "semanticsVerified": false,
+          "refreshing": false,
+          "lastRefreshError": null,
+          "cacheError": null,
+          "cacheLoading": false
+        },
+        "existingCapturesUnchanged": true
+      }
+    },
+    "completedAt": "2026-11-01T06:10:05.9170913+00:00"
+  }
+}

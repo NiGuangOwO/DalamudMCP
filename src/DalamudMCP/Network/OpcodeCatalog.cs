@@ -66,9 +66,13 @@ internal sealed class OpcodeCatalog : IDisposable
         catch (Exception ex) { lock (sync) cacheError = Error(ex); }
     }
 
-    internal async Task<object?> RefreshAsync()
+    internal Task<object?> RefreshAsync() => FetchAsync(startupCheck: false);
+    internal Task<object?> CheckAtStartupAsync() => FetchAsync(startupCheck: true);
+
+    private async Task<object?> FetchAsync(bool startupCheck)
     {
-        if (!allowed()) throw new ToolException("Opcode refresh requires mutation access");
+        if (!startupCheck && !allowed()) throw new ToolException("Opcode refresh requires mutation access");
+        var applyAllowedAtStart = allowed();
         if (!await refreshGate.WaitAsync(0).ConfigureAwait(false)) throw new ToolException("Opcode refresh is already running; query network_capture_status");
         try
         {
@@ -76,13 +80,25 @@ internal sealed class OpcodeCatalog : IDisposable
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(10));
             await cacheLoad.WaitAsync(timeout.Token).ConfigureAwait(false);
-            if (!allowed() || lifetime.IsCancellationRequested) throw new ToolException("Opcode refresh is no longer authorized");
+            if ((!startupCheck && !allowed()) || lifetime.IsCancellationRequested) throw new ToolException("Opcode refresh is no longer authorized");
             using var response = await client.GetAsync(OpcodeDataset.SourceUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             if (response.Content.Headers.ContentLength > OpcodeDataset.MaxBytes) throw new ToolException("Opcode response exceeds 1 MiB");
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
             var data = await ReadBoundedAsync(stream, timeout.Token).ConfigureAwait(false);
             var next = OpcodeDataset.Parse(data, "network");
+            var changed = next.Sha256 != Snapshot().Sha256;
+            if (startupCheck && (!applyAllowedAtStart || !allowed()))
+            {
+                lock (sync)
+                {
+                    if (disposed) throw new ToolException("Opcode startup check cancelled by unload");
+                    lastError = null; refreshing = false;
+                }
+                return new JObject { ["checked"] = true, ["updateAvailable"] = changed, ["applied"] = false,
+                    ["refreshed"] = false, ["cacheSaved"] = false, ["reason"] = "mutation_gate_closed",
+                    ["remote"] = next.Summary(), ["catalog"] = Status(), ["existingCapturesUnchanged"] = true };
+            }
             if (!allowed()) throw new ToolException("Mutation access closed during opcode refresh; previous mapping retained");
             if (cachePath != null)
             {
@@ -106,7 +122,8 @@ internal sealed class OpcodeCatalog : IDisposable
                 current = next; lastError = null;
             }
             lock (sync) refreshing = false;
-            return new JObject { ["refreshed"] = true, ["cacheSaved"] = cachePath != null, ["catalog"] = Status(),
+            return new JObject { ["checked"] = true, ["updateAvailable"] = changed, ["applied"] = true,
+                ["refreshed"] = true, ["cacheSaved"] = cachePath != null, ["catalog"] = Status(),
                 ["existingCapturesUnchanged"] = true };
         }
         catch (Exception ex)

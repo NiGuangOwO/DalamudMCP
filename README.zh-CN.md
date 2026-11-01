@@ -128,6 +128,7 @@ dotnet build src\DalamudMCP\DalamudMCP.csproj -p:Platform=x64 -c Release
 | --- | --- | --- |
 | `Enabled` | `true` | 启用监听器。 |
 | `AutoStart with the plugin` | `true` | 插件加载时自动启动监听器。 |
+| `插件加载时检查网络包定义更新` | `true` | 每次加载后台检查包结构来源及 opcode JSON；更新 opcode 需要变更权限。 |
 | `Port` | `18777` | TCP 端口，范围为 1024–65535，仅绑定 `127.0.0.1`。 |
 | `Framework timeout (s)` | `10.0` | 框架线程执行超时，范围为 0.5–120 秒。 |
 | `Allow mutating tools` | `false` | 控制可改变游戏或插件状态的工具是否对客户端开放。 |
@@ -453,7 +454,7 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 八个 `network_capture_*` 工具提供实验性的区域 IPC 捕获、按数字 opcode/方向筛选、十六进制和 ASCII 分页、声明式字段解析与包差异比较。捕获默认 10 秒，需要登录并开启变更权限。原生桥目前仅接受已检查的国服游戏二进制和 SDK 构建，其他版本会拒绝启用。数据仅保留在内存，开始新场或卸载后失效；发送观测不代表服务器收到了消息，未知字段含义仍需验证。详见[网络包诊断](docs/network-packets.md)的容量、包头布局与验证范围。
 
 `network_packet_schema` 和 `network_capture_parse` 提供内置 elpis 结构查询及按捕获 opcode 名称/别名/方向自动解析。来源、容量和版本未验证状态见[包体结构](docs/packet-schemas.md)。
-只读工具 `network_packet_schema_check_updates` 可按需在线检查 elpis 已发布版本、参考结构目录及名称目录的变化，不自动替换定义。
+默认每次插件加载在后台检查一次包结构来源和固定 opcode JSON；包结构只报告变化，opcode 在开启变更权限时校验后更新。仍可手动调用 `network_packet_schema_check_updates`；启动结果见 `network_capture_status.startupUpdates`。
 
 
 

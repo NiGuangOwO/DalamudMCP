@@ -13,6 +13,7 @@ internal sealed class NetworkPacketTools : IDisposable
     private readonly PacketHookSource source;
     private readonly OpcodeCatalog opcodeCatalog;
     private readonly PacketSchemaUpdates schemaUpdates;
+    private readonly NetworkStartupUpdates startupUpdates;
     private PacketCapture? capture;
     private bool disposed;
     internal const string Coverage = "Bounded in-process zone IPC observation, not TCP/PCAP or all lobby/chat traffic. " +
@@ -26,6 +27,8 @@ internal sealed class NetworkPacketTools : IDisposable
         source = new PacketHookSource(svc);
         opcodeCatalog = OpcodeCatalog.Create(svc.PluginInterface?.GetPluginConfigDirectory(), () => !disposed && svc.Config.AllowMutatingTools);
         schemaUpdates = new PacketSchemaUpdates(PacketSchemas.Bundled.Value.Summary());
+        startupUpdates = new NetworkStartupUpdates(() => schemaUpdates.CheckAsync(new JObject { ["force"] = true }),
+            () => opcodeCatalog.CheckAtStartupAsync(), (name, message) => svc.Log.Information("[network updates] {Source}: {Summary}", name, message));
         registry.AddAsync("network_packet_schema_check_updates", "Check upstream packet schema updates",
             "On-demand read-only check of fixed public npm latest metadata for the two elpis packages, " +
             "GitHub's packet-structure directory content against a separately reviewed reference, and opcode-worker alias catalog content. " +
@@ -70,7 +73,8 @@ internal sealed class NetworkPacketTools : IDisposable
             "Stops this exact capture and removes its hooks; retains copied packets for analysis. Idempotent within a session.",
             SessionSchema(), args => { RequireMutation(); var current = Current(args); Stop("requested"); return Status(); }, mutating: true);
         registry.Add("network_capture_status", "Network capture status",
-            "Read-only hook availability, active session, budgets, loss counters, opcode catalog/provenance and SDK/build identity. Does not install hooks. " + Coverage,
+            "Read-only hook availability, active session, budgets, loss counters, opcode catalog/provenance, per-load startup update outcomes and SDK/build identity. " +
+            "Does not install hooks or trigger new update requests. Read startupUpdates per-source results/errors. " + Coverage,
             Json.Schema(), _ => Status());
         registry.Add("network_packet_schema", "Inspect bundled packet schemas",
             "Lists build-pinned elpis packet schemas and their exact FFXIVOpcodes aliases/directions. " +
@@ -206,9 +210,12 @@ internal sealed class NetworkPacketTools : IDisposable
             ["capture"] = snapshot, ["hooks"] = source.Status(), ["coverage"] = Coverage,
             ["opcodeCatalog"] = opcodeCatalog.Status(),
             ["packetSchemas"] = PacketSchemas.Bundled.Value.Summary(),
+            ["startupUpdates"] = startupUpdates.Status(),
             ["buildMvid"] = typeof(NetworkPacketTools).Assembly.ManifestModule.ModuleVersionId.ToString(),
         };
     }
+
+    internal void StartStartupChecks() => startupUpdates.Start(svc.Config.CheckNetworkUpdatesOnLoad);
 
     private void Watch(IFramework _)
     {
@@ -222,6 +229,7 @@ internal sealed class NetworkPacketTools : IDisposable
     public void Dispose()
     {
         disposed = true;
+        startupUpdates.Dispose();
         svc.Framework.Update -= Watch;
         Stop("unload");
         source.Dispose();

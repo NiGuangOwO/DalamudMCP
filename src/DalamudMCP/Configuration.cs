@@ -52,6 +52,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Auto-start the listener when the plugin loads.</summary>
     public bool AutoStart { get; set; } = true;
 
+    /// <summary>Once per plugin load, check schema sources and check/refresh opcodes in the background.</summary>
+    public bool CheckNetworkUpdatesOnLoad { get; set; } = true;
+
     /// <summary>Continuously arm the combat recorder, independently of MCP listener clients.</summary>
     public bool BackgroundCombatRecording { get; set; } = true;
     public string CombatRecordingScope { get; set; } = "all";

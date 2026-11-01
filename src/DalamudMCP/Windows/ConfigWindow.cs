@@ -65,6 +65,14 @@ public sealed class ConfigWindow : Window
         }
 
         var port = config.Port;
+        var checkNetworkUpdates = config.CheckNetworkUpdatesOnLoad;
+        if (ImGui.Checkbox(Localization.T("ui.networkUpdatesOnLoad"), ref checkNetworkUpdates))
+        {
+            config.CheckNetworkUpdatesOnLoad = checkNetworkUpdates;
+            Persist();
+        }
+        ImGui.TextDisabled(Localization.T("ui.networkUpdatesOnLoadHint"));
+
         ImGui.SetNextItemWidth(140);
         if (ImGui.InputInt(Localization.T("ui.port"), ref port))
         {

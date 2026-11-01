@@ -175,6 +175,9 @@ internal static class Program
             pluginConfigType?.FullName ?? "(type not found)");
 
         var config = Activator.CreateInstance(configType)!;
+        Check("new configurations enable per-load network update checks", Equals(Prop(config, "CheckNetworkUpdatesOnLoad"), true));
+        // Keep constructor smoke tests offline; fake HTTP lifecycle checks cover startup behavior separately.
+        Set(config, "CheckNetworkUpdatesOnLoad", false);
         Check("new configurations default to all combat actors", Equals(Prop(config, "CombatRecordingScope"), "all"));
         Set(config, "CombatRecordingScope", "local");
         Invoke(config, "Sanitize");
@@ -643,6 +646,8 @@ internal static class Program
                 blockedRefresh.Payload?.Contains("changes game state and is disabled", StringComparison.Ordinal) == true);
             Set(config, "AllowMutatingTools", true);
             var networkState = await NetworkCall("network_capture_status", new { });
+            using (var document = JsonDocument.Parse(networkState.Payload!))
+                Check("startup network opt-out is honored by the shipped plugin constructor", document.RootElement.GetProperty("startupUpdates").GetProperty("state").GetString() == "disabled");
             using (var document = JsonDocument.Parse(networkState.Payload!))
                 Check("network capture is absent and hooks disabled on plugin load", !networkState.Error &&
                     document.RootElement.GetProperty("capture").ValueKind == JsonValueKind.Null &&

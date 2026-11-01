@@ -5,6 +5,7 @@
     <Compile Include="../../src/DalamudMCP/Network/PacketAnalysis.cs" Link="PacketAnalysis.cs" />
     <Compile Include="../../src/DalamudMCP/Network/PacketSchemas.cs" Link="PacketSchemas.cs" />
     <Compile Include="../../src/DalamudMCP/Network/PacketSchemaUpdates.cs" Link="PacketSchemaUpdates.cs" />
+    <Compile Include="../../src/DalamudMCP/Network/NetworkStartupUpdates.cs" Link="NetworkStartupUpdates.cs" />
     <EmbeddedResource Include="../../src/DalamudMCP/Network/Data/elpis-schemas.json" LogicalName="DalamudMCP.elpis-schemas.json" />
     <Compile Include="../../src/DalamudMCP/Network/NativePacketReader.cs" Link="NativePacketReader.cs" />
     <Compile Include="../../src/DalamudMCP/Network/OpcodeDataset.cs" Link="OpcodeDataset.cs" />

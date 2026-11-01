@@ -26,7 +26,7 @@
 
 ## 在线检查更新
 
-调用只读工具 `network_packet_schema_check_updates`，参数 `{}`；传 `{"force":true}` 可跳过内存缓存。它不会自动启动，也不要求登录或开启变更权限。
+调用只读工具 `network_packet_schema_check_updates`，参数 `{}`；传 `{"force":true}` 可跳过内存缓存。不要求登录或开启变更权限。默认每次插件加载也会在后台调用一次，手动调用可复用启动时的缓存结果。
 
 - `packages`：比较两个 elpis 包的已安装版本与 npm `latest`，返回最新 SHA-512；`publishedUpdateAvailable` 表示有更高版本，`packageArtifactChanged` 单独报告同版本的安装包哈希变化。`latestPackageVersionsAligned` 表示上游两个包的 latest 是否一致。
 - `referenceStructures`：下载固定 GitHub 源码 ZIP，只计算包结构目录的内容摘要，与独立审阅过的源码基线比较。`aliasCatalog` 单独比较 opcode-worker 目录文件的 SHA-256。`referenceChanged` 不等于 npm 已发布更新，也不证明现有布局不兼容。审阅基线不是断言的 npm 发布提交。
@@ -53,8 +53,19 @@ Passive live validation on 2026-11-01 captured 80 messages (5 send, 75 receive).
 
 ### Online update checks
 
-Call read-only `network_packet_schema_check_updates` with `{}` or `{"force":true}` to bypass its memory cache. It is on-demand and needs neither login nor mutation access. It independently checks both fixed npm latest versions/integrities, the GitHub packet-structure directory content against a separately reviewed reference, and alias-catalog SHA-256. Published versions, same-version artifact changes and possibly unpublished reference changes are separate. The reviewed source baseline is not an asserted npm release commit.
+Call read-only `network_packet_schema_check_updates` with `{}` or `{"force":true}` to bypass its memory cache. It can be called on demand and needs neither login nor mutation access. By default every plugin load also runs one background check, warming the same result cache. It independently checks both fixed npm latest versions/integrities, the GitHub packet-structure directory content against a separately reviewed reference, and alias-catalog SHA-256. Published versions, same-version artifact changes and possibly unpublished reference changes are separate. The reviewed source baseline is not an asserted npm release commit.
 
 Each source has status/errors. Overall complete/partial/failed describes coverage; unknown comparisons are null, never “up to date.” Successful results cache 5 minutes, partial/failed results 30 seconds. Concurrent checks are refused. Four parallel fixed HTTPS GETs run off the game thread within a 10-second total deadline. Limits: metadata 1 MiB each; source ZIP 2 MiB, 4096 entries, 512 directory files, 1 MiB per file and 8 MiB uncompressed directory content, bounded ASCII relative paths. No custom URLs, redirects, user credentials, disk extraction, code execution, background polling or automatic replacement. The source-content digest excludes archive root names, timestamps and unrelated source files; its exact algorithm is recorded in catalog metadata.
 
 `applied=false` and `compatibilityVerified=false` remain explicit. Applying updates requires reviewing upstream changes, updating importer pins/hashes and, where appropriate, alias/source baselines, regenerating, validating and publishing the plugin.
+
+
+## 插件加载时检查 / Per-load checks
+
+`CheckNetworkUpdatesOnLoad` 默认 true，新配置和原来没有该字段的配置均开启。在设置窗口可关闭，下次插件加载生效。每个插件实例只发起一次后台任务，schema 四来源检查与 opcode JSON 检查并行执行，不阻塞游戏线程，不依赖登录、监听器自动启动或客户端连接。schema 检查只报告，不自动导入；opcode 使用固定 FFXIVOpcodes URL，先等本地缓存读取完成再校验远端 JSON，仅当任务开始和应用时变更权限都开启才发布新映射与缓存。权限关闭时仍完成只读下载检查，返回 `reason=mutation_gate_closed`；中途开启权限不会使这次只读检查升级为写入。
+
+`network_capture_status.startupUpdates` 返回启用状态、一次尝试的开始/结束时间、schema 和 opcode 的独立结果或错误；顶层 completed 表示任务已结束，应继续检查子项的状态。结果也写入 Dalamud 日志。手动 schema 检查使用相同缓存；读取状态、重启监听器或客户端重连不会重发启动检查。没有自动重试或定时轮询；HTTP/格式/写盘失败保留旧数据，已有捕获保留各自的映射快照。卸载时取消提供者的 HTTP/缓存工作，不同步等待网络，也不发布迟到的结果或日志。
+
+`CheckNetworkUpdatesOnLoad` defaults to true, including existing configurations without this field. Disable it in settings if desired; changes take effect on the next plugin load. Each plugin instance starts one background task, independently of login, listener auto-start or MCP connections. Schema-source checking and opcode checking run in parallel off the game thread. Schemas are reported only, never automatically imported. Opcode checking waits for the last-good local cache before downloading the fixed FFXIVOpcodes JSON; it publishes validated data/cache only if mutation access is enabled at both start and application. With the gate closed it still performs a read-only check and reports `mutation_gate_closed`. Opening the gate mid-check does not escalate that read-only attempt.
+
+Read `network_capture_status.startupUpdates` for enabled state, start/end time and per-source outcomes/errors. Top-level completed means finished, not every source succeeded. Outcomes are logged to Dalamud. Manual schema checks reuse the warmed cache. Status reads, listener restarts and MCP reconnects do not trigger another startup check. There is no automatic retry or periodic polling. HTTP/format/disk failures retain last-good data; existing captures retain their pinned mappings. Unload cancels provider HTTP/cache work without synchronously waiting or publishing late results/logs.

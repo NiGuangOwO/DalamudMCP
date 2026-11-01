@@ -187,6 +187,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (Config.Enabled && Config.AutoStart) StartServer();
         else LogInfo($"listener not started (enabled={Config.Enabled}, autoStart={Config.AutoStart})");
+        networkPackets.StartStartupChecks();
     }
 
     public Configuration Config { get; }

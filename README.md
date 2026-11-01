@@ -126,6 +126,7 @@ Open **DalamudMCP** settings with `/dalamudmcp` or the Plugin Installer's config
 | --- | --- | --- |
 | `Enabled` | `true` | Enables the listener. |
 | `AutoStart with the plugin` | `true` | Starts the listener when the plugin loads. |
+| `Check network definitions when the plugin loads` | `true` | Check schema sources and opcode JSON once per load; applying opcodes requires mutation access. |
 | `Port` | `18777` | TCP port, limited to 1024–65535 and bound to `127.0.0.1`. |
 | `Framework timeout (s)` | `10.0` | Framework-thread execution timeout, limited to 0.5–120 seconds. |
 | `Allow mutating tools` | `false` | Makes tools that can change game or plugin state available to clients. |
@@ -478,7 +479,7 @@ Combat recording runs automatically in the background while mutating tools are a
 Eight `network_capture_*` tools provide experimental, bounded zone IPC capture, numeric opcode/direction filtering, hex/ASCII paging, caller-declared field decoding and packet comparison. Capture defaults to 10 seconds and requires login plus mutation access. The native bridge currently accepts only the inspected CN game executable and SDK build; other builds refuse capture. Bytes stay in memory until replaced/unloaded. Send observations are attempts, not proof of delivery; unknown field semantics are unverified. See [network packet diagnostics](docs/network-packets.md) for limits, layouts and validation coverage.
 
 `network_packet_schema` and `network_capture_parse` add bundled elpis schema discovery and automatic parsing by captured opcode name/alias/direction. See [packet schemas](docs/packet-schemas.md) for provenance, limits and unverified-version behavior.
-The read-only `network_packet_schema_check_updates` checks published elpis versions and reference-directory/catalog changes online on demand; it never applies definitions automatically.
+By default each plugin load checks schema sources and the fixed opcode JSON once in the background. Schema changes are reported; validated opcode data is applied only with mutation access. `network_packet_schema_check_updates` remains available on demand; inspect `network_capture_status.startupUpdates` for startup results.
 
 
 

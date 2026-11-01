@@ -56,7 +56,7 @@ Capture lasts 1–120 seconds, holds at most 4096 packets / 8 MiB, and copies at
 
 ## Opcode 名称映射 / Opcode name mapping — 1.0.0.36
 
-数据源固定为用户指定的 [FFXIVOpcodes JSON](https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json)。发布时内置快照，启动时在后台读取最后可用缓存，**启动不发起联网请求**。可显式调用 `network_opcode_refresh {}` 下载最新数据，最多 10 秒、1 MiB，下载和缓存读写均不占用游戏线程。刷新需要变更权限；无 URL/路径参数，不上传游戏数据。网络、格式或写盘失败会保留之前可用的映射，错误可在 `network_capture_status.opcodeCatalog` 查看。
+数据源固定为用户指定的 [FFXIVOpcodes JSON](https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json)。发布时内置快照，先使用内置快照并在后台读取最后可用缓存；默认每次插件加载后再后台联网检查一次 JSON，变更权限开启时校验后更新映射与缓存，关闭时仅检查并报告差异。可显式调用 `network_opcode_refresh {}` 下载最新数据，最多 10 秒、1 MiB，下载和缓存读写均不占用游戏线程。刷新需要变更权限；无 URL/路径参数，不上传游戏数据。网络、格式或写盘失败会保留之前可用的映射，错误可在 `network_capture_status.opcodeCatalog` 查看。
 
 按 **region + direction + opcode** 查找。当前捕获后端仅支持已检查的国服构建，因此捕获固定使用 CN，依据不是 UI 语言。发送用 `ClientZoneIpcType`，接收用 `ServerZoneIpcType`；不会跨方向、跨地区猜测。内置快照 CN 版本为 `7.57`（发送 12 个、接收 170 个 opcode）。例如 CN 的 872：发送 `ClientTrigger`，接收 `FreeCompanyDialog`；接收 408 为 `ActorControl`。
 
@@ -70,7 +70,7 @@ Capture lasts 1–120 seconds, holds at most 4096 packets / 8 MiB, and copies at
 
 `tableVersion` 是第三方表的版本标签；`versionMatch=unverified` 和 `semanticsVerified=false` 明确表示没有独立认证它与当前客户端补丁或业务含义完全一致。包体自动解析使用独立的固定 elpis schema；详见[内置包体结构](packet-schemas.md)。名称和长度匹配不等于版本或语义验证。源数据及 [MIT 声明](../src/DalamudMCP/Network/Data/FFXIVOpcodes.LICENSE)一并嵌入程序集。
 
-The fixed source is the linked FFXIVOpcodes JSON. A bundled snapshot and asynchronous last-good cache support offline use; startup performs no HTTP. `network_opcode_refresh` explicitly downloads at most 1 MiB within 10 seconds off the game thread, behind the mutation gate. Failures retain last-good data. There are no caller-supplied URLs/paths or uploads of game data.
+The fixed source is the linked FFXIVOpcodes JSON. A bundled snapshot and asynchronous last-good cache support offline use; each plugin load defaults to one background online check. Valid opcode data is applied/cached only while mutation access remains enabled; closed-gate startup checks report differences without applying them. `network_opcode_refresh` explicitly downloads at most 1 MiB within 10 seconds off the game thread, behind the mutation gate. Failures retain last-good data. There are no caller-supplied URLs/paths or uploads of game data.
 
 Lookups are scoped by region, direction and number: sends use ClientZoneIpcType, receives ServerZoneIpcType. The build-restricted CN backend pins CN mappings, independently of UI language. `network_opcode_lookup` supports explicit numbers, literal name search and bounded paging. Packet metadata carries names, ambiguity/unknown status, region and table version; capture summaries carry source/hash/origin/time. Existing captures retain their mapping after refresh. Table versions and names are external claims, not certified patch compatibility or independently verified semantics. Numeric opcodes and unknown entries remain available.
 
@@ -94,3 +94,6 @@ Version 1.0.0.35 fixes an expiry snapshot race found by this test: a query could
 
 
 包体结构 / Packet body schemas: [`network_packet_schema` and `network_capture_parse`](packet-schemas.md).
+
+
+每次加载的完整结果见 `network_capture_status.startupUpdates`：schema 检查与 opcode 检查/刷新各自记录结果或失败原因；没有定时轮询，监听器重启和客户端重连不会重复检查。设置项 `CheckNetworkUpdatesOnLoad` 默认开启，可在插件设置中关闭，下次加载生效。卸载取消网络任务；离线/失败保留旧数据。See [startup update checks](packet-schemas.md) for the same behavior in English.
