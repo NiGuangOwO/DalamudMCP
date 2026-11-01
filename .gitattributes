@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Generated schemas are hashed byte-for-byte; preserve the importer's LF bytes on Windows.
+src/DalamudMCP/Network/Data/elpis-schemas.json -text
