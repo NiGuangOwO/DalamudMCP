@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0.36",
+  "sourceCommit": "c7a495a183ddfff316259b88ffde7a1564b5a975",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.36",
+  "distributionCommit": "4215bb6c31de2222e131c4846fabc41ceb69534a",
+  "indexCommit": "878ba1481e94c613143cb085a408e3aef2c7643e",
+  "workflow": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/41274069188",
+  "workflowConclusion": "success",
+  "packageSha256": "D6E95981134FFC4A81A730CDC84B9805441299716CAA1F67E5A31618B6F0E742",
+  "packageDownloadVerified": true,
+  "indexVersionAuthorLinksVerified": true,
+  "fixedCommitVerification": true,
+  "indexDownloadLinkHashVerified": true,
+  "liveTrafficVerified": true,
+  "validation": {
+    "networkPacketChecks": 107,
+    "releasePluginLoadChecks": 203,
+    "protocolChecks": 59,
+    "schemaChecks": 11,
+    "liveMappingChecks": 30
+  },
+  "opcodeSource": "https://cdn.jsdelivr.net/gh/karashiiro/FFXIVOpcodes@latest/opcodes.min.json",
+  "opcodeDatasetSha256": "33030F2AF9B718BFCF012A7E7970DA287617641F26585F84B5A8289DC892F7B0",
+  "livePacketMapping": {
+    "packets": 41,
+    "named": 38,
+    "unknown": 3,
+    "versionMatch": "unverified"
+  }
+}
