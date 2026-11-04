@@ -398,5 +398,16 @@
       "references/native-debugging.md": "d4d7a3f24a244ba6e1322b309b15e52e372e4afab415e8556c779ef6c9ee9136",
       "references/tool-selection.md": "3be39a9acdc34846b29c8d50226be76a8bdbc201535479feecbcc7a3c3447953"
     }
+  },
+  {
+    "revision": "ba5146bcca65c968cf297bcad272a45ecb725401b4a51bf2283f860a08048a15",
+    "sourceCommit": "780db6842c9d93457a2fd29d6b17a563d8becf33",
+    "files": {
+      "SKILL.md": "a7e28cc5b453ead98ceb8314280e667d206d403eb2245e7d45d68146040bad98",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/native-debugging.md": "dd406d6afccb7b0d097ec1aba8dd04f112afd4d2f210afb0e5b09ba989975660",
+      "references/tool-selection.md": "bb2a5a12ca737d7a26c0966be697d2ebb175120a51dc057b0a989e86f86588af",
+      "scripts/sync_skill.py": "e5297c872c2278e5911cf0779371e693d290bfab65c8365a5dd1304cf3e58000"
+    }
   }
 ]

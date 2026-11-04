@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Dalamud.Game.Command;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Fates;
@@ -50,6 +51,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NetworkPacketTools networkPackets;
     private readonly ItemHoldingsTools itemHoldings;
     private readonly PluginInstallerTools pluginInstaller;
+    private readonly RuntimeTools runtimeTools;
+    private readonly ScreenshotTools screenshots;
+    private readonly CancellationTokenSource inputLifetime = new();
     private readonly WindowSystem windowSystem = new("DalamudMCP");
     private readonly ConfigWindow configWindow;
     private readonly EventHub eventHub = new();
@@ -86,7 +90,8 @@ public sealed class Plugin : IDalamudPlugin
         IGameInteropProvider interop,
         IBuddyList buddyList,
         IDutyState dutyState,
-        ITextureProvider textureProvider)
+        ITextureProvider textureProvider,
+        ITextureReadbackProvider textureReadback)
     {
         this.pluginInterface = pluginInterface;
         this.log = log;
@@ -166,6 +171,9 @@ public sealed class Plugin : IDalamudPlugin
         TribalQuestTools.Register(registry, services);
         DevPluginTools.Register(registry, services);
         AgentGuidance.Bundled.Register(registry);
+        runtimeTools = new RuntimeTools(registry, services);
+        screenshots = new ScreenshotTools(registry, services, textureProvider, textureReadback);
+        VisualInputTools.Register(registry, services, screenshots, inputLifetime.Token);
         PluginBridgeTools.Register(registry, services, ipcHub);
         EventTools.Register(registry, services, eventHub);
         combatRecorder = new CombatRecorder(registry, services);
@@ -383,6 +391,10 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        inputLifetime.Cancel();
+        inputLifetime.Dispose();
+        screenshots.Dispose();
+        runtimeTools.Dispose();
         pluginInstaller.Dispose();
         dalamudLogHub.Dispose();
         itemHoldings.Dispose();

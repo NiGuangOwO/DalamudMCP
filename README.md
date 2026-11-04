@@ -654,7 +654,7 @@ These records describe specific builds and scenarios; test counts are not a comp
   combat, duties and other UI contexts require separate validation for the intended workflow.
 - Navigation requires [vnavmesh](https://github.com/awgil/ffxiv_navmesh) to be installed and loaded.
   A successful dispatch does not establish that movement, a callback or another game action completed.
-- Screenshot capture is not provided. Use structured UI text, geometry and image-node metadata; report remaining visual gaps.
+- Independent render-target screenshots and runtime exploration are available; see [runtime tools](docs/runtime-explorer.md). Prefer structured native UI text for ordinary labels.
 - Object queries read the object table before filtering. Event collection is preferable to frequent full-state polling where applicable.
 - Sessions are stored in memory and expire after two idle hours. Clients must reinitialize after expiry or plugin reload.
   Long-duration memory use and listener stability are not fully characterized.

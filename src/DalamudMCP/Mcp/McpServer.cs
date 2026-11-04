@@ -657,7 +657,10 @@ public sealed class McpServer : IDisposable
                         "input restrictions. Locate entities with get_game_objects/find_game_object and native windows " +
                         "with list_loaded_addons. When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
-                        "controls or geometry are needed. Screenshot capture is not provided. " +
+                        "controls or geometry are needed. Use capture for visual pixels and same-frame cached crops, not ordinary native text. " +
+                        "Independent runtime exploration uses service_list, object_access, ffcs_index/call, mem_read/write/scan and observe/evidence; " +
+                        "discover exact member ids before invocation, respect bounded signatures and remove observers/release handles. " +
+                        "These tools do not use the DalamudCN MCP endpoint. input supports screenshot-relative plugin actions and foreground-only game HWND messages; dispatch is not outcome verification. " +
                         "Copy nodeId/componentPath to clicks or node snapshots. " +
                         "Use set_addon_text_input for native TextInput fields " +
                         "and imgui_text for Dear ImGui; inspect actual text/exactMatch and verify search results separately. " +

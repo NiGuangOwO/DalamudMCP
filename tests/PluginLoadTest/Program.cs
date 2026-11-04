@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 163;
+    private const int ExpectedTools = 178;
 
     private static int checks;
     private static int failures;
@@ -139,12 +139,12 @@ internal static class Program
         if (ctors.Length != 1) return 1;
 
         var parameters = ctors[0].GetParameters();
-        Check("constructor takes 24 services", parameters.Length == 24, $"found {parameters.Length}");
-        Check("constructor does not require texture readback",
-            parameters.All(p => p.ParameterType.Name != "ITextureReadbackProvider"));
-        Check("screenshot capture implementations are absent from the shipped assembly",
+        Check("constructor takes 25 services", parameters.Length == 25, $"found {parameters.Length}");
+        Check("constructor requests SDK texture readback",
+            parameters.Any(p => p.ParameterType.Name == "ITextureReadbackProvider"));
+        Check("independent screenshot implementations are present in the shipped assembly",
             new[] { "ScreenshotTools", "ScreenshotPixels", "ScreenshotSession" }.All(name =>
-                pluginAssembly.GetType("DalamudMCP.Tools." + name, throwOnError: false) is null));
+                pluginAssembly.GetType("DalamudMCP.Tools." + name, throwOnError: false) is not null));
 
         var nonInterfaces = parameters.Where(p => !p.ParameterType.IsInterface).Select(p => p.ParameterType.Name).ToArray();
         Check("every constructor parameter is an interface", nonInterfaces.Length == 0, string.Join(", ", nonInterfaces));
@@ -533,6 +533,17 @@ internal static class Program
                     name="get_tribal_quest_state",arguments=new {} } })).ConfigureAwait(false);
             Check("tribal state refuses logged-out clients before native access", UnwrapToolResult(tribalOffline).IsError);
             Set(config, "AllowMutatingTools", false);
+            foreach (var runtimeName in new[] { "object_access", "ffcs_call", "mem_write", "mem_scan", "observe", "input" })
+            {
+                var denied = await CallAsync(http, baseUrl, sessionId,
+                    JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 350, method = "tools/call", @params = new { name = runtimeName, arguments = new { } } })).ConfigureAwait(false);
+                var (deniedPayload, deniedError) = UnwrapToolResult(denied);
+                Check(runtimeName + " is refused by the mutation gate before runtime/native access", deniedError && deniedPayload?.Contains("disabled", StringComparison.Ordinal) == true);
+            }
+            var clearEvidence = await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 351, method = "tools/call", @params = new { name = "evidence", arguments = new { action = "Clear" } } })).ConfigureAwait(false);
+            var (clearPayload, clearError) = UnwrapToolResult(clearEvidence);
+            Check("mixed evidence tool refuses Clear while read operations remain available", clearError && clearPayload?.Contains("mutation access", StringComparison.Ordinal) == true);
             var guidanceReply = await CallAsync(http, baseUrl, sessionId,
                 JsonSerializer.Serialize(new { jsonrpc="2.0", id=2320, method="tools/call", @params=new {name="get_agent_guidance",arguments=new {}} })).ConfigureAwait(false);
             var (guidanceText, guidanceError) = UnwrapToolResult(guidanceReply);
@@ -565,8 +576,8 @@ internal static class Program
                     addonTextSchema.GetProperty("maxNodeTexts").GetProperty("maximum").GetInt32() == 500 &&
                     addonTextSchema.GetProperty("maxValueTexts").GetProperty("maximum").GetInt32() == 500 &&
                     addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
-                Check("screenshot capture is not advertised in tools/list",
-                    toolsList.All(t => t.GetProperty("name").GetString() != "capture_game_screenshot"));
+                Check("independent screenshot capture is advertised in tools/list",
+                    toolsList.Any(t => t.GetProperty("name").GetString() == "capture") && toolsList.Any(t => t.GetProperty("name").GetString() == "capture_game_screenshot"));
                 foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin", "get_agent_guidance" })
                     Check(name + " is advertised as read-only",
                         toolsList.Single(t => t.GetProperty("name").GetString() == name)
@@ -749,10 +760,10 @@ internal static class Program
             {
                 Set(config, "AllowMutatingTools", allowMutating);
                 var removedScreenshot = await CallAsync(http, baseUrl, sessionId,
-                    "{\"jsonrpc\":\"2.0\",\"id\":111,\"method\":\"tools/call\",\"params\":{\"name\":\"capture_game_screenshot\",\"arguments\":{}}}").ConfigureAwait(false);
+                    "{\"jsonrpc\":\"2.0\",\"id\":111,\"method\":\"tools/call\",\"params\":{\"name\":\"capture_game_screenshot\",\"arguments\":{\"maxDimension\":0}}}").ConfigureAwait(false);
                 var (removedPayload, removedError) = UnwrapToolResult(removedScreenshot);
-                Check($"removed screenshot tool is unknown with mutation gate {allowMutating}",
-                    removedError && removedPayload?.Contains("Unknown tool", StringComparison.OrdinalIgnoreCase) == true);
+                Check($"screenshot arguments validate before GPU access with mutation gate {allowMutating}",
+                    removedError && removedPayload?.Contains("maxDimension", StringComparison.OrdinalIgnoreCase) == true);
             }
             var invalidGameKey = await CallAsync(http, baseUrl, sessionId,
                 JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 206, method = "tools/call",

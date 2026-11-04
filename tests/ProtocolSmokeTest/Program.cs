@@ -145,10 +145,10 @@ public static class Program
             initJson["result"]?["capabilities"]?["tools"] is not null);
         var instructions = initJson["result"]?["instructions"]?.Value<string>() ?? string.Empty;
         Check("initialize includes bundled bootstrap independently of installed skills", instructions.StartsWith(server.GuidanceInstructions, StringComparison.Ordinal));
-        Check("initialize instructions prefer addon text and do not offer screenshot capture",
+        Check("initialize instructions prefer addon text and describe independent visual capture",
             instructions.Contains("read_addon_text first", StringComparison.Ordinal) &&
-            instructions.Contains("Screenshot capture is not provided", StringComparison.Ordinal) &&
-            !instructions.Contains("capture_game_screenshot", StringComparison.Ordinal));
+            instructions.Contains("Use capture for visual pixels", StringComparison.Ordinal) &&
+            instructions.Contains("do not use the DalamudCN MCP endpoint", StringComparison.Ordinal));
         Check("initialize instructions prefer read-only auto-reload readiness and preserve watcher settings",
             instructions.Contains("get_dev_plugin_state", StringComparison.Ordinal) &&
             instructions.Contains("When autoReload=true, use read-only wait_for_dev_plugin", StringComparison.Ordinal) &&
