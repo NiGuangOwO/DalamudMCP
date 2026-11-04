@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using DalamudMCP.Mcp;
-using HarmonyLib;
 using Newtonsoft.Json.Linq;
 
 namespace DalamudMCP.Runtime;
@@ -34,7 +33,7 @@ internal sealed class RuntimeObservations : IDisposable
     private readonly Func<bool> allowed;
     private readonly Dictionary<string,Observation> observations=new();
     private readonly Queue<JObject> evidence=new();
-    private readonly Harmony harmony=new("DalamudMCP.Runtime."+Guid.NewGuid().ToString("N"));
+    private readonly ManagedObserverBackend managed=new();
     private static readonly object PatchLock=new();
     private static readonly Dictionary<MethodBase,Action<object?,object[]>> Patches=new();
     private long sequence,next;
@@ -115,10 +114,10 @@ internal sealed class RuntimeObservations : IDisposable
                     {
                         if(Patches.ContainsKey(method))throw new ToolException("Method already observed");
                         Patches.Add(method,(instance,items)=>{if(value is null||ReferenceEquals(value,instance))Record(observation,new JObject{["arguments"]=new JArray(items.Take(16).Select(Summary))});});
-                        try{harmony.Patch(method,prefix:new HarmonyMethod(typeof(RuntimeObservations).GetMethod(nameof(Prefix),BindingFlags.NonPublic|BindingFlags.Static)!));}
+                        try{managed.Patch(method,typeof(RuntimeObservations).GetMethod(nameof(Prefix),BindingFlags.NonPublic|BindingFlags.Static)!);}
                         catch{Patches.Remove(method);throw;}
                     }
-                    observation.Cleanup=()=>{lock(PatchLock){harmony.Unpatch(method,HarmonyPatchType.All,harmony.Id);Patches.Remove(method);}};
+                    observation.Cleanup=()=>{lock(PatchLock){managed.Unpatch(method);Patches.Remove(method);}};
                 }
             }
             else throw new ToolException("Supported modes: Memwatch, Hostevent, Managedhook, Hook");

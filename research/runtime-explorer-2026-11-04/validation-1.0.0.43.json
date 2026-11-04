@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0.43",
+  "supersedes": "1.0.0.42",
+  "independentOfBundledMcp": true,
+  "toolCount": 178,
+  "debugMvid": "6b650074-4407-41b0-b744-1ab71e6834a9",
+  "packageSha256": "8bbb13b7bb8d9462c2c2f18ef5ba26b8b902a40fa6b829e82a31b525e7cbfbe9",
+  "guidanceRevision": "d7f46fd093a429cafc3f62e93df9448d9fe0bda0b79031c5e098563986dc73c6",
+  "guidanceSha256": "b5e63a1b11f7e653c326a78b67e3009aab4a8076c3f3249b371082f9729fba8b",
+  "offline": {
+    "pluginLoad": 223,
+    "protocol": 62,
+    "runtime": 26,
+    "screenshots": 26,
+    "officialSchema": 11,
+    "guidance": 21,
+    "pythonSync": 23
+  },
+  "liveChecks": [
+    "running host MVID equals current Debug DLL",
+    "host remains stable for readiness interval",
+    "game remains logged in",
+    "complete catalog advertises 178 tools over two pages",
+    "runtime explorer reports independent in-process backend",
+    "service discovery finds an already constructed manager",
+    "managed Describe returns member metadata",
+    "SDK static wrapper resolves live TargetSystem instance",
+    "known read-only native instance wrapper returns without altering target",
+    "guarded native memory read works",
+    "independent SDK capture returns native PNG content",
+    "cached crop retains exact frame timestamp and requested dimensions",
+    "validation session closed"
+  ],
+  "limitations": [
+    "No game input dispatched",
+    "No live memory writes",
+    "No arbitrary managed methods invoked",
+    "No live generic native/managed hooks installed",
+    "Managedhook requires an optional compatible host-provided 0Harmony backend"
+  ]
+}

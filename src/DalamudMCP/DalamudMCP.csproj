@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <PropertyGroup>
-    <Version>1.0.0.42</Version>
+    <Version>1.0.0.43</Version>
     <!--
       Plugin manifest. DalamudPackager (pulled in by the SDK) reads these properties and
       writes DalamudMCP.json next to the assembly on every build:
@@ -47,7 +47,4 @@
   </ItemGroup>
 
   <Import Project="../../build/AgentGuidanceResources.props" />
-  <ItemGroup>
-    <Reference Include="0Harmony"><HintPath>$(DalamudLibPath)0Harmony.dll</HintPath><Private>false</Private></Reference>
-  </ItemGroup>
 </Project>

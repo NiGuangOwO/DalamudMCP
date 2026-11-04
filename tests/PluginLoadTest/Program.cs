@@ -139,6 +139,7 @@ internal static class Program
         if (ctors.Length != 1) return 1;
 
         var parameters = ctors[0].GetParameters();
+        Check("plugin has no hard Harmony assembly dependency", pluginAssembly.GetReferencedAssemblies().All(a => a.Name != "0Harmony"));
         Check("constructor takes 25 services", parameters.Length == 25, $"found {parameters.Length}");
         Check("constructor requests SDK texture readback",
             parameters.Any(p => p.ParameterType.Name == "ITextureReadbackProvider"));

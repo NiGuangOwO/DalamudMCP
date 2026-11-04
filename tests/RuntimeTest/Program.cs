@@ -25,6 +25,10 @@ void Check(bool ok,string name){ if(!ok)throw new Exception(name); Console.Write
 bool Reject(Action action){try{action();return false;}catch(ToolException){return true;}}
 using var catalog=new RuntimeCatalog { Types=()=>new[]{typeof(Fixture),typeof(int)}, Service=n=>n=="fixture"?new Fixture():null };
 var obj=new Fixture();var handle=catalog.Keep(obj);
+var backendProbed=false;
+var optionalBackend=new ManagedObserverBackend{ResolveHarmony=()=>{backendProbed=true;return null;}};
+Check(!backendProbed,"missing optional hook backend does not affect initialization");
+Check(Reject(()=>optionalBackend.Patch(typeof(Fixture).GetMethod(nameof(Fixture.Add))!,typeof(Fixture).GetMethod(nameof(Fixture.Add))!)),"missing optional backend returns an explicit tool error on demand");
 Check(catalog.Keep(obj)==handle,"stable bounded object identity");
 var metadata=catalog.Describe(typeof(Fixture),null,0,100);
 Check(obj.Gets==0,"describe does not invoke getters");
