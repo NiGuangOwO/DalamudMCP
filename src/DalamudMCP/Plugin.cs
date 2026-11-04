@@ -213,7 +213,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public int ActiveSessions => server?.ActiveSessions ?? 0;
 
-    public int ToolCount => registry.Tools.Count;
+    public int ToolCount => registry.Count;
 
     /// <summary>Endpoint an MCP client should connect to.</summary>
     public string Endpoint => $"http://127.0.0.1:{Config.Port}/mcp";

@@ -29,6 +29,17 @@ jobs:
       - name: Build plugin package
         run: dotnet build src/DalamudMCP/DalamudMCP.csproj --configuration Release
 
+      - name: Build stdio bridge
+        run: dotnet build bridge/DalamudMcpBridge/DalamudMcpBridge.csproj --configuration Release
+
+      - name: Test protocol and stdio notifications
+        shell: pwsh
+        run: |
+          dotnet run --project tests/ProtocolSmokeTest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tests/BridgeSmokeTest -- bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Package agent guidance
         shell: pwsh
         run: |
@@ -36,6 +47,13 @@ jobs:
           $manifest = Get-Content src/DalamudMCP/bin/x64/Release/DalamudMCP/DalamudMCP.json -Raw | ConvertFrom-Json
           dotnet run --project tools/AgentGuidancePack -- $manifest.AssemblyVersion agent-guidance
           Copy-Item docs/agent-setup.md,docs/dalamud-project.AGENTS.md agent-guidance/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DalamudMCP-stdio-bridge
+          path: bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge*
+          if-no-files-found: error
+          retention-days: 30
 
       - uses: actions/upload-artifact@v4
         with:

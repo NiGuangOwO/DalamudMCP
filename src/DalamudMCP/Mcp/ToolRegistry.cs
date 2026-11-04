@@ -58,20 +58,98 @@ public sealed class ToolException : Exception
 /// <summary>The set of tools exposed by the MCP server.</summary>
 public sealed class ToolRegistry
 {
+    private readonly object sync = new();
     private readonly List<McpTool> tools = new();
     private readonly Dictionary<string, McpTool> byName = new(StringComparer.Ordinal);
+    private bool dirty = true;
+    private bool lastAllowMutating;
+    private string? catalogJson;
+    private long revision;
+    private McpTool[] visibleTools = Array.Empty<McpTool>();
+
+    /// <summary>Raised after the effective client-visible metadata changes, outside the registry lock.</summary>
+    public event Action? CatalogChanged;
 
     /// <summary>Supplies whether mutating tools are currently permitted.</summary>
     public Func<bool> AllowMutating { get; set; } = () => false;
 
-    public IReadOnlyList<McpTool> Tools => tools;
+    public IReadOnlyList<McpTool> Tools { get { lock (sync) return tools.ToArray(); } }
+    public int Count { get { lock (sync) return tools.Count; } }
+
+    /// <summary>Monotonic version of visible names, descriptions, schemas and annotations.</summary>
+    public long CatalogRevision { get { RefreshCatalog(); lock (sync) return revision; } }
 
     public McpTool Add(McpTool tool)
     {
-        if (!byName.TryAdd(tool.Name, tool))
-            throw new InvalidOperationException($"duplicate tool name: {tool.Name}");
-        tools.Add(tool);
+        lock (sync)
+        {
+            if (!byName.TryAdd(tool.Name, tool))
+                throw new InvalidOperationException($"duplicate tool name: {tool.Name}");
+            tools.Add(tool);
+            dirty = true;
+        }
+        if (CatalogChanged is not null) RefreshCatalog();
         return tool;
+    }
+
+    public bool Remove(string name)
+    {
+        lock (sync)
+        {
+            if (!byName.Remove(name, out var tool)) return false;
+            tools.Remove(tool);
+            dirty = true;
+        }
+        if (CatalogChanged is not null) RefreshCatalog();
+        return true;
+    }
+
+    /// <summary>Replaces metadata/handler without reordering the catalog; unknown names are refused.</summary>
+    public void Replace(McpTool tool)
+    {
+        lock (sync)
+        {
+            if (!byName.TryGetValue(tool.Name, out var previous))
+                throw new InvalidOperationException($"unknown tool: {tool.Name}");
+            tools[tools.IndexOf(previous)] = tool;
+            byName[tool.Name] = tool;
+            dirty = true;
+        }
+        if (CatalogChanged is not null) RefreshCatalog();
+    }
+
+    /// <summary>Call after editing a registered InputSchema in place. Prefer Replace for live changes.</summary>
+    public void NotifyChanged()
+    {
+        lock (sync) dirty = true;
+        RefreshCatalog();
+    }
+
+    /// <summary>
+    /// Cheap when unchanged. The server polls the external mutation-gate delegate, so UI/config
+    /// edits are detected even without a request. The delegate must be thread-safe and nonblocking.
+    /// </summary>
+    public void RefreshCatalog()
+    {
+        Action? changed = null;
+        lock (sync)
+        {
+            var allow = AllowMutating();
+            if (!dirty && allow == lastAllowMutating) return;
+            var visible = tools.Where(t => !t.Mutating || allow).ToArray();
+            var json = new JArray(visible.Select(t => t.ToJson()))
+                .ToString(Newtonsoft.Json.Formatting.None);
+            if (!string.Equals(catalogJson, json, StringComparison.Ordinal))
+            {
+                catalogJson = json;
+                revision++;
+                changed = CatalogChanged;
+            }
+            visibleTools = visible;
+            lastAllowMutating = allow;
+            dirty = false;
+        }
+        changed?.Invoke();
     }
 
     public McpTool Add(
@@ -117,11 +195,14 @@ public sealed class ToolRegistry
         });
     }
 
-    public McpTool? Find(string name) => byName.TryGetValue(name, out var t) ? t : null;
+    public McpTool? Find(string name) { lock (sync) return byName.TryGetValue(name, out var t) ? t : null; }
 
     public IEnumerable<McpTool> Visible()
+        => VisibleSnapshot().Tools;
+
+    internal (long Revision, McpTool[] Tools) VisibleSnapshot()
     {
-        var allow = AllowMutating();
-        return tools.Where(t => !t.Mutating || allow);
+        RefreshCatalog();
+        lock (sync) return (revision, (McpTool[])visibleTools.Clone());
     }
 }

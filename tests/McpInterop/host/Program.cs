@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using DalamudMCP.Mcp;
 using Newtonsoft.Json.Linq;
@@ -95,7 +96,20 @@ internal static class Program
         Console.Out.Flush();
 
         // Stay alive until the parent closes stdin.
-        await Console.In.ReadToEndAsync().ConfigureAwait(false);
+        var changes = 0;
+        while (await Console.In.ReadLineAsync().ConfigureAwait(false) is { } line)
+        {
+            if (args.Contains("--notification-control") && line == "change")
+            {
+                var original = registry.Find("ping")!;
+                registry.Replace(new McpTool
+                {
+                    Name = original.Name, Title = original.Title,
+                    Description = "Metadata update " + ++changes,
+                    InputSchema = original.InputSchema, Handler = original.Handler,
+                });
+            }
+        }
         server.Stop();
         return 0;
     }

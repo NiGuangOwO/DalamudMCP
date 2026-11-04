@@ -404,6 +404,20 @@ public static class Program
         var queryToken = await http.GetAsync("/tools?token=s3cret");
         Check("query-string token is accepted for GET /tools", queryToken.StatusCode == System.Net.HttpStatusCode.OK);
 
+        using (var eventRequest = new HttpRequestMessage(HttpMethod.Get, "/mcp"))
+        {
+            eventRequest.Headers.Add("Mcp-Session-Id", sid);
+            using var eventDenied = await http.SendAsync(eventRequest, HttpCompletionOption.ResponseHeadersRead);
+            Check("notification stream is refused without the configured bearer token", eventDenied.StatusCode == System.Net.HttpStatusCode.Unauthorized);
+        }
+        using (var eventRequest = new HttpRequestMessage(HttpMethod.Get, "/mcp"))
+        {
+            eventRequest.Headers.Add("Mcp-Session-Id", sid);
+            eventRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "s3cret");
+            using var eventAllowed = await http.SendAsync(eventRequest, HttpCompletionOption.ResponseHeadersRead);
+            Check("authenticated notification stream is available", eventAllowed.StatusCode == System.Net.HttpStatusCode.OK && eventAllowed.Content.Headers.ContentType?.MediaType == "text/event-stream");
+        }
+
         server.TokenProvider = () => null;
 
         // ------------------------------------------------------ concurrency
@@ -427,6 +441,8 @@ public static class Program
         }
 
         Check("24 concurrent calls all return their own result", parallelOk);
+
+        await ToolListChangeChecks.RunAsync((label, ok) => Check(label, ok));
 
         // ------------------------------------------------------ stop/start
         // This host does NOT report dead loopback ports consistently: the control

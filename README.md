@@ -172,6 +172,7 @@ All endpoints bind to `127.0.0.1`:
 | `/` | GET | Server information and transport endpoints. |
 
 Supported protocol revisions are `2025-06-18`, `2025-03-26` and `2024-11-05`.
+The server advertises `tools.listChanged=true` and sends catalog invalidations over HTTP/SSE and the updated stdio bridge. Clients must refresh every tool page; see [catalog notifications](docs/tool-list-notifications.md).
 After `initialize`, requests must include the `Mcp-Session-Id` response header received during the handshake.
 A missing session returns HTTP `400` with `session_required`; an expired or unknown session returns HTTP `404`
 with `session_not_found`. The client must initialize a new session after either response.

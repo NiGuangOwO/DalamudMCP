@@ -87,6 +87,7 @@ namespace BridgeSmokeTest
             // the closest thing to a real authenticated setup available out of game.
             await RunAuthChecksAsync(bridgePath, server, port).ConfigureAwait(false);
             await RunRecoveryChecksAsync(bridgePath).ConfigureAwait(false);
+            await RunNotificationChecksAsync(bridgePath).ConfigureAwait(false);
 
             Console.WriteLine();
             Console.WriteLine($"{checks - failures}/{checks} checks passed");
@@ -353,6 +354,70 @@ namespace BridgeSmokeTest
                         ? reply["result"] is not null && reply["error"] is null
                         : reply["error"]?["message"]?.GetValue<string>()?.Contains(test.Body, StringComparison.Ordinal) == true));
                 Check($"{test.Name}: bridge exits cleanly", exited && bridge.ExitCode == 0);
+            }
+        }
+
+        private static async Task RunNotificationChecksAsync(string bridgePath)
+        {
+            var gate = 0;
+            var registry = new ToolRegistry { AllowMutating = () => Volatile.Read(ref gate) != 0 };
+            registry.Add("read", "Read", "Read-only tool", Json.Schema(), _ => null);
+            registry.Add("write", "Write", "Mutating tool", Json.Schema(), _ => null, true);
+            using var server = new McpServer(registry, new InlineGameThread(), _ => { });
+            server.TokenProvider = () => "notification-token";
+            server.Start(0);
+            var port = server.Port;
+            using var bridge = StartBridge(bridgePath, port, "notification-token");
+            var stderr = bridge.StandardError.ReadToEndAsync();
+            var messages = System.Threading.Channels.Channel.CreateUnbounded<JsonNode>();
+            var reader = Task.Run(async () =>
+            {
+                try
+                {
+                    while (await bridge.StandardOutput.ReadLineAsync().ConfigureAwait(false) is { } line)
+                        messages.Writer.TryWrite(JsonNode.Parse(line)!);
+                    messages.Writer.TryComplete();
+                }
+                catch (Exception ex) { messages.Writer.TryComplete(ex); }
+            });
+            async Task<JsonNode> Next() => await messages.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            static bool Change(JsonNode message) => message["id"] is null && message["method"]?.GetValue<string>() == "notifications/tools/list_changed";
+            try
+            {
+                await WriteAsync(bridge, """{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}""").ConfigureAwait(false);
+                var initialized = await Next();
+                Check("stdio exposes the server's listChanged capability", initialized["result"]?["capabilities"]?["tools"]?["listChanged"]?.GetValue<bool>() == true);
+                await WriteAsync(bridge, """{"jsonrpc":"2.0","method":"notifications/initialized"}""").ConfigureAwait(false);
+                Volatile.Write(ref gate, 1);
+                Check("authenticated stdio receives an unsolicited gate-change notification", Change(await Next()));
+                await WriteAsync(bridge, """{"jsonrpc":"2.0","id":2,"method":"tools/list"}""").ConfigureAwait(false);
+                var list = await Next();
+                Check("stdio client can refresh the changed catalog", list["id"]?.GetValue<int>() == 2 && (list["result"]?["tools"] as JsonArray)?.Count == 2);
+
+                registry.Add("extra", "Extra", "Dynamic tool", Json.Schema(), _ => null);
+                await WriteAsync(bridge, """{"jsonrpc":"2.0","id":3,"method":"ping"}""").ConfigureAwait(false);
+                var concurrent = new[] { await Next(), await Next() };
+                Check("concurrent notification and response stay separate intact JSON lines", concurrent.Any(Change) && concurrent.Any(m => m["id"]?.GetValue<int>() == 3 && m["result"] is not null));
+
+                server.Stop();
+                registry.Add("after_restart", "After restart", "New build tool", Json.Schema(), _ => null);
+                server.Start(port);
+                Check("stdio re-establishes its notification session after listener restart without a new client request", Change(await Next()));
+                await WriteAsync(bridge, """{"jsonrpc":"2.0","id":4,"method":"tools/list"}""").ConfigureAwait(false);
+                var reloaded = await Next();
+                Check("stdio refresh after automatic recovery contains the new catalog", reloaded["id"]?.GetValue<int>() == 4 &&
+                    (reloaded["result"]?["tools"] as JsonArray)?.Any(t => t?["name"]?.GetValue<string>() == "after_restart") == true);
+                Volatile.Write(ref gate, 0);
+                Check("stdio notification delivery continues on the replacement session", Change(await Next()));
+            }
+            finally
+            {
+                bridge.StandardInput.Close();
+                var exited = await WaitForExitAsync(bridge, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+                Check("stdio EOF cancels its background notification stream and exits cleanly", exited && bridge.ExitCode == 0);
+                if (!exited) bridge.Kill(true);
+                await reader.ConfigureAwait(false);
+                _ = await stderr.ConfigureAwait(false);
             }
         }
 

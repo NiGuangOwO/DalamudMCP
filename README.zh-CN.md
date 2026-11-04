@@ -171,6 +171,7 @@ MCP 连接配置与 Skill 安装为独立步骤。
 | `/` | GET | 服务器信息和传输端点。 |
 
 支持的协议版本为 `2025-06-18`、`2025-03-26` 和 `2024-11-05`。
+服务端声明 `tools.listChanged=true`，通过 HTTP/SSE 和新版 stdio 桥接交付目录变化通知；客户端收到后应重新读取全部工具分页，详见[目录通知](docs/tool-list-notifications.md)。
 完成 `initialize` 后，请求必须携带握手响应中的 `Mcp-Session-Id` 响应头所指定的会话 ID。
 缺少会话时返回 HTTP `400` 和 `session_required`；会话过期或不存在时返回 HTTP `404` 和 `session_not_found`。
 客户端收到上述响应后需重新初始化会话。

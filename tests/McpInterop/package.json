@@ -6,7 +6,8 @@
   "description": "Talks to the DalamudMCP server with the OFFICIAL @modelcontextprotocol/sdk, so the protocol framing is checked by somebody else's implementation of the spec.",
   "scripts": {
     "interop": "node interop.mjs",
-    "negative": "node negative.mjs"
+    "negative": "node negative.mjs",
+    "notifications": "node notifications.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.1"

@@ -13,6 +13,7 @@
    技能变化时先运行 `python build/update-guidance-baselines.py` 保留历史原版指纹；定稿后用 `dotnet run --project tools/AgentGuidancePack -- <Version> <输出目录>` 生成技能 ZIP、清单及 payload。运行 `tests/AgentGuidanceTest` 的 C# 和 Python 检查；核对运行服务提供的内容修订和 ZIP 哈希与发布产物一致。
 5. 提交并推送源码与版本号；为确切的发布提交创建 `v<Version>` 标签并推送。创建同名的正式 GitHub Release，附上本次生成的 `latest.zip` 和 `DalamudMCP.json`，使用简体中文和英文双语说明行为变更、验证结果和实际限制。不得移动或覆盖已经发布的同名标签；重试时先核对现有 Release 的提交及资源。
    同时附上 `dalamud-development-skill.zip`、`dalamud-development.manifest.json`、`dalamud-development.payload.json`，下载校验三份资源，不依赖短期 CI 产物分发技能。文档说明自动同步依赖客户端执行能力与权限，不把推荐修订当成客户端已安装版本。
+   桥接程序有更新时，构建 `bridge/DalamudMcpBridge` Release，将同版本的 EXE、DLL、deps.json 和 runtimeconfig.json 打包为 `dalamud-mcp-bridge.zip`，一并上传并下载校验；明确它需要 .NET 10，以及旧桥接程序不具备的新协议能力。
 6. 将同一构建的 `latest.zip`、`DalamudMCP.json` 和需要更新的发布资源同步到分发仓库 `plugins/DalamudMCP/`。保留其他插件，提交并推送分发更新。不要重新构建另一份 ZIP 来替换已经上传的 Release 资源。
 7. 等待分发仓库 `.github/workflows/regenerate.yml` 成功生成 `pluginmaster.json`。核对 DalamudMCP 的版本、作者、安装及更新下载链接，再下载对应包并比较 SHA-256。若 raw GitHub 缓存尚未刷新，使用分发提交固定的索引和包验证准确内容，并说明缓存情况。
 8. 检查两仓库远程引用与本地提交一致，报告版本、源码提交、Release 链接、分发提交、索引及包校验结果。上传成功或工作流启动不等于发布已验证完成。

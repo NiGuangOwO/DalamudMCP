@@ -72,6 +72,10 @@ Keep individual rules such as "no computer use", spending limits, preferred buil
 
 ## 4. Verify discovery and behavior / 验证发现与行为
 
+From plugin/bridge 1.0.0.44, the server advertises tool-list change notifications. HTTP clients need a live GET event stream; stdio users must update the bridge binary. Receiving a notification requires the host to invalidate and re-fetch the entire paged catalog. Existing client support remains necessary; see [tool catalog notifications](tool-list-notifications.md).
+
+从插件/桥接 1.0.0.44 起支持工具目录变化通知。HTTP 客户端需持续监听 GET 事件流，stdio 用户需更新桥接二进制；宿主收到通知后应清除缓存并重新读取全部分页。仍需客户端自身支持，详见[目录通知](tool-list-notifications.md)。
+
 Check that `dalamud-development` appears in the client's skill selector. In Codex CLI/IDE, explicit invocation is `$dalamud-development`; implicit invocation remains enabled. If the installed skill does not appear after refresh, restart the agent client. A currently running conversation may not yet have the new skill in its available metadata.
 
 确认客户端能列出 `dalamud-development`，必要时刷新或重启。Codex 可显式使用 `$dalamud-development`；也可以直接描述任务，观察是否选择该 Skill。自动选择依赖客户端和模型，不承诺每次触发。

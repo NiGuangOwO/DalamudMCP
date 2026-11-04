@@ -148,7 +148,16 @@ namespace DalamudMcpBridge
         /// a stdio client sees only the JSON body, so it has no way to observe or
         /// echo the id and every later request would be rejected without this.
         /// </summary>
-        private string? sessionId;
+        private volatile string? sessionId;
+        private volatile string protocolVersion = "2025-06-18";
+        private volatile bool clientInitialized;
+        private volatile bool toolNotifications;
+        private readonly CancellationTokenSource lifetime = new();
+        private readonly object streamLock = new();
+        private CancellationTokenSource? activeStream;
+        private Task? notificationPump;
+        private readonly SemaphoreSlim outputLock = new(1, 1);
+        private const string ToolsChanged = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/tools/list_changed\"}";
 
         /// <summary>Guards <see cref="sessionId"/>; the pump is sequential but a re-handshake is not.</summary>
         private readonly SemaphoreSlim sessionLock = new(1, 1);
@@ -250,6 +259,8 @@ namespace DalamudMcpBridge
                 await HandleLineAsync(line).ConfigureAwait(false);
             }
 
+            lifetime.Cancel();
+            if (notificationPump is not null) await notificationPump.ConfigureAwait(false);
             await output.FlushAsync().ConfigureAwait(false);
             Log("stdin closed; bridge exiting");
             return 0;
@@ -274,6 +285,8 @@ namespace DalamudMcpBridge
             }
 
             if (parsed is null) return;
+            if (parsed is JsonObject init && init["method"]?.GetValue<string>() == "initialize")
+                clientInitialized = false;
 
             var expectsReply = ExpectsReply(parsed);
             Log($"-> {(parsed is JsonArray array ? $"batch[{array.Count}]" : (parsed["method"]?.GetValue<string>() ?? "response"))}");
@@ -295,6 +308,11 @@ namespace DalamudMcpBridge
             {
                 if (response.StatusCode == HttpStatusCode.Accepted)
                 {
+                    if (parsed is JsonObject notification && notification["method"]?.GetValue<string>() == "notifications/initialized")
+                    {
+                        clientInitialized = true;
+                        if (toolNotifications) notificationPump ??= Task.Run(PumpNotificationsAsync);
+                    }
                     Log("<- 202 accepted (notification)");
                     return;
                 }
@@ -318,6 +336,7 @@ namespace DalamudMcpBridge
                     var stream = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     foreach (var message in SseDataLines(stream))
                     {
+                        CaptureCapabilities(message);
                         await WriteLineAsync(message).ConfigureAwait(false);
                     }
 
@@ -325,6 +344,7 @@ namespace DalamudMcpBridge
                 }
 
                 var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                CaptureCapabilities(payload);
                 if (payload.Length == 0)
                 {
                     if (expectsReply) await WriteErrorAsync(parsed, "the plugin returned an empty response body").ConfigureAwait(false);
@@ -363,6 +383,7 @@ namespace DalamudMcpBridge
                         Log("re-handshake failed; forwarding the original rejection");
                         return attempt;
                     }
+                    if (clientInitialized && toolNotifications) await WriteLineAsync(ToolsChanged).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -384,17 +405,20 @@ namespace DalamudMcpBridge
         /// header when there is no session is deliberate: the plugin accepts
         /// <c>initialize</c> only because it arrives without one.
         /// </summary>
-        private Task<HttpResponseMessage> PostAsync(string body, bool includeSession = true)
+        private async Task<HttpResponseMessage> PostAsync(string body, bool includeSession = true)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
             {
                 Content = new StringContent(body, new UTF8Encoding(false), "application/json"),
             };
 
             if (includeSession && sessionId is { Length: > 0 } id)
+            {
                 request.Headers.TryAddWithoutValidation("Mcp-Session-Id", id);
+                request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", protocolVersion);
+            }
 
-            return http.SendAsync(request);
+            return await http.SendAsync(request, lifetime.Token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -454,6 +478,7 @@ namespace DalamudMcpBridge
             }
 
             CaptureSession(response);
+            CaptureCapabilities(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
             if (sessionId is null)
             {
                 Log("handshake succeeded but the plugin issued no session id");
@@ -489,8 +514,95 @@ namespace DalamudMcpBridge
                 if (!string.IsNullOrEmpty(id) && id != sessionId)
                 {
                     sessionId = id;
+                    lock (streamLock) activeStream?.Cancel();
                     Log($"session: {id}");
                 }
+            }
+        }
+
+        private void CaptureCapabilities(string payload)
+        {
+            var parsed = JsonNode.Parse(payload);
+            var messages = parsed is JsonArray batch ? batch.AsEnumerable() : new[] { parsed };
+            foreach (var message in messages)
+            {
+                if (message?["result"] is not JsonObject result || result["protocolVersion"] is not JsonValue version) continue;
+                protocolVersion = version.GetValue<string>();
+                toolNotifications = result["capabilities"]?["tools"]?["listChanged"]?.GetValue<bool>() == true;
+            }
+        }
+
+        /// <summary>Unsolicited HTTP/SSE messages share the same serialized stdout writer as replies.</summary>
+        private async Task PumpNotificationsAsync()
+        {
+            while (!lifetime.IsCancellationRequested)
+            {
+                try
+                {
+                    if (!clientInitialized || !toolNotifications || sessionId is not { } id)
+                    {
+                        await Task.Delay(100, lifetime.Token).ConfigureAwait(false);
+                        continue;
+                    }
+                    using var streamCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+                    lock (streamLock) activeStream = streamCancellation;
+                    try
+                    {
+                        using var request = new HttpRequestMessage(HttpMethod.Get, "/mcp");
+                        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+                        request.Headers.TryAddWithoutValidation("Mcp-Session-Id", id);
+                        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", protocolVersion);
+                        using var headerDeadline = CancellationTokenSource.CreateLinkedTokenSource(streamCancellation.Token);
+                        headerDeadline.CancelAfter(TimeSpan.FromSeconds(10));
+                        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, headerDeadline.Token).ConfigureAwait(false);
+                        headerDeadline.CancelAfter(Timeout.InfiniteTimeSpan);
+                        if (await IsStaleSessionAsync(response).ConfigureAwait(false))
+                        {
+                            await sessionLock.WaitAsync(lifetime.Token).ConfigureAwait(false);
+                            try
+                            {
+                                if (sessionId == id && await HandshakeAsync().ConfigureAwait(false) && toolNotifications)
+                                    await WriteLineAsync(ToolsChanged).ConfigureAwait(false);
+                            }
+                            finally { sessionLock.Release(); }
+                            await Task.Delay(250, lifetime.Token).ConfigureAwait(false);
+                            continue;
+                        }
+                        response.EnsureSuccessStatusCode();
+                        if (response.Content.Headers.ContentType?.MediaType != "text/event-stream")
+                            throw new IOException("notification channel did not return SSE");
+                        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(streamCancellation.Token).ConfigureAwait(false), Encoding.UTF8);
+                        var data = new StringBuilder();
+                        while (await reader.ReadLineAsync(streamCancellation.Token).ConfigureAwait(false) is { } line)
+                        {
+                            if (line.Length == 0)
+                            {
+                                if (data.Length == 0) continue;
+                                var message = data.ToString();
+                                data.Clear();
+                                if (JsonNode.Parse(message) is JsonObject notification && notification["id"] is null &&
+                                    notification["method"]?.GetValue<string>() == "notifications/tools/list_changed")
+                                    await WriteLineAsync(message).ConfigureAwait(false);
+                            }
+                            else if (line.StartsWith("data:", StringComparison.Ordinal))
+                            {
+                                if (data.Length > 0) data.Append('\n');
+                                data.Append(line[5..].TrimStart(' '));
+                                if (data.Length > 65536) throw new IOException("notification exceeds the 64 KiB budget");
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        lock (streamLock) if (ReferenceEquals(activeStream, streamCancellation)) activeStream = null;
+                    }
+                }
+                catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { break; }
+                catch (OperationCanceledException) { /* session replacement or a bounded connection attempt */ }
+                catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or ObjectDisposedException)
+                { Log($"notification stream disconnected: {ex.Message}"); }
+                try { await Task.Delay(250, lifetime.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
             }
         }
 
@@ -579,8 +691,13 @@ namespace DalamudMcpBridge
         private async Task WriteLineAsync(string message)
         {
             Log($"<- {Summarize(message)}");
-            await output.WriteLineAsync(message).ConfigureAwait(false);
-            await output.FlushAsync().ConfigureAwait(false);
+            await outputLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await output.WriteLineAsync(message).ConfigureAwait(false);
+                await output.FlushAsync().ConfigureAwait(false);
+            }
+            finally { outputLock.Release(); }
         }
 
         private void Log(string message)
@@ -591,6 +708,7 @@ namespace DalamudMcpBridge
 
         public void Dispose()
         {
+            lifetime.Cancel();
             http.Dispose();
             sessionLock.Dispose();
             output.Dispose();

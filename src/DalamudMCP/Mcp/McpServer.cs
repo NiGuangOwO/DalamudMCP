@@ -44,6 +44,10 @@ public sealed class McpServer : IDisposable
     private readonly Dictionary<string, Session> sessions = new(StringComparer.Ordinal);
     private readonly object sessionLock = new();
     private readonly CancellationTokenSource cts = new();
+    private Timer? catalogTimer;
+    private bool notificationsEnabled;
+    private int disposed;
+    private const string ToolsChangedMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/tools/list_changed\"}";
 
     public McpServer(ToolRegistry registry, IGameThread gameThread, Action<string> log)
     {
@@ -72,21 +76,62 @@ public sealed class McpServer : IDisposable
 
     public void Start(int port)
     {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+        Stop();
+        registry.RefreshCatalog();
         http.Start(port);
         Port = http.Port;
+        lock (sessionLock) notificationsEnabled = true;
+        registry.CatalogChanged += OnCatalogChanged;
+        catalogTimer = new Timer(_ =>
+        {
+            try { registry.RefreshCatalog(); }
+            catch (Exception ex) { log($"catalog change check failed: {ex.GetType().Name}: {ex.Message}"); }
+        }, null, 100, 100);
     }
 
-    public void Stop() => http.Stop();
+    public void Stop()
+    {
+        lock (sessionLock)
+        {
+            notificationsEnabled = false;
+            foreach (var session in sessions.Values) session.Stream.Writer.TryComplete();
+            sessions.Clear();
+        }
+        registry.CatalogChanged -= OnCatalogChanged;
+        Interlocked.Exchange(ref catalogTimer, null)?.Dispose();
+        http.Stop();
+    }
+
+    private void OnCatalogChanged()
+    {
+        lock (sessionLock)
+        {
+            if (!notificationsEnabled) return;
+            foreach (var session in sessions.Values)
+                if (session.Initialized) QueueToolsChangedLocked(session);
+        }
+    }
+
+    private static void QueueToolsChangedLocked(Session session)
+    {
+        if (session.ToolsChangedPending) return;
+        session.ToolsChangedPending = session.Stream.Writer.TryWrite(new SessionMessage(ToolsChangedMessage, true));
+    }
+
+    private sealed record SessionMessage(string Json, bool ToolsChanged = false);
 
     private sealed class Session
     {
         public required string Id { get; init; }
         public string ProtocolVersion { get; set; } = SupportedProtocolVersions[0];
         public bool Initialized { get; set; }
+        public long ListedCatalogRevision { get; set; }
+        public bool ToolsChangedPending { get; set; }
         public DateTime LastSeen { get; set; } = DateTime.UtcNow;
 
         /// <summary>Queue of messages destined for a standalone GET SSE stream.</summary>
-        public Channel<string>? Stream { get; set; }
+        public Channel<SessionMessage> Stream { get; } = Channel.CreateUnbounded<SessionMessage>();
     }
 
     /// <summary>
@@ -209,6 +254,8 @@ public sealed class McpServer : IDisposable
             buildMvid = typeof(McpServer).Module.ModuleVersionId,
             protocolVersions = SupportedProtocolVersions,
             tools = registry.Visible().Count(),
+            toolListChanged = true,
+            toolCatalogRevision = registry.CatalogRevision,
             mutatingToolsEnabled = allowMutating,
             sessions = SessionCount(),
             authRequired = !string.IsNullOrEmpty(TokenProvider()),
@@ -424,7 +471,9 @@ public sealed class McpServer : IDisposable
         }
 
         session.LastSeen = DateTime.UtcNow;
-        session.Stream ??= Channel.CreateUnbounded<string>();
+        var revision = registry.CatalogRevision;
+        lock (sessionLock)
+            if (session.Initialized && session.ListedCatalogRevision != revision) QueueToolsChangedLocked(session);
 
         // Returning false below closes the socket once the stream drains, so the
         // response head must not promise keep-alive.
@@ -433,13 +482,22 @@ public sealed class McpServer : IDisposable
         try
         {
             await foreach (var message in session.Stream.Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
-                await ctx.SendEventAsync("message", message, cts.Token).ConfigureAwait(false);
+            {
+                if (message.ToolsChanged) lock (sessionLock) session.ToolsChangedPending = false;
+                await ctx.SendEventAsync("message", message.Json, cts.Token).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) { /* server shutting down */ }
         catch (IOException) { /* client disconnected */ }
         catch (ObjectDisposedException) { /* client disconnected */ }
         finally
         {
+            // An SSE write has no application-level acknowledgement. If a client reconnects
+            // without having fetched the new catalog, retain one invalidation for that session.
+            var currentRevision = registry.CatalogRevision;
+            lock (sessionLock)
+                if (notificationsEnabled && sessions.ContainsKey(session.Id) && session.Initialized &&
+                    session.ListedCatalogRevision != currentRevision) QueueToolsChangedLocked(session);
             await ctx.EndChunkedResponseAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
@@ -454,7 +512,6 @@ public sealed class McpServer : IDisposable
 
         // The 2024-11-05 transport has no per-request response channel: every
         // response is correlated by session over the stream opened here.
-        session.Stream ??= Channel.CreateUnbounded<string>();
         ctx.CloseAfterResponse = true;
         await ctx.BeginEventStreamAsync().ConfigureAwait(false);
         await ctx.SendEventAsync("endpoint", $"/messages?sessionId={session.Id}").ConfigureAwait(false);
@@ -462,7 +519,10 @@ public sealed class McpServer : IDisposable
         try
         {
             await foreach (var message in session.Stream.Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
-                await ctx.SendEventAsync("message", message, cts.Token).ConfigureAwait(false);
+            {
+                if (message.ToolsChanged) lock (sessionLock) session.ToolsChangedPending = false;
+                await ctx.SendEventAsync("message", message.Json, cts.Token).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) { /* server shutting down */ }
         catch (IOException) { /* client disconnected */ }
@@ -520,8 +580,7 @@ public sealed class McpServer : IDisposable
         {
             var response = await DispatchAsync(request, sessionRef, ctx).ConfigureAwait(false);
             if (response is null) continue;
-            if (session.Stream is not null)
-                await session.Stream.Writer.WriteAsync(response.ToString(Newtonsoft.Json.Formatting.None)).ConfigureAwait(false);
+            await session.Stream.Writer.WriteAsync(new SessionMessage(response.ToString(Newtonsoft.Json.Formatting.None))).ConfigureAwait(false);
         }
 
         return true;
@@ -623,13 +682,18 @@ public sealed class McpServer : IDisposable
 
                 session.ProtocolVersion = negotiated;
                 session.LastSeen = DateTime.UtcNow;
+                lock (sessionLock)
+                {
+                    session.Initialized = false;
+                    session.ListedCatalogRevision = registry.CatalogRevision;
+                }
 
                 var result = new JObject
                 {
                     ["protocolVersion"] = negotiated,
                     ["capabilities"] = new JObject
                     {
-                        ["tools"] = new JObject { ["listChanged"] = false },
+                        ["tools"] = new JObject { ["listChanged"] = true },
                     },
                     ["serverInfo"] = new JObject
                     {
@@ -654,7 +718,10 @@ public sealed class McpServer : IDisposable
                         "Use search_item_holdings for bags, equipment, armoury, saddlebags and visited retainers; read coverage/source/complete " +
                         "because unloaded or unvisited storage is unknown and session snapshots may be stale. " +
                         "Mutating tools are hidden/refused when AllowMutatingTools is off; follow the user's scope and " +
-                        "input restrictions. Locate entities with get_game_objects/find_game_object and native windows " +
+                        "input restrictions. Tool catalogs support notifications/tools/list_changed; clients must invalidate " +
+                        "cached catalogs and refresh every tools/list page. HTTP clients need the GET /mcp SSE channel; " +
+                        "stdio notification delivery requires an updated bridge. A server notification cannot force client discovery. " +
+                        "Locate entities with get_game_objects/find_game_object and native windows " +
                         "with list_loaded_addons. When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
                         "controls or geometry are needed. Use capture for visual pixels and same-frame cached crops, not ordinary native text. " +
@@ -710,12 +777,21 @@ public sealed class McpServer : IDisposable
                 };
 
                 if (session.ProtocolVersion == "2024-11-05") result["sessionId"] = session.Id;
-                session.Initialized = true;
-
                 return isNotification ? null : Json.Result(id!, result);
             }
 
             case "notifications/initialized":
+                if (session is not null)
+                {
+                    var revision = registry.CatalogRevision;
+                    lock (sessionLock)
+                    {
+                        session.Initialized = true;
+                        session.LastSeen = DateTime.UtcNow;
+                        if (session.ListedCatalogRevision != revision) QueueToolsChangedLocked(session);
+                    }
+                }
+                return null;
             case "notifications/cancelled":
             case "notifications/progress":
             case "notifications/roots/list_changed":
@@ -727,7 +803,8 @@ public sealed class McpServer : IDisposable
 
             case "tools/list":
             {
-                var all = registry.Visible().ToList();
+                var snapshot = registry.VisibleSnapshot();
+                var all = snapshot.Tools;
                 var cursor = p?["cursor"]?.Value<string>();
                 var start = 0;
                 if (!string.IsNullOrEmpty(cursor) && int.TryParse(cursor, out var parsedCursor)) start = parsedCursor;
@@ -740,7 +817,10 @@ public sealed class McpServer : IDisposable
                 };
 
                 var next = start + page.Count;
-                if (next < all.Count) result["nextCursor"] = next.ToString();
+                if (next < all.Length) result["nextCursor"] = next.ToString();
+
+                if (session is not null && start == 0)
+                    lock (sessionLock) session.ListedCatalogRevision = snapshot.Revision;
 
                 return isNotification ? null : Json.Result(id!, result);
             }
@@ -866,7 +946,7 @@ public sealed class McpServer : IDisposable
             if (!sessions.Remove(id, out removed)) return;
         }
 
-        try { removed.Stream?.Writer.TryComplete(); } catch { /* already completed */ }
+        removed.Stream.Writer.TryComplete();
     }
 
     private void PruneSessionsLocked()
@@ -876,19 +956,21 @@ public sealed class McpServer : IDisposable
         {
             if (sessions.Remove(id, out var dead))
             {
-                try { dead.Stream?.Writer.TryComplete(); } catch { /* already completed */ }
+                dead.Stream.Writer.TryComplete();
             }
         }
     }
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) return;
+        Stop();
         try { cts.Cancel(); } catch { /* already disposed */ }
         lock (sessionLock)
         {
             foreach (var s in sessions.Values)
             {
-                try { s.Stream?.Writer.TryComplete(); } catch { /* already completed */ }
+                s.Stream.Writer.TryComplete();
             }
 
             sessions.Clear();

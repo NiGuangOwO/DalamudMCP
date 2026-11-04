@@ -25,6 +25,7 @@ $interopExit = 1
 $negativeExit = 1
 $realExit = 1
 $loadExit = 1
+$notificationsExit = 1
 Push-Location $here
 try {
     if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
@@ -66,6 +67,10 @@ try {
         Write-Host '--- interop: the official MCP SDK against the real server ---'
         & node (Join-Path $here 'interop.mjs') $port
         $interopExit = $LASTEXITCODE
+
+        Write-Host '--- notifications: independent HTTP and legacy SSE clients ---'
+        & node (Join-Path $here 'notifications.mjs')
+        $notificationsExit = $LASTEXITCODE
 
         Write-Host ''
         Write-Host '--- negative control: the SDK must REJECT a non-conforming server ---'
@@ -110,8 +115,8 @@ try {
     }
 
     Write-Host ''
-    if ($interopExit -ne 0 -or $negativeExit -ne 0 -or $realExit -ne 0) {
-        Write-Host "INTEROP FAILED (interop $interopExit, negative control $negativeExit, real schemas $realExit, load test $loadExit)" -ForegroundColor Red
+    if ($interopExit -ne 0 -or $negativeExit -ne 0 -or $realExit -ne 0 -or $notificationsExit -ne 0 -or $loadExit -ne 0) {
+        Write-Host "INTEROP FAILED (interop $interopExit, notifications $notificationsExit, negative control $negativeExit, real schemas $realExit, load test $loadExit)" -ForegroundColor Red
         exit 1
     }
 
