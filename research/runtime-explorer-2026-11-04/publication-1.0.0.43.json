@@ -6,35 +6,35 @@
     {
       "name": "latest.zip",
       "id": 709708966,
-      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/latest.zip",
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.43/latest.zip",
       "sha256": "8bbb13b7bb8d9462c2c2f18ef5ba26b8b902a40fa6b829e82a31b525e7cbfbe9",
       "downloadedSha256": "8bbb13b7bb8d9462c2c2f18ef5ba26b8b902a40fa6b829e82a31b525e7cbfbe9"
     },
     {
       "name": "DalamudMCP.json",
       "id": 709709115,
-      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/DalamudMCP.json",
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.43/DalamudMCP.json",
       "sha256": "21902a570087c60ea1d92fb8e617cbce7ed7f21abaf35a73357d0040374963bc",
       "downloadedSha256": "21902a570087c60ea1d92fb8e617cbce7ed7f21abaf35a73357d0040374963bc"
     },
     {
       "name": "dalamud-development-skill.zip",
       "id": 709709173,
-      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/dalamud-development-skill.zip",
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.43/dalamud-development-skill.zip",
       "sha256": "b5e63a1b11f7e653c326a78b67e3009aab4a8076c3f3249b371082f9729fba8b",
       "downloadedSha256": "b5e63a1b11f7e653c326a78b67e3009aab4a8076c3f3249b371082f9729fba8b"
     },
     {
       "name": "dalamud-development.manifest.json",
       "id": 709709285,
-      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/dalamud-development.manifest.json",
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.43/dalamud-development.manifest.json",
       "sha256": "5667dcbfd633538def36e1cb9731243d1b5406be79e220484e6c49df6808fe89",
       "downloadedSha256": "5667dcbfd633538def36e1cb9731243d1b5406be79e220484e6c49df6808fe89"
     },
     {
       "name": "dalamud-development.payload.json",
       "id": 709709327,
-      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/dalamud-development.payload.json",
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.43/dalamud-development.payload.json",
       "sha256": "3df603db8739b371a42e9118b0a66a0cad38401507d3556cd56f34a3d1a2d241",
       "downloadedSha256": "3df603db8739b371a42e9118b0a66a0cad38401507d3556cd56f34a3d1a2d241"
     }
