@@ -1,0 +1,78 @@
+{
+  "sourceCommit": "369afe9c53cf2af9aac83e80b43c2bb669e7bba4",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.43",
+  "releaseId": 433995987,
+  "assets": [
+    {
+      "name": "latest.zip",
+      "id": 709708966,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/latest.zip",
+      "sha256": "8bbb13b7bb8d9462c2c2f18ef5ba26b8b902a40fa6b829e82a31b525e7cbfbe9",
+      "downloadedSha256": "8bbb13b7bb8d9462c2c2f18ef5ba26b8b902a40fa6b829e82a31b525e7cbfbe9"
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 709709115,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/DalamudMCP.json",
+      "sha256": "21902a570087c60ea1d92fb8e617cbce7ed7f21abaf35a73357d0040374963bc",
+      "downloadedSha256": "21902a570087c60ea1d92fb8e617cbce7ed7f21abaf35a73357d0040374963bc"
+    },
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 709709173,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/dalamud-development-skill.zip",
+      "sha256": "b5e63a1b11f7e653c326a78b67e3009aab4a8076c3f3249b371082f9729fba8b",
+      "downloadedSha256": "b5e63a1b11f7e653c326a78b67e3009aab4a8076c3f3249b371082f9729fba8b"
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 709709285,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/dalamud-development.manifest.json",
+      "sha256": "5667dcbfd633538def36e1cb9731243d1b5406be79e220484e6c49df6808fe89",
+      "downloadedSha256": "5667dcbfd633538def36e1cb9731243d1b5406be79e220484e6c49df6808fe89"
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 709709327,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/untagged-c44b530db8438a282472/dalamud-development.payload.json",
+      "sha256": "3df603db8739b371a42e9118b0a66a0cad38401507d3556cd56f34a3d1a2d241",
+      "downloadedSha256": "3df603db8739b371a42e9118b0a66a0cad38401507d3556cd56f34a3d1a2d241"
+    }
+  ],
+  "bilingualNotesVerified": true,
+  "distributionCommit": "9749f5df9af3e64240d5fc5b4ee2bde474e8b220",
+  "distributionIndexCommit": "4b30ae7105c4060513642baae195e64415f4a67a",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/4b30ae7105c4060513642baae195e64415f4a67a/pluginmaster.json",
+  "indexEntry": {
+    "Author": "NiGuangOwO",
+    "Name": "DalamudMCP",
+    "Punchline": "Expose FFXIV game memory to AI agents over MCP.",
+    "Description": "Hosts a Model Context Protocol (MCP) server on a local port so that agents can read FINAL FANTASY XIV game memory via Dalamud and FFXIVClientStructs.",
+    "Tags": [
+      "mcp",
+      "agent",
+      "memory",
+      "api"
+    ],
+    "InternalName": "DalamudMCP",
+    "RepoUrl": "https://github.com/NiGuangOwO/DalamudMCP",
+    "AssemblyVersion": "1.0.0.43",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudMCP/main/src/DalamudMCP/images/icon.png",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudPlugins/raw/main/plugins/DalamudMCP/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudPlugins/raw/main/plugins/DalamudMCP/latest.zip",
+    "DownloadCount": 0,
+    "LastUpdate": "1793800716"
+  },
+  "distributionPackageUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/4b30ae7105c4060513642baae195e64415f4a67a/plugins/DalamudMCP/latest.zip",
+  "distributionPackageSha256": "8bbb13b7bb8d9462c2c2f18ef5ba26b8b902a40fa6b829e82a31b525e7cbfbe9",
+  "sourceWorkflow": {
+    "id": 41842893492,
+    "conclusion": "success"
+  },
+  "indexWorkflow": {
+    "id": 41842980280,
+    "conclusion": "success"
+  }
+}
