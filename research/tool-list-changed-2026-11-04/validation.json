@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0.44",
+  "sourceCommit": "7ebdad1079f7d388cd3f425ec09fc4651b25b621",
+  "toolListChanged": true,
+  "toolCount": 178,
+  "packageSha256": "574a35ae92090dc266be99f93ac5bc007c6f50121fa084e34e30270ab48c380e",
+  "bridgeSha256": "7218908d77fba37d22f299483296d21ae37c681a68cbcd2ab998dd5b4e8a9967",
+  "guidanceRevision": "6bf3235b4c8a7d055a497a3c55a0396bd2c57c98efb85a1d8325d5b524eb3ebe",
+  "guidanceSha256": "2942294220c4636903a80bec1f9b55c133cf6de8553667fbf53a990eb9558c40",
+  "offlineChecks": {
+    "protocol": 88,
+    "bridge": 57,
+    "pluginLoad": 223,
+    "officialSdkNotifications": 4,
+    "agentGuidance": 21,
+    "pythonSkillSync": 23
+  },
+  "protocols": [
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05"
+  ],
+  "liveValidation": {
+    "available": false,
+    "reason": "The local 18777 listener refused the connection and no ffxiv_dx11 process was found. The game was not started for validation/publication."
+  },
+  "limitations": [
+    "Clients must consume notifications and refresh all tools/list pages",
+    "Older stdio bridge binaries must be updated",
+    "Changes can be coalesced into one pending invalidation per session; not an audit log",
+    "Polling is scheduled every 100ms and can be delayed",
+    "No newer protocol subscription mechanism is implemented"
+  ]
+}

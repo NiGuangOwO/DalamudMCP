@@ -1,0 +1,87 @@
+{
+  "sourceCommit": "7ebdad1079f7d388cd3f425ec09fc4651b25b621",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.44",
+  "releaseId": 434087757,
+  "assets": [
+    {
+      "name": "latest.zip",
+      "id": 709933816,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.44/latest.zip",
+      "sha256": "574a35ae92090dc266be99f93ac5bc007c6f50121fa084e34e30270ab48c380e",
+      "downloadedSha256": "574a35ae92090dc266be99f93ac5bc007c6f50121fa084e34e30270ab48c380e"
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 709933951,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.44/DalamudMCP.json",
+      "sha256": "e49a5d0fcf02b0cd2b14f8ca6d87dbb7725acbd5061e9562f48b2fefc51f3675",
+      "downloadedSha256": "e49a5d0fcf02b0cd2b14f8ca6d87dbb7725acbd5061e9562f48b2fefc51f3675"
+    },
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 709933995,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.44/dalamud-development-skill.zip",
+      "sha256": "2942294220c4636903a80bec1f9b55c133cf6de8553667fbf53a990eb9558c40",
+      "downloadedSha256": "2942294220c4636903a80bec1f9b55c133cf6de8553667fbf53a990eb9558c40"
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 709934114,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.44/dalamud-development.manifest.json",
+      "sha256": "7f70720283d7a296956d7c65a4faa62d9a2753b0e9e5e479f694da2eb3dfe6fd",
+      "downloadedSha256": "7f70720283d7a296956d7c65a4faa62d9a2753b0e9e5e479f694da2eb3dfe6fd"
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 709934197,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.44/dalamud-development.payload.json",
+      "sha256": "98b71af2f0795f49344e90c4bd1cd3b33f883c5308fcba9c4fca6fe301b5d6e2",
+      "downloadedSha256": "98b71af2f0795f49344e90c4bd1cd3b33f883c5308fcba9c4fca6fe301b5d6e2"
+    },
+    {
+      "name": "dalamud-mcp-bridge.zip",
+      "id": 709934270,
+      "url": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.44/dalamud-mcp-bridge.zip",
+      "sha256": "7218908d77fba37d22f299483296d21ae37c681a68cbcd2ab998dd5b4e8a9967",
+      "downloadedSha256": "7218908d77fba37d22f299483296d21ae37c681a68cbcd2ab998dd5b4e8a9967"
+    }
+  ],
+  "bilingualNotesVerified": true,
+  "distributionCommit": "744190dd42000889983d0743735468439c29cebc",
+  "distributionIndexCommit": "2e55d1f63e6bd4fc8f8064795b5005c234967fba",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/2e55d1f63e6bd4fc8f8064795b5005c234967fba/pluginmaster.json",
+  "indexEntry": {
+    "Author": "NiGuangOwO",
+    "Name": "DalamudMCP",
+    "Punchline": "Expose FFXIV game memory to AI agents over MCP.",
+    "Description": "Hosts a Model Context Protocol (MCP) server on a local port so that agents can read FINAL FANTASY XIV game memory via Dalamud and FFXIVClientStructs.",
+    "Tags": [
+      "mcp",
+      "agent",
+      "memory",
+      "api"
+    ],
+    "InternalName": "DalamudMCP",
+    "RepoUrl": "https://github.com/NiGuangOwO/DalamudMCP",
+    "AssemblyVersion": "1.0.0.44",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudMCP/main/src/DalamudMCP/images/icon.png",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudPlugins/raw/main/plugins/DalamudMCP/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudPlugins/raw/main/plugins/DalamudMCP/latest.zip",
+    "DownloadCount": 0,
+    "LastUpdate": "1793805082"
+  },
+  "distributionPackageUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/2e55d1f63e6bd4fc8f8064795b5005c234967fba/plugins/DalamudMCP/latest.zip",
+  "distributionPackageSha256": "574a35ae92090dc266be99f93ac5bc007c6f50121fa084e34e30270ab48c380e",
+  "rawMainIndexVersion": "1.0.0.44",
+  "sourceWorkflow": {
+    "id": 41854903485,
+    "conclusion": "success"
+  },
+  "indexWorkflow": {
+    "id": 41855081613,
+    "conclusion": "success"
+  },
+  "liveValidationUnavailable": "The local 18777 listener refused the connection and no ffxiv_dx11 process was found. The game was not started for validation/publication."
+}
