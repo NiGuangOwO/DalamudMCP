@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0.45",
+  "changeScope": "Installer metadata only: bilingual punchline/description and search tags",
+  "builds": {
+    "Debug": "passed, 0 warnings, 0 errors",
+    "Release": "passed, 0 warnings, 0 errors; packaging required sandbox escalation"
+  },
+  "manifestChecks": {
+    "matchesProject": true,
+    "archiveMatchesExternalManifest": true,
+    "bilingualParagraphs": 6,
+    "punchlineCharacters": 64,
+    "xmlEntitiesDecoded": true,
+    "assemblyBytesMatch": true,
+    "dependencyVersionMatches": true,
+    "zipIntegrity": true
+  },
+  "packageFiles": [
+    "DalamudMCP.deps.json",
+    "DalamudMCP.dll",
+    "DalamudMCP.json",
+    "agent-guidance/dalamud-development-skill.zip",
+    "agent-guidance/dalamud-development.manifest.json",
+    "agent-guidance/dalamud-development.payload.json",
+    "licenses/elpis-FFXIVClientStructs.LICENSE",
+    "licenses/elpis-opcode-worker.LICENSE",
+    "licenses/elpis.LICENSE"
+  ],
+  "packageSha256": "db60f8655da986e4378cf05de0bc3a597bef04434a48f2d5f90df6ec0bd02237",
+  "liveValidation": "No ffxiv_dx11 process was found. The game was not started; installer rendering was not checked in game.",
+  "pluginLoadTest": {
+    "result": "223/223 checks passed",
+    "scope": "Offline shipped Release assembly constructor, registration, MCP transport, commands and unload; local Dalamud SDK and game data; no live game process",
+    "initialSandboxAttempt": "Local TCP connection denied; passed after sandbox escalation"
+  }
+}
