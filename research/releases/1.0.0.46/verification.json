@@ -1,0 +1,114 @@
+{
+  "version": "1.0.0.46",
+  "sourceCommit": "66a6f1030ae9110c5d26af9a6a2b7def83cb55d3",
+  "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.46",
+  "releaseId": 438049423,
+  "assets": [
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 722975898,
+      "sha256": "2942294220c4636903a80bec1f9b55c133cf6de8553667fbf53a990eb9558c40",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 722975932,
+      "sha256": "9fec0e123a58213bd2171e785cb19ea1870dc19ddf23417d299ab28ebccba568",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 722975946,
+      "sha256": "ba1fbc5d1d9cf37ad0791c9cdb6b60a1aa1448c6a72d4f8db912ece3bb6d4eba",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-mcp-bridge.zip",
+      "id": 722975968,
+      "sha256": "39ee5d881e283a69f8e94f8d46b119b15dc8750d60fd70a652ca702cc4497f4f",
+      "downloadVerified": true
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 722975881,
+      "sha256": "4bb7eee95c531fe32d774d8303e11759d9912584b7add3c1cc9cbc7fc5ff9199",
+      "downloadVerified": true
+    },
+    {
+      "name": "latest.zip",
+      "id": 722975869,
+      "sha256": "4357a6aa8a7e2db29251375dea3c84ce9015a46d046d9560985998ed8ab2b1d1",
+      "downloadVerified": true
+    },
+    {
+      "name": "release-provenance.json",
+      "id": 722975993,
+      "sha256": "16b4b77d5bc14431b57069c03f8fe00790aba00b583c03460d63d90e917dd93b",
+      "downloadVerified": true
+    }
+  ],
+  "distributionCommit": "25c3444fc7b2721b806c336cd264e759086904ca",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/25c3444fc7b2721b806c336cd264e759086904ca/pluginmaster.json",
+  "indexEntry": {
+    "Author": "NiGuangOwO",
+    "Name": "DalamudMCP",
+    "Punchline": "连接 AI 助手，辅助插件开发与调试 | AI-assisted plugin development & debugging.",
+    "Description": "通过 MCP（模型上下文协议）连接 AI 助手与 FINAL FANTASY XIV，为 Dalamud 插件开发、运行时分析和游戏内验证提供工具。\n\n读取角色、物品栏、游戏数据、界面文本与运行日志，检查插件和 IPC，并在授权后执行界面交互等操作。\n\n安装后输入 /dalamudmcp 打开设置，并配置支持 MCP 的 AI 客户端。默认仅开放只读工具；修改游戏状态的工具需手动启用。仅支持 stdio 的客户端可使用配套桥接程序。\n\nConnect AI agents to FINAL FANTASY XIV through the Model Context Protocol (MCP) for Dalamud plugin development, runtime analysis, and in-game validation.\n\nRead character, inventory, game data, UI text, and runtime logs; inspect plugins and IPC; and perform UI interactions with explicit permission.\n\nAfter installation, open settings with /dalamudmcp and configure an MCP-compatible AI client. Only read-only tools are enabled by default; tools that change game state must be enabled manually. A companion bridge is available for stdio-only clients.",
+    "Tags": [
+      "mcp",
+      "ai",
+      "agent",
+      "development",
+      "debugging",
+      "memory",
+      "api",
+      "开发",
+      "调试"
+    ],
+    "InternalName": "DalamudMCP",
+    "RepoUrl": "https://github.com/NiGuangOwO/DalamudMCP",
+    "AssemblyVersion": "1.0.0.46",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudMCP/main/src/DalamudMCP/images/icon.png",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.46/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.46/latest.zip",
+    "LastUpdate": "1794115077",
+    "DownloadCount": 0
+  },
+  "rawMainIndexVersion": "1.0.0.46",
+  "packageSha256": "4357a6aa8a7e2db29251375dea3c84ce9015a46d046d9560985998ed8ab2b1d1",
+  "sourceWorkflow": {
+    "id": 42450090852,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/42450090852",
+    "conclusion": "success"
+  },
+  "distributionWorkflow": {
+    "id": 42450239203,
+    "url": "https://github.com/NiGuangOwO/DalamudPlugins/actions/runs/42450239203",
+    "conclusion": "success"
+  },
+  "independentDownloadsVerified": true,
+  "liveValidation": "In-game behavior was not revalidated; this release changes publication infrastructure and version metadata.",
+  "syncOnlyRepairWorkflow": {
+    "id": 42450347213,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/42450347213",
+    "conclusion": "success"
+  },
+  "sameAssetIdsAfterRepair": true,
+  "sameDistributionCommitAfterRepair": true,
+  "unrelatedPluginEntriesPreserved": 14,
+  "distributionChangeContainsNoZip": true,
+  "offlineChecks": {
+    "publicationRegressions": 13,
+    "indexRegressions": 6,
+    "protocol": "88/88",
+    "publishedPluginLoad": "223/223"
+  },
+  "builds": {
+    "localDebug": "passed, 0 warnings/errors",
+    "localRelease": "passed, 0 warnings/errors",
+    "actionsDebugAndRelease": "passed"
+  },
+  "bilingualReleaseNotesVerified": true
+}
