@@ -5,6 +5,7 @@
   <p>Inspect game state. Debug interfaces. Verify the build running in your game.</p>
   <p>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/releases/latest"><img src="https://img.shields.io/github/v/release/NiGuangOwO/DalamudMCP?style=flat-square&amp;color=0891b2" alt="Latest release" /></a>
+    <a href="https://github.com/NiGuangOwO/DalamudMCP/releases"><img src="https://img.shields.io/github/downloads/NiGuangOwO/DalamudMCP/total?style=flat-square&amp;color=16a34a" alt="GitHub Release downloads" title="Total downloads of GitHub Release assets; excludes Plugin Installer downloads" /></a>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml"><img src="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml/badge.svg" alt="Build status" /></a>
     <a href="src/DalamudMCP/DalamudMCP.csproj"><img src="https://img.shields.io/badge/Dalamud_API-15-6366f1?style=flat-square" alt="Dalamud API 15" /></a>
   </p>

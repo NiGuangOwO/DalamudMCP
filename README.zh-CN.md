@@ -5,6 +5,7 @@
   <p>读取实时状态 · 调试游戏界面 · 确认实际运行的插件构建</p>
   <p>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/releases/latest"><img src="https://img.shields.io/github/v/release/NiGuangOwO/DalamudMCP?style=flat-square&amp;color=0891b2" alt="最新版本" /></a>
+    <a href="https://github.com/NiGuangOwO/DalamudMCP/releases"><img src="https://img.shields.io/github/downloads/NiGuangOwO/DalamudMCP/total?style=flat-square&amp;color=16a34a" alt="GitHub Release 下载量" title="GitHub Release 附件累计下载量，不含插件安装器下载" /></a>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml"><img src="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml/badge.svg" alt="构建状态" /></a>
     <a href="src/DalamudMCP/DalamudMCP.csproj"><img src="https://img.shields.io/badge/Dalamud_API-15-6366f1?style=flat-square" alt="Dalamud API 15" /></a>
   </p>
