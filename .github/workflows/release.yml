@@ -1,0 +1,96 @@
+name: Release and plugin repository
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sync_only:
+        description: 'Repair the plugin index from the current published version without rebuilding'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check version and existing release
+        id: plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SYNC_ONLY: ${{ inputs.sync_only }}
+        run: |
+          args=()
+          if [ "$SYNC_ONLY" = "true" ]; then args+=(--sync-only); fi
+          python build/release_pipeline.py plan --output "$GITHUB_OUTPUT" --publish-allowed "${args[@]}"
+
+  build:
+    needs: plan
+    if: inputs.sync_only != true
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    needs: [plan, build]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check distribution credential before publishing
+        env:
+          DEPLOY_KEY: ${{ secrets.PLUGIN_REPO_DEPLOY_KEY }}
+        run: test -n "$DEPLOY_KEY"
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Publish once and verify downloads
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          python build/release_pipeline.py publish --assets release-assets --version "$VERSION" --commit "$GITHUB_SHA" --notes "docs/release-$VERSION.md"
+
+  sync:
+    needs: [plan, build, publish]
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      (needs.publish.result == 'success' ||
+       (needs.publish.result == 'skipped' && needs.plan.outputs.publish == 'false'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: NiGuangOwO/DalamudPlugins
+          path: distribution
+          ssh-key: ${{ secrets.PLUGIN_REPO_DEPLOY_KEY }}
+      - name: Refresh and remotely verify pluginmaster.json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          git -C distribution config user.name "github-actions[bot]"
+          git -C distribution config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python source/build/release_pipeline.py sync --distribution distribution --tag "$TAG" --push

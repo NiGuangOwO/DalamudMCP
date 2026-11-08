@@ -5,7 +5,7 @@
   <p>Inspect game state. Debug interfaces. Verify the build running in your game.</p>
   <p>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/releases/latest"><img src="https://img.shields.io/github/v/release/NiGuangOwO/DalamudMCP?style=flat-square&amp;color=0891b2" alt="Latest release" /></a>
-    <a href="https://github.com/NiGuangOwO/DalamudMCP/releases"><img src="https://img.shields.io/github/downloads/NiGuangOwO/DalamudMCP/total?style=flat-square&amp;color=16a34a" alt="GitHub Release downloads" title="Total downloads of GitHub Release assets; excludes Plugin Installer downloads" /></a>
+    <a href="https://github.com/NiGuangOwO/DalamudMCP/releases"><img src="https://img.shields.io/github/downloads/NiGuangOwO/DalamudMCP/total?style=flat-square&amp;color=16a34a" alt="GitHub Release downloads" title="GitHub Release asset download requests; not a unique installation count" /></a>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml"><img src="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml/badge.svg" alt="Build status" /></a>
     <a href="src/DalamudMCP/DalamudMCP.csproj"><img src="https://img.shields.io/badge/Dalamud_API-15-6366f1?style=flat-square" alt="Dalamud API 15" /></a>
   </p>
@@ -226,6 +226,10 @@ dotnet build src/DalamudMCP/DalamudMCP.csproj -c Release
 The project selects an installed CN Dalamud directory when available and otherwise uses the SDK default;
 `DALAMUD_HOME` supports custom installations. See [build and dev-plugin instructions](docs/development.md)
 for SDK paths, package outputs and offline verification.
+
+New project versions pushed to `main` are built and released by [Release and plugin repository](.github/workflows/release.yml).
+The workflow uploads the package once, refreshes the distribution index, and verifies its remote version and download hash.
+See the [release procedure](docs/releasing.md) for bilingual notes, retry/repair and scheduled reconciliation.
 
 For bug reports, include the plugin, game and Dalamud versions, relevant logs, and steps to reproduce.
 For tool changes, keep schemas, server instructions and the skill consistent, and verify the resulting state.

@@ -5,7 +5,7 @@
   <p>读取实时状态 · 调试游戏界面 · 确认实际运行的插件构建</p>
   <p>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/releases/latest"><img src="https://img.shields.io/github/v/release/NiGuangOwO/DalamudMCP?style=flat-square&amp;color=0891b2" alt="最新版本" /></a>
-    <a href="https://github.com/NiGuangOwO/DalamudMCP/releases"><img src="https://img.shields.io/github/downloads/NiGuangOwO/DalamudMCP/total?style=flat-square&amp;color=16a34a" alt="GitHub Release 下载量" title="GitHub Release 附件累计下载量，不含插件安装器下载" /></a>
+    <a href="https://github.com/NiGuangOwO/DalamudMCP/releases"><img src="https://img.shields.io/github/downloads/NiGuangOwO/DalamudMCP/total?style=flat-square&amp;color=16a34a" alt="GitHub Release 下载量" title="GitHub Release 附件下载请求总数，并非独立安装用户数" /></a>
     <a href="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml"><img src="https://github.com/NiGuangOwO/DalamudMCP/actions/workflows/build.yml/badge.svg" alt="构建状态" /></a>
     <a href="src/DalamudMCP/DalamudMCP.csproj"><img src="https://img.shields.io/badge/Dalamud_API-15-6366f1?style=flat-square" alt="Dalamud API 15" /></a>
   </p>
@@ -216,6 +216,9 @@ dotnet build src/DalamudMCP/DalamudMCP.csproj -c Release
 
 项目优先选择已存在的国服 Dalamud 目录，否则使用 SDK 默认路径；自定义安装可通过 `DALAMUD_HOME` 指定。
 SDK 路径、打包输出、开发插件安装与离线验证见[构建与验证](docs/development.zh-CN.md)。
+
+新项目版本推送到 `main` 后，由[自动发布流程](.github/workflows/release.yml)构建并发布。
+流程只上传一次安装包，刷新插件仓库索引，并核验远程版本和下载哈希；双语说明、失败修复与定时校对见[发布流程](docs/releasing.md)。
 
 反馈问题时请提供插件、游戏和 Dalamud 版本、相关日志及复现步骤。
 修改工具时应同步维护 schema、服务指引和 Skill，并核对实际结果。

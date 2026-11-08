@@ -1,29 +1,36 @@
-# 插件端发布流程
+# 自动构建、发布与插件索引同步
 
-仓库所有者要求：每次完成并提交经过验证的 DalamudMCP 插件端更新后，必须递增版本号、创建 GitHub Release，并同步发布到其 Dalamud 插件仓库。该范围已获得持续授权，无需再次询问是否发布。
+仓库所有者持续授权对已完成并验证的 DalamudMCP 更新进行版本递增与发布，无需再次询问。源码仓库为 `NiGuangOwO/DalamudMCP`，分发索引仓库为 `NiGuangOwO/DalamudPlugins`。新安装包只上传到源码仓库的 GitHub Release；分发仓库仅同步 JSON 清单和来源记录，不再重复提交新 ZIP。
 
-源码仓库：`NiGuangOwO/DalamudMCP`。插件分发仓库：`NiGuangOwO/DalamudPlugins`，本机通常位于 `C:\Github\DalamudPlugins`。
+## 正常发布
 
-## 发布步骤
+1. 检查本地与远程状态，保留无关改动。在 `src/DalamudMCP/DalamudMCP.csproj` 递增四段 `Version`，高于已发布的稳定版本。
+2. 准备 `docs/release-<Version>.md`，先 `## 简体中文`、后 `## English`。两种语言完整对应行为变化、实际验证结果和限制。不得把离线检查写成现场验证，或把 Skill 推荐修订写成客户端已安装版本。
+3. 完成相关本地验证，提交到 `main` 并推送。正式分发使用 Actions 本次生成的包，不上传另一个不同构建的安装包。游戏关闭时，不为发布启动游戏。
+4. 跟进 [.github/workflows/release.yml](../.github/workflows/release.yml) 的所有任务。`plan` 检查版本和已发布状态；`build` 调用构建工作流，构建 Debug/Release、运行协议、stdio 桥接和发布回归，打包 Skill 和需要 .NET 10 的桥接程序；`publish` 校验产物并创建 Release。
+5. 新版本必须具备 `latest.zip`、`DalamudMCP.json`、`dalamud-development-skill.zip`、`dalamud-development.manifest.json`、`dalamud-development.payload.json`、`dalamud-mcp-bridge.zip` 和 `release-provenance.json`。校验包内/外清单、身份、版本、依赖清单、Skill 哈希及 GitHub 资产 SHA-256，发布后重新下载。CI Artifacts 只用于任务间传递，不是安装器下载地址。
+6. `sync` 使用只绑定分发仓库的部署密钥，先下载并验证正式 Release，再更新 `plugins/DalamudMCP/DalamudMCP.json`、`plugins/DalamudMCP/release.json` 与 `pluginmaster.json`。安装/更新 URL 固定为对应版本的 Release 资产。一次提交包含清单与已生成索引，不依赖下一次工作流再生成 JSON。
+7. `sync` 推送后读取远程 main 的确切提交，从该提交下载 `pluginmaster.json` 核对身份、版本、文案、下载链接和发布时间，并重新校验安装包 SHA-256。只有整个流程成功，才能报告发布完成。记录源码提交、标签、Release、分发提交、运行链接及验证结果。
 
-1. 检查两个仓库的工作区、远程分支、已有标签和 Release，以及分发仓库当前的 `AssemblyVersion`。保留无关的本地修改，避免覆盖其他插件。版本和网络配置必须现场核实。
-2. 在 `src/DalamudMCP/DalamudMCP.csproj` 中递增 `Version`，新版本必须高于当前源码和分发仓库中的版本。常规兼容更新递增四段版本的最后一段；有更大版本规划时遵循所有者要求。版本号应在发布构建前更新，可与功能一并提交，或在功能提交后追加发布提交。
-3. 构建 Debug 和 Release，运行与改动相关的检查。插件注册或加载相关改动运行 `tests/PluginLoadTest`；协议相关改动运行 `tests/ProtocolSmokeTest`。保存验证范围和结果，不把离线检查描述成游戏内验证。游戏已经关闭时，不为发布重新启动游戏。
-4. 检查 `src/DalamudMCP/bin/x64/Release/DalamudMCP/latest.zip` 及同目录 `DalamudMCP.json`。确认压缩包内程序集、清单和外部清单的版本一致，作者为 `NiGuangOwO`、InternalName 为 `DalamudMCP`，依赖与资源完整。记录 ZIP 的 SHA-256。
-   技能变化时先运行 `python build/update-guidance-baselines.py` 保留历史原版指纹；定稿后用 `dotnet run --project tools/AgentGuidancePack -- <Version> <输出目录>` 生成技能 ZIP、清单及 payload。运行 `tests/AgentGuidanceTest` 的 C# 和 Python 检查；核对运行服务提供的内容修订和 ZIP 哈希与发布产物一致。
-5. 提交并推送源码与版本号；为确切的发布提交创建 `v<Version>` 标签并推送。创建同名的正式 GitHub Release，附上本次生成的 `latest.zip` 和 `DalamudMCP.json`，使用简体中文和英文双语说明行为变更、验证结果和实际限制。不得移动或覆盖已经发布的同名标签；重试时先核对现有 Release 的提交及资源。
-   同时附上 `dalamud-development-skill.zip`、`dalamud-development.manifest.json`、`dalamud-development.payload.json`，下载校验三份资源，不依赖短期 CI 产物分发技能。文档说明自动同步依赖客户端执行能力与权限，不把推荐修订当成客户端已安装版本。
-   桥接程序有更新时，构建 `bridge/DalamudMcpBridge` Release，将同版本的 EXE、DLL、deps.json 和 runtimeconfig.json 打包为 `dalamud-mcp-bridge.zip`，一并上传并下载校验；明确它需要 .NET 10，以及旧桥接程序不具备的新协议能力。
-6. 将同一构建的 `latest.zip`、`DalamudMCP.json` 和需要更新的发布资源同步到分发仓库 `plugins/DalamudMCP/`。保留其他插件，提交并推送分发更新。不要重新构建另一份 ZIP 来替换已经上传的 Release 资源。
-7. 等待分发仓库 `.github/workflows/regenerate.yml` 成功生成 `pluginmaster.json`。核对 DalamudMCP 的版本、作者、安装及更新下载链接，再下载对应包并比较 SHA-256。若 raw GitHub 缓存尚未刷新，使用分发提交固定的索引和包验证准确内容，并说明缓存情况。
-8. 检查两仓库远程引用与本地提交一致，报告版本、源码提交、Release 链接、分发提交、索引及包校验结果。上传成功或工作流启动不等于发布已验证完成。
+已发布标签和资源不得删除、移动或覆盖。相同版本的安装包哈希改变会被拒绝；新构建必须使用新版本。其他插件的条目、资源和未变更的时间戳必须保留。推送冲突会从最新分支重新生成索引并重试，不使用强制推送。
 
-## Release 说明语言
+## 配置与修复
 
-后续每次 GitHub Release 的正文均提供简体中文和英文两部分，默认先中文、后英文，分别使用 `## 简体中文` 和 `## English`。两种语言应完整对应本次变更、验证结果和实际限制；不能只翻译标题或用一句英文摘要替代完整英文说明。发布前核对两部分的版本、工具名称、测试数量、链接和限制是否一致。
+- 源码仓库 Actions Secret `PLUGIN_REPO_DEPLOY_KEY` 是专用 SSH 私钥，对应公钥只给 `NiGuangOwO/DalamudPlugins` 写权限。不要改用个人令牌或在日志、工作流文件中保存私钥。
+- 发布流程串行执行且不中止正在运行的发布。构建或上传失败先诊断，再重跑失败任务以复用同一份产物。草稿中的不同哈希资源也不会被静默替换。
+- Release 已发布但索引同步失败时，在源码仓库的 **Release and plugin repository → Run workflow** 选中 `sync_only`，仅同步当前版本，不重新构建或重复上传。
+- 分发仓库的 **Regenerate PluginMaster** 支持手动执行，并在每小时第 7、22、37、52 分钟校对最新正式 Release。该流程只需分发仓库自己的 `GITHUB_TOKEN`，可在跨仓库部署密钥失效时补偿同步。定时触发可能延迟，不能拿“已安排校对”当成“已完成同步”。
+- raw GitHub/CDN 索引可能暂时缓存旧版本。先核对固定提交的索引与包；用户仍需刷新插件安装器。无法保证离线用户、所有网络或所有客户端即时看到更新。
+- 自动校验失败会使工作流失败，不隐藏异常、不自动回滚到旧版本，也不宣称发布成功。真实权限或凭据问题才需要用户协助。
 
-## 范围和失败处理
+## 回归与发布范围
 
-此流程适用于实际随插件分发的代码、工具、服务行为、依赖、图像和插件元数据更新。仅修改文档、发布流程说明、发布记账文件，或仅修改独立小游戏开发插件时，不递归触发 DalamudMCP 二进制发布。
+```powershell
+python -m unittest discover -s tests/ReleasePipelineTest -p "test_*.py"
+```
 
-认证、构建、测试或远程校验失败时，保留已经完成的工作并报告具体阻塞；不得报告未完成的发布成功，也不得为解决认证问题输出凭据。遇到真实权限不足或不在授权范围内的操作时，再明确说明需要的用户操作。
+分发仓库同时运行 `python -m unittest discover -s tests -p "test_*.py"`。覆盖外部 Release 清单、固定版本链接、旧 ZIP 回退、时间戳稳定、其他插件保留、幂等及并发冲突重试。
+
+插件代码变更仍需相关离线测试；注册/加载变化运行 `tests/PluginLoadTest`，协议变化运行 `tests/ProtocolSmokeTest`。Skill 变化时先运行 `python build/update-guidance-baselines.py` 保留历史原版指纹，再验证 C# 和 Python Skill 同步测试及实际运行构建的内容修订。自动发布不替代需要的游戏内验证。
+
+纯文档、发布记账和工作流维护不必单独递增插件版本。未修改版本时，不重复创建 Release；本次基础设施接入使用 1.0.0.46 做完整构建、发布和索引同步验收。

@@ -1,14 +1,17 @@
 name: Build
 
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: windows-2022
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v5
@@ -16,6 +19,10 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       # Dalamud.NET.Sdk resolves the Dalamud assemblies from this location.
       - name: Download Dalamud
@@ -27,7 +34,10 @@ jobs:
       # Release builds run DalamudPackager, which writes the manifest and
       # bin\x64\Release\DalamudMCP\latest.zip.
       - name: Build plugin package
-        run: dotnet build src/DalamudMCP/DalamudMCP.csproj --configuration Release
+        run: |
+          dotnet build src/DalamudMCP/DalamudMCP.csproj --configuration Debug
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build src/DalamudMCP/DalamudMCP.csproj --configuration Release
 
       - name: Build stdio bridge
         run: dotnet build bridge/DalamudMcpBridge/DalamudMcpBridge.csproj --configuration Release
@@ -47,6 +57,26 @@ jobs:
           $manifest = Get-Content src/DalamudMCP/bin/x64/Release/DalamudMCP/DalamudMCP.json -Raw | ConvertFrom-Json
           dotnet run --project tools/AgentGuidancePack -- $manifest.AssemblyVersion agent-guidance
           Copy-Item docs/agent-setup.md,docs/dalamud-project.AGENTS.md agent-guidance/
+
+      - name: Test release pipeline
+        run: python -m unittest discover -s tests/ReleasePipelineTest -p "test_*.py"
+
+      - name: Prepare and validate release assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release-assets | Out-Null
+          Copy-Item src/DalamudMCP/bin/x64/Release/DalamudMCP/latest.zip,src/DalamudMCP/bin/x64/Release/DalamudMCP/DalamudMCP.json release-assets/
+          Copy-Item agent-guidance/dalamud-development* release-assets/
+          Compress-Archive -Path bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge.exe,bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge.dll,bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge.deps.json,bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge.runtimeconfig.json -DestinationPath release-assets/dalamud-mcp-bridge.zip
+          $manifest = Get-Content release-assets/DalamudMCP.json -Raw | ConvertFrom-Json
+          python build/release_pipeline.py validate --assets release-assets --version $manifest.AssemblyVersion --commit $env:GITHUB_SHA
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
