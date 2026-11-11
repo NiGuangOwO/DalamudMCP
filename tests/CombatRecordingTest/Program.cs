@@ -69,5 +69,6 @@ unsafe class Program
         Check(bytes.Encounters[0].DroppedEvents > 0 && bytes.Encounters[0].PayloadBytes < 8 * 1024 * 1024 + 1024, "byte budget bounds memory even with large payloads");
         Console.WriteLine($"{checks}/{checks} passed");
         ArchiveTests.Run().GetAwaiter().GetResult();
+        CombatDiagnosticsTests.Run().GetAwaiter().GetResult();
     }
 }

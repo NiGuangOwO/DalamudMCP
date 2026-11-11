@@ -19,6 +19,8 @@ internal sealed class CombatRecording
         public bool PartialStart { get; init; }
         public int DroppedEvents { get; set; }
         public int PayloadBytes { get; set; }
+        // Add owns the stored clones. Readers may copy the references on the framework thread
+        // and inspect them in the background; never mutate an event after it has been appended.
         public List<JObject> Events { get; } = new();
         public object Summary() => new { id = Id, startedAt = StartedAt, endedAt = EndedAt,
             durationMs = (EndedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()) - StartedAt,

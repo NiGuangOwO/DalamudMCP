@@ -251,6 +251,8 @@ that classification does not imply that local queues or configuration remain unc
 
 ### Combat encounter recording
 
+Use `get_combat_snapshot` or `sample_combat_frames` for same-frame action queue, recast, gauge and target evidence. Use `analyze_combat_recording` to summarize retained effects and status observations without changing capture. See [combat diagnostics](combat-diagnostics.md) for filters, clock fields and coverage.
+
 Combat recording runs automatically in the background while mutating tools are allowed, independently of MCP clients/listener. New settings default to `all` nearby actors; valid saved scopes are preserved. Completed fights are compressed with 7-day, 1000-fight and 100 MiB retention limits. Five `combat_recording_*` tools inspect/configure recording and read archives after reload. See [combat recording](combat-recording.md) for schemas and coverage limitations.
 
 Eight `network_capture_*` tools provide experimental, bounded zone IPC capture, numeric opcode/direction filtering, hex/ASCII paging, caller-declared field decoding and packet comparison. Capture defaults to 10 seconds and requires login plus mutation access. The native bridge currently accepts only the inspected CN game executable and SDK build; other builds refuse capture. Bytes stay in memory until replaced/unloaded. Send observations are attempts, not proof of delivery; unknown field semantics are unverified. See [network packet diagnostics](network-packets.md) for limits, layouts and validation coverage.

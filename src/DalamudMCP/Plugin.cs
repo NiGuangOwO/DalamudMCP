@@ -48,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ToolRegistry registry;
     private readonly AddonProbeTools addonProbe;
     private readonly CombatRecorder combatRecorder;
+    private readonly CombatFrameTools combatFrames;
     private readonly NetworkPacketTools networkPackets;
     private readonly ItemHoldingsTools itemHoldings;
     private readonly PluginInstallerTools pluginInstaller;
@@ -158,6 +159,7 @@ public sealed class Plugin : IDalamudPlugin
         BuddyTools.Register(registry, services);
         ControlTools.Register(registry, services);
         CooldownTools.Register(registry, services);
+        combatFrames = new CombatFrameTools(registry, services);
         GearsetTools.Register(registry, services);
         GameWindowTools.Register(registry, services);
         TeleportTools.Register(registry, services);
@@ -313,6 +315,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         eventHub.Stop();
+        combatFrames.Stop();
         chatLogHub.Stop();
         ipcHub.Stop();
         gameThread?.Dispose();
@@ -399,6 +402,7 @@ public sealed class Plugin : IDalamudPlugin
         dalamudLogHub.Dispose();
         itemHoldings.Dispose();
         combatRecorder.Dispose();
+        combatFrames.Dispose();
         networkPackets.Dispose();
         addonProbe.Dispose();
         commandManager.RemoveHandler(CommandName);

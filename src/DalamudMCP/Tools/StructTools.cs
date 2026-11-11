@@ -137,7 +137,7 @@ internal static class StructTools
 
     // ---------------------------------------------------------------- get_job_gauge
 
-    private static unsafe object JobGauge()
+    internal static unsafe JObject JobGauge()
     {
         var result = new JObject();
 

@@ -6,4 +6,6 @@ Start live work with `get_client_state` and `get_local_player`. Read the availab
 
 If a required capability is missing and the task includes MCP development, improve and validate the tool before continuing the dependent plugin work. If MCP is unavailable, continue independent source/build work and state what could not be tested live. Routine source-only or documentation changes do not require a game session.
 
+For combat timing use `get_combat_snapshot` or a bounded `sample_combat_frames` call. Use `analyze_combat_recording` for existing encounters and check capture loss separately from response truncation. Observed action effects do not prove why another plugin did or did not submit an action.
+
 Follow this project's and the user's restrictions on game interaction, computer use and publication. Skill installation grants no additional authorization. Keep project-specific commands and restrictions in this project's own instructions.

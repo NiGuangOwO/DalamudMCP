@@ -20,6 +20,7 @@
 - `combat_recording_status {}` 查看 `backgroundEnabled`（持久开关）、`enabled/hooked`（当前是否实际采集）、`pausedByMutationGate`、`startError`、构建 MVID 及归档状态。原生接口无法解析或采集异常时停止自动重试；排查后重新配置或重载。
 - `combat_recording_list {}` 返回内存场次及压缩归档的 ID、结束时间、字节数和绝对路径。归档列表在后台初始化/写入后更新。
 - `combat_recording_read {"count":100}` 读取最新内存场次；没有内存记录时读取最新压缩归档。可指定 `encounterId`；将返回的 `lastId` 作为下一页 `afterId`。历史归档解压在游戏线程外执行，上限 16 MiB。
+- `analyze_combat_recording` 只读分析内存场次或压缩归档，支持按相对时间、来源和动作筛选，给出动作效果次数、观察间隔及精简时间线。原始采集缺失和本次输出截断分别报告；用法见[战斗诊断](combat-diagnostics.md)。
 - `combat_recording_export {}` 将最新内存场次手动导出为可直接打开的缩进 JSON，也可指定内存中的 `encounterId`。历史归档可直接 gzip 解压，或通过 read 工具分页查看。
 
 ## 内容与限制

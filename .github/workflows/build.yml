@@ -50,6 +50,9 @@ jobs:
           dotnet run --project tests/BridgeSmokeTest -- bridge/DalamudMcpBridge/bin/Release/net10.0/dalamud-mcp-bridge.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Test combat recording and diagnostics
+        run: dotnet run --project tests/CombatRecordingTest -c Release
+
       - name: Package agent guidance
         shell: pwsh
         run: |

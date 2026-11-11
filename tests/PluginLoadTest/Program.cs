@@ -49,7 +49,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 178;
+    private const int ExpectedTools = 181;
 
     private static int checks;
     private static int failures;
@@ -423,7 +423,8 @@ internal static class Program
         Check("registry exposes call_plugin_ipc", toolNames.Contains("call_plugin_ipc"));
         foreach (var name in new[] { "add_plugin_repository", "remove_plugin_repository", "set_plugin_repository_enabled", "refresh_plugin_repositories", "install_plugin", "uninstall_plugin" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
-        foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation" })
+        foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation",
+            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         var holdingsTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "search_item_holdings"));
         Check("item holdings query is read-only", Equals(Prop(holdingsTool, "Mutating"), false));
@@ -852,6 +853,11 @@ internal static class Program
             // promise by throwing raw exceptions, and both are checked here so the promise is
             // enforced rather than just advertised. Neither needs real game data: they are exactly
             // the cases that failed WITH the inert services this test still uses for them.
+            var (framePayload, frameError) = UnwrapToolResult(await CallAsync(http, baseUrl, sessionId,
+                "{\"jsonrpc\":\"2.0\",\"id\":31,\"method\":\"tools/call\",\"params\":{\"name\":\"get_combat_snapshot\",\"arguments\":{}}}").ConfigureAwait(false));
+            Check("get_combat_snapshot reports logged-out state without touching native addresses", !frameError &&
+                ReadBool(framePayload, "available") == false && ReadString(framePayload, "reason") == "not_logged_in",
+                FirstLine(framePayload ?? ""));
             var tableText = await CallAsync(
                 http, baseUrl, sessionId,
                 "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"get_object_table_info\",\"arguments\":{}}}").ConfigureAwait(false);

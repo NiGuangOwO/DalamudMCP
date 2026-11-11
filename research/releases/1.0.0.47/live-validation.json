@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0.47",
+  "date": "2026-11-11",
+  "validation": "local CN client, Debug, read-only",
+  "buildMvid": "fa358764-aaaf-45e5-8219-9a63eefd7bbe",
+  "clientStructsMvid": "d5a6c4cf-8f1a-4d66-bbcb-130678162b0b",
+  "catalogTools": 181,
+  "buildVerified": true,
+  "jobGaugeAvailable": true,
+  "statusProjectionPresent": true,
+  "actionQueryAvailable": true,
+  "sampledUpdates": 24,
+  "samples": 12,
+  "combatAtSnapshot": false,
+  "queueObserved": false,
+  "archiveSource": "archive",
+  "archiveMatchedRows": 1308,
+  "archiveActionEffects": 468,
+  "timelineReturned": 12,
+  "timelineTruncated": true,
+  "archivedPartialStart": false,
+  "archivedDroppedEvents": 0,
+  "focusedRows": 22,
+  "actionQuery": {
+    "adjustedId": true,
+    "charges": true,
+    "unknownRowReason": "unknown_action_row"
+  },
+  "limits": [
+    "No active action queue was observed; no game action was dispatched.",
+    "AEAssist verdicts and offline trainer are not part of this release."
+  ]
+}

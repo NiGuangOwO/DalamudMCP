@@ -21,12 +21,6 @@ namespace DalamudMCP.Tools;
 /// </summary>
 internal static unsafe class CooldownTools
 {
-    /// <summary>
-    /// The recast group every GCD action shares. Its members are only blocked for one global
-    /// cooldown, so listing them would bury the real cooldowns under a dozen idle weaponskills.
-    /// </summary>
-    private const int GcdSheetGroup = 58;
-
     /// <summary>Rows per call, capped so one poll cannot flood a caller's context.</summary>
     private const int MaxRows = 100;
 
@@ -79,8 +73,8 @@ internal static unsafe class CooldownTools
             if (action.IsPvP != inPvP) continue;
             if (!inPvP && (action.ClassJobLevel == 0 || action.ClassJobLevel > level)) continue;
             if (!IsJobAbility(action, jobId, jobAbbreviation, categories)) continue;
-            // Sheet groups are one-based, unlike the runtime array indices.
-            if (action.CooldownGroup is 0 or GcdSheetGroup) continue;
+            // Sheet groups are one-based; the shared GCD would bury ability recharges.
+            if (action.CooldownGroup is 0 or CombatFrameProjection.GcdSheetGroup) continue;
 
             // The runtime recast group is authoritative: the sheet column is the starting value,
             // and charge-based or combo actions can be moved to a different group.

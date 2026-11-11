@@ -112,12 +112,22 @@ internal sealed class CombatArchive : IDisposable
         files = retained.ToArray();
     }
 
-    public async Task<object> ReadPage(string? id, long afterId, int count)
+    public Task<object> ReadPage(string? id, long afterId, int count) => ReadPayload<object>(id, (file, data) =>
+    {
+        var all = (JArray)data["events"]!;
+        var events = all.Cast<JObject>().Where(e => e.Value<long>("id") > afterId).Take(Math.Clamp(count, 1, 500)).ToArray();
+        var last = events.LastOrDefault()?.Value<long>("id") ?? afterId;
+        return new { encounter = data["encounter"], events, lastId = last,
+            hasMore = all.Cast<JObject>().Any(e => e.Value<long>("id") > last), archived = true, path = file.path,
+            coverage = data["coverage"], packetLoss = data["packetLoss"], buildMvid = data["buildMvid"] };
+    });
+
+    internal async Task<T> ReadPayload<T>(string? id, Func<ArchiveFile, JObject, T> project)
     {
         await initialized.Task.ConfigureAwait(false);
         var file = id == null ? files.FirstOrDefault() : files.FirstOrDefault(f => f.encounterId == id);
         if (file == null) throw new InvalidOperationException("No retained memory encounter or compressed archive with this id.");
-        return await Task.Run<object>(() =>
+        return await Task.Run(() =>
         {
             using var source = File.OpenRead(file.path);
             using var gzip = new GZipStream(source, CompressionMode.Decompress);
@@ -129,13 +139,7 @@ internal sealed class CombatArchive : IDisposable
                 if (buffer.Length + read > MaxJsonBytes) throw new InvalidDataException("Archive exceeds the 16 MiB decompression limit.");
                 buffer.Write(chunk, 0, read);
             }
-            var data = JObject.Parse(Encoding.UTF8.GetString(buffer.ToArray()));
-            var all = (JArray)data["events"]!;
-            var events = all.Cast<JObject>().Where(e => e.Value<long>("id") > afterId).Take(Math.Clamp(count, 1, 500)).ToArray();
-            var last = events.LastOrDefault()?.Value<long>("id") ?? afterId;
-            return new { encounter = data["encounter"], events, lastId = last,
-                hasMore = all.Cast<JObject>().Any(e => e.Value<long>("id") > last), archived = true, path = file.path,
-                coverage = data["coverage"], packetLoss = data["packetLoss"], buildMvid = data["buildMvid"] };
+            return project(file, JObject.Parse(Encoding.UTF8.GetString(buffer.ToArray())));
         }).ConfigureAwait(false);
     }
 

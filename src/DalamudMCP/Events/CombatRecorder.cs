@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
@@ -35,6 +36,7 @@ internal sealed class CombatRecorder : IDisposable
     private int pendingCount;
     private int droppedPackets;
     private int invalidPackets;
+    private int analyzing;
     private uint localId;
     private uint territory;
     private bool allActors;
@@ -70,9 +72,38 @@ internal sealed class CombatRecorder : IDisposable
                 ("afterId", "integer", "Exclusive event cursor, default 0", false),
                 ("count", "integer", "Page size, 1-500, default 100", false)),
             Read);
+        registry.AddAsync("analyze_combat_recording", "Analyze a retained combat encounter",
+            "Reads memory or the automatic gzip archive without changing capture. Summarizes observed effect counts and gaps per actor/action, and returns a compact timeline ordered by (elapsedMs, id). " +
+            "The encounter's partial start/event drops and the recorder session's packet loss remain separate from output truncation. Gaps measure observed effects, not confirmed casts or GCD uptime. " + Coverage,
+            AnalysisSchema(), Analyze);
         registry.Add("combat_recording_export", "Export combat encounter", "Writes one retained encounter as JSON under the plugin config combat-recordings folder. No arbitrary path. Keeps the most recent 10 exports. Includes coverage limitations and raw effects.",
             Json.Schema(("encounterId", "string", "Encounter id; latest if omitted", false)), Export);
         svc.Framework.Update += Watch;
+    }
+
+    private static JObject AnalysisSchema()
+    {
+        var schema = Json.Schema(("encounterId", "string", "Exact 32-character id from combat_recording_list; latest memory encounter or archive if omitted.", false),
+                ("fromMs", "integer", "Inclusive elapsed milliseconds relative to combat start; negative includes pre-pull.", false),
+                ("toMs", "integer", "Inclusive upper elapsed milliseconds.", false),
+                ("sourceId", "integer", "Only rows with this source entity ID; rows without a source are excluded.", false),
+                ("actionId", "integer", "Only rows with this action ID; rows without an action are excluded.", false),
+                ("maxTimelineEvents", "integer", "Maximum returned rows, 0-300 (default 80). The summary still covers all matched rows.", false),
+                ("maxActions", "integer", "Maximum returned actor/action groups, 1-100 (default 32).", false));
+        var properties = schema["properties"]!;
+        properties["encounterId"]!["pattern"] = "^[a-fA-F0-9]{32}$";
+        foreach (var key in new[] { "sourceId", "actionId" })
+        {
+            properties[key]!["minimum"] = 1;
+            properties[key]!["maximum"] = uint.MaxValue;
+        }
+        properties["maxTimelineEvents"]!["minimum"] = 0;
+        properties["maxTimelineEvents"]!["maximum"] = 300;
+        properties["maxTimelineEvents"]!["default"] = 80;
+        properties["maxActions"]!["minimum"] = 1;
+        properties["maxActions"]!["maximum"] = 100;
+        properties["maxActions"]!["default"] = 32;
+        return schema;
     }
 
     private CombatRecording NewRecording()
@@ -96,6 +127,36 @@ internal sealed class CombatRecorder : IDisposable
             recording.Encounters.Any(e => id == null || e.Id == id) ? recording.Read(id, after, count) : null).ConfigureAwait(false);
         return memory ?? (archive != null ? await archive.ReadPage(id, after, count).ConfigureAwait(false)
             : throw new ToolException("Combat archive directory is unavailable"));
+    }
+
+    private async Task<object?> Analyze(JObject args)
+    {
+        var options = CombatAnalysisOptions.Parse(args);
+        if (Interlocked.CompareExchange(ref analyzing, 1, 0) != 0)
+            throw new ToolException("another combat recording analysis is active");
+        try
+        {
+            var memory = await svc.Framework.RunOnFrameworkThread(() =>
+            {
+                var fight = options.EncounterId is { } id ? recording.Encounters.FirstOrDefault(e => e.Id == id)
+                    : recording.Encounters.LastOrDefault();
+                return fight is null ? null : new CombatEncounterAnalysis.Input(JObject.FromObject(fight.Summary()),
+                    fight.Events.ToArray(), false, allActors ? "all" : "local",
+                    new JObject { ["droppedPackets"] = Volatile.Read(ref droppedPackets), ["invalidPackets"] = Volatile.Read(ref invalidPackets) },
+                    new JValue(typeof(CombatRecorder).Assembly.ManifestModule.ModuleVersionId), new JValue(Coverage));
+            }).ConfigureAwait(false);
+            if (memory is not null)
+                return await Task.Run(() => CombatEncounterAnalysis.Analyze(memory, options)).ConfigureAwait(false);
+            if (archive is null) throw new ToolException("no retained combat encounter and the archive directory is unavailable");
+            try
+            {
+                return await archive.ReadPayload(options.EncounterId, (file, data) =>
+                    CombatEncounterAnalysis.FromArchive(file.encounterId, data, options)).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or JsonException)
+            { throw new ToolException($"combat archive unavailable: {ex.Message}"); }
+        }
+        finally { Volatile.Write(ref analyzing, 0); }
     }
 
     private void Watch(IFramework framework)
