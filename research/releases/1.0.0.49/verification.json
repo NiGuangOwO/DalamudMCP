@@ -1,0 +1,118 @@
+{
+  "version": "1.0.0.49",
+  "sourceCommit": "be0806b0ad72b37579aa515ebb0383804e142862",
+  "tag": "v1.0.0.49",
+  "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.49",
+  "releaseId": 442915160,
+  "assets": [
+    {
+      "name": "latest.zip",
+      "id": 739402133,
+      "sha256": "a8b4fbc778ff80455c7b2868a826a77ff79484d44b1eddcfa5fdfcb8aa09a6d6",
+      "downloadVerified": true
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 739402161,
+      "sha256": "8795602994dc7a0df3e1a2238ad87be069d199621f46f1c474fe11620bdc243b",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 739402192,
+      "sha256": "77fa0c7618492e529aae6811ee4c2a172dbe090f51295f6c6b02816cbb4bf384",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 739402212,
+      "sha256": "2950b006c18464d1d9bf58efeca4d13d473b099888c1d9f67bcd7b857813ee80",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 739402237,
+      "sha256": "48c9f131a93f0d27ddf4f5caa4b26a3d1a15f38636843e77f7e590409e3a232e",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-mcp-bridge.zip",
+      "id": 739402273,
+      "sha256": "1a0843f4c3cc27c6018d96973239d778d06b32883adbeccce79e0f5c762b66cf",
+      "downloadVerified": true
+    },
+    {
+      "name": "release-provenance.json",
+      "id": 739402296,
+      "sha256": "318bb120c3175b524681f0560804f3c71b5cbd37f96ee27856d9246c0ce48eb1",
+      "downloadVerified": true
+    }
+  ],
+  "distributionCommit": "4f61c176408054ebd0ac34ed2cfd2da5360cbdb0",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/4f61c176408054ebd0ac34ed2cfd2da5360cbdb0/pluginmaster.json",
+  "indexEntry": {
+    "Author": "NiGuangOwO",
+    "Name": "DalamudMCP",
+    "Punchline": "连接 AI 助手，辅助插件开发与调试 | AI-assisted plugin development & debugging.",
+    "Description": "通过 MCP（模型上下文协议）连接 AI 助手与 FINAL FANTASY XIV，为 Dalamud 插件开发、运行时分析和游戏内验证提供工具。\n\n读取角色、物品栏、游戏数据、界面文本与运行日志，检查插件和 IPC，并在授权后执行界面交互等操作。\n\n安装后输入 /dalamudmcp 打开设置，并配置支持 MCP 的 AI 客户端。默认仅开放只读工具；修改游戏状态的工具需手动启用。仅支持 stdio 的客户端可使用配套桥接程序。\n\nConnect AI agents to FINAL FANTASY XIV through the Model Context Protocol (MCP) for Dalamud plugin development, runtime analysis, and in-game validation.\n\nRead character, inventory, game data, UI text, and runtime logs; inspect plugins and IPC; and perform UI interactions with explicit permission.\n\nAfter installation, open settings with /dalamudmcp and configure an MCP-compatible AI client. Only read-only tools are enabled by default; tools that change game state must be enabled manually. A companion bridge is available for stdio-only clients.",
+    "Tags": [
+      "mcp",
+      "ai",
+      "agent",
+      "development",
+      "debugging",
+      "memory",
+      "api",
+      "开发",
+      "调试"
+    ],
+    "InternalName": "DalamudMCP",
+    "RepoUrl": "https://github.com/NiGuangOwO/DalamudMCP",
+    "AssemblyVersion": "1.0.0.49",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudMCP/main/src/DalamudMCP/images/icon.png",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.49/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.49/latest.zip",
+    "LastUpdate": "1794486397",
+    "DownloadCount": 0
+  },
+  "packageSha256": "a8b4fbc778ff80455c7b2868a826a77ff79484d44b1eddcfa5fdfcb8aa09a6d6",
+  "otherIndexEntriesPreserved": true,
+  "sourceWorkflow": {
+    "id": 43217612993,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43217612993",
+    "conclusion": "success",
+    "jobs": {
+      "plan": "success",
+      "build / build": "success",
+      "publish": "success",
+      "sync": "success"
+    }
+  },
+  "validation": {
+    "builds": {
+      "Debug": "passed (0 warnings)",
+      "Release": "passed (0 warnings)"
+    },
+    "pluginLoadChecks": 234,
+    "publishedDllPluginLoadChecks": 234,
+    "nativeUiChecks": 259,
+    "protocolChecks": 88,
+    "imGuiInputChecks": 48,
+    "skillCatalogChecks": 21,
+    "skillSyncTests": 23,
+    "releasePipelineTests": 13,
+    "live": {
+      "region": "CN",
+      "buildMvid": "950d29e0-3bbd-486e-bd88-f77f0cca11cd",
+      "catalogCount": 179,
+      "gameKeyToolsAbsent": true,
+      "legacyGameBatchRefused": true,
+      "verifiedCallbackDryRunWithoutDispatch": true,
+      "addonNameAndIdGuardsVerified": true,
+      "unsupportedMenuRefused": true,
+      "gatheringLogOpenedAndClosedViaNativeUi": true
+    }
+  }
+}
