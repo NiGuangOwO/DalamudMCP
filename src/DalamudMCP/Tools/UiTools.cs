@@ -622,7 +622,7 @@ internal static class UiTools
         };
     }
 
-    private static unsafe object ReadAddonText(JObject args)
+    internal static unsafe object ReadAddonText(JObject args)
     {
         string? addonName = null;
         if (args["addon"] is { } addonToken)
@@ -1211,7 +1211,8 @@ internal static class UiTools
 
     private static int menuSelectionActive;
 
-    private static async Task<object?> SelectAddonMenuItemAsync(GameServices svc, JObject args, CancellationToken lifetime)
+    internal static async Task<object?> SelectAddonMenuItemAsync(
+        GameServices svc, JObject args, CancellationToken lifetime, Action? guard = null)
     {
         if (Interlocked.CompareExchange(ref menuSelectionActive, 1, 0) != 0)
             throw new ToolException("another menu selection is active");
@@ -1223,6 +1224,7 @@ internal static class UiTools
             token.ThrowIfCancellationRequested();
             if (!svc.Config.AllowMutatingTools || svc.Framework.IsFrameworkUnloading)
                 throw new ToolException("menu input stopped because mutation access closed or the framework is unloading");
+            guard?.Invoke();
             return action();
         }
         try

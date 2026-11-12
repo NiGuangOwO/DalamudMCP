@@ -324,7 +324,7 @@ internal static unsafe class ControlTools
         };
     }
 
-    private static JObject InteractWithTarget(GameServices svc)
+    internal static JObject InteractWithTarget(GameServices svc)
     {
         EnsureLoggedIn(svc);
         var target = svc.TargetManager.Target

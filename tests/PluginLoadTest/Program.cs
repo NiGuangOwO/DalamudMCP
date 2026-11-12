@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 179;
+    private const int ExpectedTools = 180;
 
     private static int checks;
     private static int failures;
@@ -520,7 +520,7 @@ internal static class Program
                     name="get_tribal_quest_state",arguments=new {} } })).ConfigureAwait(false);
             Check("tribal state refuses logged-out clients before native access", UnwrapToolResult(tribalOffline).IsError);
             Set(config, "AllowMutatingTools", false);
-            foreach (var runtimeName in new[] { "object_access", "ffcs_call", "mem_write", "mem_scan", "observe", "input" })
+            foreach (var runtimeName in new[] { "object_access", "ffcs_call", "mem_write", "mem_scan", "observe", "input", "interact_with_npc" })
             {
                 var denied = await CallAsync(http, baseUrl, sessionId,
                     JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 350, method = "tools/call", @params = new { name = runtimeName, arguments = new { } } })).ConfigureAwait(false);
@@ -545,6 +545,33 @@ internal static class Program
                 Check("read-only holdings query works with mutation gate closed and reports logged-out state before native access",
                     !holdingsError && !state.RootElement.GetProperty("available").GetBoolean() && !state.RootElement.GetProperty("complete").GetBoolean());
             Set(config, "AllowMutatingTools", true);
+            async Task<(string? Payload, bool IsError)> NpcCall(object arguments) =>
+                UnwrapToolResult(await CallAsync(http, baseUrl, sessionId, JsonSerializer.Serialize(new
+                {
+                    jsonrpc = "2.0", id = 2321, method = "tools/call",
+                    @params = new { name = "interact_with_npc", arguments },
+                })).ConfigureAwait(false));
+            var unguardedNpcMenu = await NpcCall(new
+            {
+                gameObjectId = "42", expectedBaseId = 123, expectedTerritoryId = 456,
+                expectedAddon = "SelectIconString", menuLabel = "Test",
+            }).ConfigureAwait(false);
+            Check("NPC workflow refuses a menu choice with no result guard before game access",
+                unguardedNpcMenu.IsError && unguardedNpcMenu.Payload?.Contains("expectedResultAddon", StringComparison.Ordinal) == true);
+            var loggedOutNpc = await NpcCall(new
+            {
+                gameObjectId = "42", expectedBaseId = 123, expectedTerritoryId = 456,
+                expectedAddon = "SelectIconString", approach = true,
+            }).ConfigureAwait(false);
+            using (var result = JsonDocument.Parse(loggedOutNpc.Payload ?? "{}"))
+            {
+                var npcRun = result.RootElement;
+                Check("NPC workflow stops before movement or native interaction while logged out",
+                    !loggedOutNpc.IsError && npcRun.GetProperty("lastStage").GetString() == "preflight" &&
+                    !npcRun.GetProperty("interactionAttempted").GetBoolean() &&
+                    !npcRun.GetProperty("menuAttempted").GetBoolean() &&
+                    !npcRun.GetProperty("outcomeVerified").GetBoolean());
+            }
             using (var addonCatalog = JsonDocument.Parse(listText))
             {
                 var toolsList = addonCatalog.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray().ToArray();

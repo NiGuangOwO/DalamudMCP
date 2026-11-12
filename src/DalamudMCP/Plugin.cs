@@ -164,6 +164,7 @@ public sealed class Plugin : IDalamudPlugin
         TeleportTools.Register(registry, services);
         MovementTools.Register(registry, services);
         NavTools.Register(registry, services);
+        NpcInteractionTools.Register(registry, services, inputLifetime.Token);
         ChatTools.Register(registry, services);
         QuestTools.Register(registry, services);
         PluginManagementTools.Register(registry, services);

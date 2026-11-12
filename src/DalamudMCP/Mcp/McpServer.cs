@@ -722,7 +722,9 @@ public sealed class McpServer : IDisposable
                         "cached catalogs and refresh every tools/list page. HTTP clients need the GET /mcp SSE channel; " +
                         "stdio notification delivery requires an updated bridge. A server notification cannot force client discovery. " +
                         "Locate entities with get_game_objects/find_game_object and native windows " +
-                        "with list_loaded_addons. When the question is native UI text, call read_addon_text first; use " +
+                        "with list_loaded_addons. For an observed NPC and known addon, interact_with_npc combines a short approach, " +
+                        "one interaction and an optional exact menu choice with addon verification. See references/gameplay-workflows.md. " +
+                        "When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
                         "controls or geometry are needed. Use capture for visual pixels and same-frame cached crops, not ordinary native text. " +
                         "Independent runtime exploration uses service_list, object_access, ffcs_index/call, mem_read/write/scan and observe/evidence; " +

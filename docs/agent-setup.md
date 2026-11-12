@@ -83,6 +83,7 @@ Check that `dalamud-development` appears in the client's skill selector. In Code
 | Prompt / 请求 | Expected behavior / 预期行为 |
 | --- | --- |
 | "Debug my Dalamud plugin: find the currently open addon and inspect its button nodes." / “调试插件，找到当前界面并检查按钮节点。” | Use the skill; orient with client/player state, discover addons and read bounded nodes before any input. |
+| "Walk to this NPC and open its known challenge list." / “走到这个 NPC 旁边并打开已知的挑战列表。” | Use [the gameplay workflows](../.agents/skills/dalamud-development/references/gameplay-workflows.md); run the guarded NPC steps together and verify the expected addon before continuing. / 按实机流程一次执行有校验的 NPC 操作，验证预期界面后再继续。 |
 | "Verify that my rebuilt FFXIV plugin is running before testing it." / “先确认新编译插件已运行，再测试。” | Use the skill; inspect `get_dev_plugin_state`, then read-only `wait_for_dev_plugin` when auto-reload is enabled. Use `load_dev_plugin` only for registration/loading or an explicit watcher change. Follow with a result-oriented live check. |
 | "MCP lacks the observation needed by this plugin; add it first." / “先补齐 MCP 的观测能力，再继续插件开发。” | Use the skill; inspect full catalog/gate, develop and test a reusable tool, verify build, resume plugin work. |
 | "Translate the README." / “翻译 README。” | No game interaction; this runtime skill need not be selected. |
