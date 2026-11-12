@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -11,6 +12,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using DalamudMCP.Mcp;
+using DalamudMCP.Tools;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using Newtonsoft.Json;
@@ -50,7 +52,7 @@ internal sealed class CombatRecorder : IDisposable
     private bool disposed;
     private const string Coverage = "Server action effects (raw effects, direct damage/heal), sampled casts/statuses/deaths at 100ms. Not an FFLogs parser: no periodic DoT/HoT tick attribution, cast requests, guaranteed cast-end reason, full encounter mechanics, or upload. Effect amounts are server announcements, not confirmed effective HP loss/healing. Actor names are omitted. Completed encounters are compressed automatically; a process crash can lose the active encounter and queued writes.";
 
-    public CombatRecorder(ToolRegistry registry, GameServices services)
+    public CombatRecorder(ToolRegistry registry, GameServices services, CancellationToken lifetime)
     {
         svc = services;
         allActors = svc.Config.CombatRecordingScope == "all";
@@ -67,6 +69,14 @@ internal sealed class CombatRecorder : IDisposable
         registry.Add("combat_recording_status", "Combat recording status", Coverage, Json.Schema(), _ => Status());
         registry.Add("combat_recording_list", "List combat encounters", "Lists memory encounters oldest first and automatic compressed archives newest first (survive plugin reload). Includes truncation/partial-start metadata for memory encounters.",
             Json.Schema(), _ => new { encounters = recording.Encounters.Select(e => e.Summary()).ToArray(), recording.EvictedEncounters, archives = archive?.List() });
+        registry.AddAsync("combat_recording_wait", "Wait for one combat recording",
+            "Read-only bounded wait for an exact encounter to end or have an automatic archive. " +
+            "Never switches to the latest encounter. Returns current capture state on timeout. " +
+            "Recording end and archive presence are not evidence of game victory.",
+            Json.SchemaWithEnum("phase", ["ended", "archived"], "Required recorder phase", true,
+                ("encounterId", "string", "Exact 32-character ID from combat_recording_status/list", true),
+                ("timeoutMs", "integer", "0 for one snapshot, otherwise up to 20000 ms (default 10000)", false)),
+            args => WaitForEncounter(args, lifetime));
         registry.AddAsync("combat_recording_read", "Read combat timeline", "Capture order with millisecond timestamps and elapsedMs (pre-pull can be negative). Cursor is event id; no events are drained. Falls back to compressed archives, including after reload. Disk/decompression runs off the game thread.",
             Json.Schema(("encounterId", "string", "Encounter id; latest if omitted", false),
                 ("afterId", "integer", "Exclusive event cursor, default 0", false),
@@ -127,6 +137,55 @@ internal sealed class CombatRecorder : IDisposable
             recording.Encounters.Any(e => id == null || e.Id == id) ? recording.Read(id, after, count) : null).ConfigureAwait(false);
         return memory ?? (archive != null ? await archive.ReadPage(id, after, count).ConfigureAwait(false)
             : throw new ToolException("Combat archive directory is unavailable"));
+    }
+
+    private sealed record EncounterProgress(string State, object? Encounter, CombatArchive.ArchiveFile? Archive,
+        bool Enabled, bool Hooked, int DroppedPackets, int InvalidPackets);
+
+    private EncounterProgress InspectEncounter(string id)
+    {
+        var fight = recording.Encounters.FirstOrDefault(e => e.Id == id);
+        var file = archive?.Find(id);
+        var state = file is not null ? "archived" : fight is null ? "not_retained"
+            : fight.EndedAt.HasValue ? "ended" : "active";
+        return new(state, fight?.Summary(), file, enabled, hook?.IsEnabled == true,
+            Volatile.Read(ref droppedPackets), Volatile.Read(ref invalidPackets));
+    }
+
+    private async Task<object?> WaitForEncounter(JObject args, CancellationToken lifetime)
+    {
+        if (args["encounterId"] is not { Type: JTokenType.String } idToken ||
+            idToken.Value<string>() is not { Length: 32 } id || !id.All(char.IsAsciiHexDigit))
+            throw new ToolException("encounterId must be exactly 32 hexadecimal characters");
+        id = id.ToLowerInvariant();
+        var phase = args["phase"]?.Type == JTokenType.String ? args.Value<string>("phase") : null;
+        if (phase is not ("ended" or "archived")) throw new ToolException("phase must be ended or archived");
+        var timeout = MapTools.Integer(args, "timeoutMs", 10000, 0, 20000);
+        var archiveAvailable = archive is not null;
+        bool Reached(EncounterProgress p) => p.State == "archived" || (phase == "ended" && p.State == "ended");
+        var timer = Stopwatch.StartNew();
+        EncounterProgress? current;
+        try
+        {
+            var wait = phase == "archived" && !archiveAvailable ? 0 : timeout;
+            current = await FrameworkWorkflow.Wait(svc.Framework, () => InspectEncounter(id), Reached, wait, lifetime)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return new { encounterId = id, phase, matched = false, state = "cancelled", elapsedMs = timer.ElapsedMilliseconds };
+        }
+        var matched = current is not null && Reached(current);
+        return new
+        {
+            encounterId = id, phase, matched, state = current?.State ?? "unavailable",
+            timedOut = !matched && timeout > 0 && (phase == "ended" || archiveAvailable),
+            elapsedMs = timer.ElapsedMilliseconds, archiveAvailable,
+            encounter = current?.Encounter, archive = current?.Archive,
+            capture = current is null ? null : new { enabled = current.Enabled, hooked = current.Hooked,
+                droppedPackets = current.DroppedPackets, invalidPackets = current.InvalidPackets,
+                packetLossBasis = "recorder_session_at_read" },
+        };
     }
 
     private async Task<object?> Analyze(JObject args)

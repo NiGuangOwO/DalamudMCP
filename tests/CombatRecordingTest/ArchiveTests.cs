@@ -29,6 +29,8 @@ internal static class ArchiveTests
                 Check(archive.Enqueue(id, ended, Payload(id)), "completed encounter is accepted without waiting for disk");
                 await archive.FlushAsync().WaitAsync(TimeSpan.FromSeconds(10));
                 var file = archive.List().Single();
+                Check(archive.Find(id) == file && archive.Find(Guid.NewGuid().ToString("N")) is null,
+                    "exact archive status never reports an unrelated existing fight");
                 Check(file.bytes < 2000, "compact gzip keeps repetitive 100 KiB payload below 2 KiB");
                 var first = JObject.FromObject(await archive.ReadPage(id, 0, 1));
                 var second = JObject.FromObject(await archive.ReadPage(id, first.Value<long>("lastId"), 1));

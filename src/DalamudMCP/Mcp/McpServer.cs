@@ -724,6 +724,8 @@ public sealed class McpServer : IDisposable
                         "Locate entities with get_game_objects/find_game_object and native windows " +
                         "with list_loaded_addons. For an observed NPC and known addon, interact_with_npc combines a short approach, " +
                         "one interaction and an optional exact menu choice with addon verification. See references/gameplay-workflows.md. " +
+                        "Use click_addon_button_and_wait for an exact labelled native button and an observed UI or destination result. " +
+                        "Use combat_recording_wait with the exact encounter ID to wait for recording end or archive, not duty success. " +
                         "When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
                         "controls or geometry are needed. Use capture for visual pixels and same-frame cached crops, not ordinary native text. " +

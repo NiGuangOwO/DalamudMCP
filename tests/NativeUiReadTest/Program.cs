@@ -330,6 +330,15 @@ unsafe class Program
             Marshal.WriteByte(paramEvent,paramTypeOffset,Convert.ToByte(requestedType));Marshal.WriteByte(paramOther,paramTypeOffset,Convert.ToByte(requestedType));
             Check(DropRefuses(()=>Parameter(paramNode)),"conflicting exact event parameters refuse automatic dispatch");
             Marshal.WriteInt32(paramOther,Offset(dropEventType,"Param"),55);Check(Parameter(paramNode)==55,"duplicate exact parameter remains unambiguous");
+            var strictRead=parameterApi.GetMethod("RegisteredParameter",BindingFlags.NonPublic|BindingFlags.Static)!;
+            var addonListener=Allocate(Size(T("AtkEventListener")));var unrelatedListener=Allocate(Size(T("AtkEventListener")));
+            Marshal.WriteIntPtr(paramEvent,Offset(dropEventType,"Listener"),unrelatedListener);
+            Marshal.WriteIntPtr(paramOther,Offset(dropEventType,"Listener"),addonListener);
+            Marshal.WriteInt32(paramOther,Offset(dropEventType,"Param"),0);
+            uint Strict(nint listener)=>(uint)strictRead.Invoke(null,new[]{(object)paramNode,requestedType,listener})!;
+            Check(Strict(addonListener)==0,"strict dispatch accepts the addon's registered zero, ignoring a different listener");
+            Marshal.WriteByte(paramOther,paramTypeOffset,0);
+            Check(DropRefuses(()=>Strict(addonListener)),"strict dispatch never falls back to another listener or event");
             Marshal.WriteIntPtr(paramOther,Offset(dropEventType,"NextEvent"),paramEvent);Check(DropRefuses(()=>Parameter(paramNode)),"cyclic automatic event discovery is bounded");Marshal.WriteIntPtr(paramOther,Offset(dropEventType,"NextEvent"),0);
             Marshal.WriteIntPtr(paramEvent,Offset(dropEventType,"NextEvent"),1);Check(DropRefuses(()=>Parameter(paramNode)),"unreadable event link refuses automatic dispatch");
             Check(DropRefuses(()=>Parameter(1)),"unreadable UI event node refused before native field access");

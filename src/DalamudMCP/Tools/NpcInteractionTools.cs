@@ -351,37 +351,10 @@ internal static class NpcInteractionTools
                     throw new ToolException($"unexpected visible dialogue '{addon}'; inspect it before continuing");
         }
 
-        private static unsafe bool Visible(string name)
-        {
-            var unit = UiTools.ResolveAddon(name, null);
-            return unit is not null && unit->NameString == name && unit->IsVisible;
-        }
+        private static bool Visible(string name) => NativeAddonCheckpoint.Visible(name);
 
-        private static unsafe JObject? ReadVisible(string name, string? expectedText)
-        {
-            var unit = UiTools.ResolveAddon(name, null);
-            if (unit is null || unit->NameString != name || !unit->IsVisible || !unit->IsReady)
-                return null;
-            var identity = new JObject { ["addon"] = name };
-            unit = UiTools.ResolveObservedAddon(identity);
-            identity["addonId"] = unit->Id;
-            var readArgs = new JObject
-            {
-                ["addon"] = name, ["addonId"] = unit->Id,
-                ["includeAtkValues"] = false,
-                ["maxNodeTexts"] = 24, ["maxTextLength"] = 256,
-            };
-            if (expectedText is not null) readArgs["contains"] = expectedText;
-            var read = (JObject)UiTools.ReadAddonText(readArgs);
-            if (!read.Value<bool>("available") || !read.Value<bool>("visible")) return null;
-            var nodes = read["nodeTexts"] as JArray ?? new JArray();
-            if (expectedText is not null && !nodes.Any(n => n.Value<bool?>("visible") == true &&
-                n.Value<string>("text") == expectedText))
-                return null;
-            identity["nodeTexts"] = nodes;
-            identity["truncated"] = read.Value<bool>("truncated") || read.Value<bool>("scanIncomplete");
-            return identity;
-        }
+        private static JObject? ReadVisible(string name, string? expectedText) =>
+            NativeAddonCheckpoint.Read(name, expectedText);
 
         private static float Distance(IGameObject player, IGameObject npc)
         {

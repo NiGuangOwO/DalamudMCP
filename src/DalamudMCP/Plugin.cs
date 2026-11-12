@@ -150,6 +150,7 @@ public sealed class Plugin : IDalamudPlugin
         MemoryTools.Register(registry, services);
         StructTools.Register(registry, services);
         UiTools.Register(registry, services, inputLifetime.Token);
+        AddonButtonWorkflow.Register(registry, services, inputLifetime.Token);
         addonProbe = new AddonProbeTools(registry, services);
         CallbackTools.Register(registry, services);
         ImGuiInputTools.Register(registry, services);
@@ -178,7 +179,7 @@ public sealed class Plugin : IDalamudPlugin
         VisualInputTools.Register(registry, services, screenshots, inputLifetime.Token);
         PluginBridgeTools.Register(registry, services, ipcHub);
         EventTools.Register(registry, services, eventHub);
-        combatRecorder = new CombatRecorder(registry, services);
+        combatRecorder = new CombatRecorder(registry, services, inputLifetime.Token);
         networkPackets = new NetworkPacketTools(registry, services);
         ChatLogTools.Register(registry, chatLogHub);
         DalamudLogTools.Register(registry, dalamudLogHub);

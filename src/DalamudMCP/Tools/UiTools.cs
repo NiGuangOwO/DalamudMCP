@@ -1079,10 +1079,7 @@ internal static class UiTools
         // Dispatch through the ADDON's vtable ReceiveEvent slot (offset 16, slot 2) —
         // ClickLib's exact path. The addon's virtual override performs its own handler
         // routing; dispatching to nested listeners bypasses it and drops the event.
-        var vtbl = (AtkEventListener.AtkEventListenerVirtualTable*)unit->VirtualTable;
-        vtbl->ReceiveEvent((AtkEventListener*)unit, sendType, (int)eventParam, (AtkEvent*)evtBuf, (AtkEventData*)eventDataBuf);
-
-        return new JObject
+        var result = new JObject
         {
             ["addon"] = unit->NameString,
             ["addonId"] = (int)unit->Id,
@@ -1095,6 +1092,9 @@ internal static class UiTools
             ["clicked"] = true,
             ["via"] = "addon vtable",
         };
+        var vtbl = (AtkEventListener.AtkEventListenerVirtualTable*)unit->VirtualTable;
+        vtbl->ReceiveEvent((AtkEventListener*)unit, sendType, (int)eventParam, (AtkEvent*)evtBuf, (AtkEventData*)eventDataBuf);
+        return result;
     }
 
     // ---------------------------------------------------------------- addon value table
@@ -1195,7 +1195,7 @@ internal static class UiTools
     /// Escapes control characters so a raw UI payload stays readable in JSON, mirroring how
     /// the game's own text payloads separate attributes with 0x02.
     /// </summary>
-    private static string EscapeText(string? text)
+    internal static string EscapeText(string? text)
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;
 
@@ -1774,7 +1774,7 @@ internal static class UiTools
     /// uses guarded complete struct/string copies. Plain pointer field reads and managed
     /// catch blocks alone do not protect the client from access violations.
     /// </summary>
-    private static unsafe string? NodeLabel(AtkResNode* node)
+    internal static unsafe string? NodeLabel(AtkResNode* node)
     {
         try
         {
@@ -1992,7 +1992,7 @@ internal static class UiTools
         }
     }
 
-    private static unsafe RaptureAtkUnitManager* SafeRaptureAtkUnitManager()
+    internal static unsafe RaptureAtkUnitManager* SafeRaptureAtkUnitManager()
     {
         try
         {

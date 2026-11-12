@@ -25,7 +25,7 @@ Read [tool-selection.md](references/tool-selection.md) when choosing observation
 
 Operate native FFXIV UI only through a verified game callback, registered native event, or supported native UI API. Prefer an existing typed adapter. For a known contract, use `fire_addon_callback` with the exact live addon name and observed ID, and start with `dryRun=true`. If an action has no supported adapter or known contract, discover the real callback and add a bounded adapter before proceeding. Do not substitute virtual keys, window messages, coordinate clicks, desktop automation, or input simulation through generic runtime tools. Use dedicated movement and action tools for gameplay.
 
-For live game tests, read [gameplay-workflows.md](references/gameplay-workflows.md). Run known, guarded steps together and stop at a new decision or an unexpected state. Use `interact_with_npc` to approach an observed NPC, open its dialogue, and optionally verify the outcome of a known native menu choice in one call.
+For live game tests, read [gameplay-workflows.md](references/gameplay-workflows.md). Run known, guarded steps together and stop at a new decision or an unexpected state. Use `interact_with_npc` for known NPC dialogues, `click_addon_button_and_wait` for a verified native button and its result, and `combat_recording_wait` for a specific encounter's end or archive.
 
 ## Develop and verify
 

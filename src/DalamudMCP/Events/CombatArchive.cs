@@ -43,6 +43,7 @@ internal sealed class CombatArchive : IDisposable
         savedFiles = Volatile.Read(ref savedFiles), failedWrites = Volatile.Read(ref failedWrites), droppedWrites = Volatile.Read(ref droppedWrites), lastError,
         retainedFiles = files.Length, retainedBytes = files.Sum(f => f.bytes), maxBytes = MaxBytes, maxFiles = MaxFiles, maxDays = MaxDays };
     public ArchiveFile[] List() => files.ToArray();
+    internal ArchiveFile? Find(string id) => Array.Find(files, f => f.encounterId == id);
 
     public bool Enqueue(string id, long endedAt, object payload)
     {

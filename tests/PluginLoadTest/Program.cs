@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 180;
+    private const int ExpectedTools = 182;
 
     private static int checks;
     private static int failures;
@@ -520,7 +520,7 @@ internal static class Program
                     name="get_tribal_quest_state",arguments=new {} } })).ConfigureAwait(false);
             Check("tribal state refuses logged-out clients before native access", UnwrapToolResult(tribalOffline).IsError);
             Set(config, "AllowMutatingTools", false);
-            foreach (var runtimeName in new[] { "object_access", "ffcs_call", "mem_write", "mem_scan", "observe", "input", "interact_with_npc" })
+            foreach (var runtimeName in new[] { "object_access", "ffcs_call", "mem_write", "mem_scan", "observe", "input", "interact_with_npc", "click_addon_button_and_wait" })
             {
                 var denied = await CallAsync(http, baseUrl, sessionId,
                     JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 350, method = "tools/call", @params = new { name = runtimeName, arguments = new { } } })).ConfigureAwait(false);
@@ -544,7 +544,28 @@ internal static class Program
             using (var state = JsonDocument.Parse(holdingsPayload ?? "{}"))
                 Check("read-only holdings query works with mutation gate closed and reports logged-out state before native access",
                     !holdingsError && !state.RootElement.GetProperty("available").GetBoolean() && !state.RootElement.GetProperty("complete").GetBoolean());
+            var noEncounter = await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 2322, method = "tools/call", @params = new
+                {
+                    name = "combat_recording_wait",
+                    arguments = new { encounterId = "00000000000000000000000000000001", phase = "archived", timeoutMs = 0 },
+                } })).ConfigureAwait(false);
+            var (waitPayload, waitError) = UnwrapToolResult(noEncounter);
+            using (var state = JsonDocument.Parse(waitPayload ?? "{}"))
+                Check("exact combat wait stays read-only with mutations closed and does not substitute another recording",
+                    !waitError && !state.RootElement.GetProperty("matched").GetBoolean() &&
+                    state.RootElement.GetProperty("state").GetString() == "not_retained");
             Set(config, "AllowMutatingTools", true);
+            var missingPrompt = await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 2323, method = "tools/call", @params = new
+                {
+                    name = "click_addon_button_and_wait",
+                    arguments = new { addon = "SelectYesno", addonId = 42, nodeId = 8, componentPath = Array.Empty<int>(),
+                        expectedLabel = "Yes", expectedTerritoryId = 123, result = new { kind = "source_hidden" } },
+                } })).ConfigureAwait(false);
+            var (promptPayload, promptError) = UnwrapToolResult(missingPrompt);
+            Check("button workflow requires the observed source prompt before accessing the game",
+                promptError && promptPayload?.Contains("sourceText", StringComparison.Ordinal) == true);
             async Task<(string? Payload, bool IsError)> NpcCall(object arguments) =>
                 UnwrapToolResult(await CallAsync(http, baseUrl, sessionId, JsonSerializer.Serialize(new
                 {
