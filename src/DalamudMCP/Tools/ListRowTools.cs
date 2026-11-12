@@ -163,7 +163,7 @@ internal static unsafe class ListRowTools
             ["selectionDispatched"] = !dryRun && selectedBefore != index, ["inputDispatched"] = !dryRun };
     }
 
-    internal static void ValidateEvent(nint unit, nint listNode)
+    internal static void ValidateEvent(nint expectedListener, nint listNode)
     {
         var owner = MemoryProbe.TryReadStruct<AtkResNode>((ulong)listNode, out _);
         if (!owner.HasValue) throw new ToolException("list owner is unreadable");
@@ -173,12 +173,12 @@ internal static unsafe class ListRowTools
             if (seen.Count >= 64 || !seen.Add((nint)next)) throw new ToolException("list event chain is cyclic or oversized");
             var evt = MemoryProbe.TryReadStruct<AtkEvent>((ulong)next, out _);
             if (!evt.HasValue) throw new ToolException("list event is unreadable");
-            if (evt.Value.State.EventType == AtkEventType.ListItemClick && ((nint)evt.Value.Listener != unit || ++matches > 1)) throw new ToolException("list click listener is foreign or ambiguous");
+            if (evt.Value.State.EventType == AtkEventType.ListItemClick && ((nint)evt.Value.Listener != expectedListener || ++matches > 1)) throw new ToolException("list click listener is foreign or ambiguous");
             next = evt.Value.NextEvent;
         }
-        if (matches != 1) throw new ToolException("list needs one ListItemClick notification to the owning addon");
-        var receiver = MemoryProbe.TryReadStruct<AtkEventListener>((ulong)unit, out _);
+        if (matches != 1) throw new ToolException("list needs one ListItemClick notification to the expected listener");
+        var receiver = MemoryProbe.TryReadStruct<AtkEventListener>((ulong)expectedListener, out _);
         var table = receiver.HasValue ? MemoryProbe.TryReadStruct<AtkEventListener.AtkEventListenerVirtualTable>((ulong)receiver.Value.VirtualTable, out _) : null;
-        if (!table.HasValue || MemoryProbe.Query((ulong)(nint)table.Value.ReceiveEvent)?.Executable != true) throw new ToolException("owning addon event receiver is unresolved or not executable");
+        if (!table.HasValue || MemoryProbe.Query((ulong)(nint)table.Value.ReceiveEvent)?.Executable != true) throw new ToolException("list event receiver is unresolved or not executable");
     }
 }

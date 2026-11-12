@@ -1,0 +1,108 @@
+{
+  "date": "2026-11-12 (Asia/Shanghai)",
+  "trial": "挑战木人歼灭战（100级）",
+  "territoryId": 1191,
+  "job": "吟游诗人 (23)",
+  "itemLevelShown": 786,
+  "itemLevelSync": 690,
+  "rotation": "AEAssist.ACR.BardAI::ai.bard",
+  "result": {
+    "systemMessage": "木人歼灭战的挑战失败了……",
+    "recordedCombatMs": 135112,
+    "dummyMaxHp": 2393293,
+    "lastSampleHp": 1227200,
+    "remainingHpPct": 51.28,
+    "manualOpener": {
+      "actionId": 16495,
+      "name": "爆发射击",
+      "confirmedByFirstEffect": true
+    }
+  },
+  "tools": {
+    "combatBuildMvid": "ef8d8be1-2105-4db5-b3f7-91ffaa82fcbf",
+    "menuBuildMvid": "96921227-54c1-46e7-810e-57df856f40b7",
+    "archiveEncounter": "3fb14e68ebf644d7bf031193d3c91dca",
+    "frames": {
+      "completeBatches": 49,
+      "samples": 2940,
+      "combatSamples": 2810,
+      "targetSamples": 2820,
+      "queueSamples": 0
+    },
+    "recording": {
+      "allEvents": 155,
+      "localActionEffects": 105,
+      "autoAttacks": 45,
+      "partialStart": false,
+      "droppedEvents": 0,
+      "droppedPackets": 0,
+      "invalidPackets": 0,
+      "readFromGzipAfterReload": true
+    },
+    "menu": {
+      "returnVerified": true,
+      "preSelectionIndex": -1,
+      "selectedIndex": 0,
+      "from": "SelectIconString",
+      "to": "DpsChallengeList",
+      "clickedOnce": true,
+      "wallClockMs": 4019,
+      "closedAfter": true
+    }
+  },
+  "acr": {
+    "successfulGcdSubmissions": 53,
+    "successfulOgcdSubmissions": 6,
+    "medianGcdSubmissionGapMs": 2504,
+    "maxGcdSubmissionGapMs": 2871,
+    "gameObservedSongEffects": 0,
+    "observedSongGaugeValues": [
+      "None"
+    ],
+    "worldTicksWithSongState": 135,
+    "blocked": [
+      {
+        "key": "wanderers-minuet",
+        "id": 3559,
+        "reason": "OutOfRange",
+        "count": 102,
+        "range": 0,
+        "distance": 8.87
+      }
+    ],
+    "actionMetadata": [
+      {
+        "id": 3559,
+        "Name": "放浪神的小步舞曲",
+        "Range": 0,
+        "CanTargetSelf": true,
+        "CanTargetHostile": false,
+        "ClassJob": 23,
+        "CooldownGroup": 18
+      },
+      {
+        "id": 114,
+        "Name": "贤者的叙事谣",
+        "Range": 0,
+        "CanTargetSelf": true,
+        "CanTargetHostile": false,
+        "ClassJob": 23,
+        "CooldownGroup": 16
+      },
+      {
+        "id": 116,
+        "Name": "军神的赞美歌",
+        "Range": 0,
+        "CanTargetSelf": true,
+        "CanTargetHostile": false,
+        "ClassJob": 23,
+        "CooldownGroup": 17
+      }
+    ]
+  },
+  "limits": [
+    "One synced single-target encounter with one manual opener.",
+    "No nonempty action queue was observed; this run does not verify the queue-active path.",
+    "Runtime evidence identifies the targeting/preflight failure; AEAssist code and configuration were unchanged."
+  ]
+}

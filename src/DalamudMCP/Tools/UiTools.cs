@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using DalamudMCP.Mcp;
 using FFXIVClientStructs.FFXIV.Client.System.String;
@@ -113,7 +115,7 @@ internal static class UiTools
         ["deepdungeonstatus"] = AgentId.DeepDungeonStatus,
     };
 
-    public static void Register(ToolRegistry registry, GameServices svc)
+    public static void Register(ToolRegistry registry, GameServices svc, CancellationToken inputLifetime)
     {
         var names = OpenableAgents.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
 
@@ -242,12 +244,13 @@ internal static class UiTools
                 ("stringsOnly", "boolean", "Only report string-typed values (default false)", false)),
             args => GetAddonStrings(args));
 
-        registry.Add(
+        registry.AddAsync(
             "select_addon_menu_item",
             "Select an item in an addon (UI window) menu",
-            "Selects a menu entry by normalized label or index. SelectString reads its guarded native popup " +
-            "entries and sends ListItemClick through the list; index is the zero-based menu ordinal, " +
+            "Selects a menu entry by normalized label or index. SelectString and SelectIconString read their guarded native popup " +
+            "entries and send ListItemClick through the list; index is the zero-based menu ordinal, " +
             "NOT the label's AtkValue index. Use dryRun to inspect indexKind and the selected entry. " +
+            "SelectIconString may wait up to four framework ticks for selection layout to settle before clicking. " +
             "Other addons retain legacy AtkValue-index callback behavior and require a known callback contract. " +
             "Ambiguous labels are refused even with containsMatch. A dispatched input is not proof of transition. This is a " +
             "mutating tool: it is hidden from tools/list and refused by tools/call while the " +
@@ -256,10 +259,10 @@ internal static class UiTools
                 ("addon", "string", "Addon name whose menu to select from", false),
                 ("addonId", "integer", "Raw AtkUnitBase id (overrides addon)", false),
                 ("label", "string", "Menu entry label to select (required unless index is given)", false),
-                ("index", "integer", "SelectString: zero-based menu ordinal; other addons: legacy AtkValue index", false),
+                ("index", "integer", "SelectString/SelectIconString: zero-based menu ordinal; other addons: legacy AtkValue index", false),
                 ("containsMatch", "boolean", "Match labels by substring instead of exact (default false)", false),
                 ("dryRun", "boolean", "Report the entry that would be selected without activating it", false)),
-            args => SelectAddonMenuItem(args),
+            args => SelectAddonMenuItemAsync(svc, args, inputLifetime),
             mutating: true);
 
         // Temporary diagnostic tools for the click-dispatch investigation. Mutating: the
@@ -1207,6 +1210,44 @@ internal static class UiTools
         return builder.ToString();
     }
 
+    private static int menuSelectionActive;
+
+    private static async Task<object?> SelectAddonMenuItemAsync(GameServices svc, JObject args, CancellationToken lifetime)
+    {
+        if (Interlocked.CompareExchange(ref menuSelectionActive, 1, 0) != 0)
+            throw new ToolException("another menu selection is active");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+        timeout.CancelAfter(TimeSpan.FromSeconds(3));
+        var token = timeout.Token;
+        object Checked(Func<object> action)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!svc.Config.AllowMutatingTools || svc.Framework.IsFrameworkUnloading)
+                throw new ToolException("menu input stopped because mutation access closed or the framework is unloading");
+            return action();
+        }
+        try
+        {
+            var result = await svc.Framework.RunOnFrameworkThread(() => Checked(() => SelectAddonMenuItem(args)))
+                .WaitAsync(token).ConfigureAwait(false);
+            for (var i = 0; i < 4 && result is IconMenuSelection pending; i++)
+            {
+                result = await svc.Framework.RunOnTick(() => Checked(() => CompleteIconMenuSelection(pending)),
+                    delayTicks: 1, cancellationToken: token).WaitAsync(token).ConfigureAwait(false);
+            }
+            if (result is IconMenuSelection)
+                throw new ToolException("SelectIconString layout did not settle; no click dispatched");
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            throw new ToolException("menu selection cancelled or timed out; read the menu before retrying");
+        }
+        finally { Volatile.Write(ref menuSelectionActive, 0); }
+    }
+
+    private sealed record IconMenuSelection(nint Unit, nint List, nint Listener, int AddonId, int Index, string Label);
+
     private static unsafe object SelectAddonMenuItem(JObject args)
     {
         var unit = ResolveAddon(args["addon"]?.Value<string>(), args["addonId"]);
@@ -1216,11 +1257,19 @@ internal static class UiTools
         if (!unit->IsReady)
             return Json.ToolError($"addon '{unit->NameString}' is not ready yet");
 
-        var values = unit->AtkValuesSpan;
+        var name = unit->NameString;
+        var addonId = (int)unit->Id;
+        var iconMenu = name == "SelectIconString";
+        var nativeMenu = name == "SelectString" || iconMenu;
+        if (iconMenu && !unit->IsVisible)
+            throw new ToolException("SelectIconString is hidden");
+        var values = nativeMenu ? default : unit->AtkValuesSpan;
         var candidates = new List<(int Index, string Label)>();
         nint nativeList = 0;
-        var nativeMenu = unit->NameString == "SelectString";
-        if (nativeMenu)
+        nint popupListener = 0;
+        if (iconMenu)
+            candidates = ReadSelectIconStringEntries(unit, out nativeList, out popupListener);
+        else if (nativeMenu)
             candidates = ReadSelectStringEntries(unit, out nativeList);
         for (var i = 0; !nativeMenu && i < values.Length; i++)
         {
@@ -1287,12 +1336,15 @@ internal static class UiTools
             selected = exact[0];
         }
 
+        if (iconMenu)
+            ValidateIconMenuSelection(nativeList, popupListener, selected.Index);
+
         if (dryRun)
         {
             return new JObject
             {
-                ["addon"] = unit->NameString,
-                ["addonId"] = (int)unit->Id,
+                ["addon"] = name,
+                ["addonId"] = addonId,
                 ["index"] = selected.Index,
                 ["indexKind"] = nativeMenu ? "menuOrdinal" : "atkValueIndex",
                 ["label"] = selected.Label,
@@ -1301,20 +1353,16 @@ internal static class UiTools
             };
         }
 
-        // SelectString AtkValues include the title and metadata before the labels.
-        // Its popup entries, not those value-table indices, define the actual selection.
+        // Popup entries, not the AtkValue title/metadata indices, define the selection.
         if (nativeMenu)
         {
             var list = (AtkComponentList*)nativeList;
-            list->SelectItem(selected.Index, false);
+            if (!iconMenu || list->SelectedItemIndex != selected.Index)
+                list->SelectItem(selected.Index, false);
+            if (iconMenu)
+                return CompleteIconMenuSelection(new((nint)unit, nativeList, popupListener, addonId, selected.Index, selected.Label));
             list->DispatchItemEvent(selected.Index, AtkEventType.ListItemClick);
-            return new JObject
-            {
-                ["addon"] = unit->NameString, ["addonId"] = (int)unit->Id,
-                ["index"] = selected.Index, ["indexKind"] = "menuOrdinal",
-                ["label"] = selected.Label, ["selected"] = true,
-                ["inputDispatched"] = true, ["via"] = "AtkComponentList.DispatchItemEvent(ListItemClick)",
-            };
+            return PopupDispatched(name, addonId, selected.Index, selected.Label);
         }
         var fired = unit->FireCallbackInt(selected.Index);
         return new JObject
@@ -1328,28 +1376,85 @@ internal static class UiTools
         };
     }
 
+    private static unsafe object CompleteIconMenuSelection(IconMenuSelection selected)
+    {
+        const string name = "SelectIconString";
+        var current = ResolveAddon(name, new JValue(selected.AddonId));
+        if ((nint)current != selected.Unit || !TryNative(current, out var unit) ||
+            !unit.IsReady || !unit.IsVisible || unit.NameString != name)
+            throw new ToolException("SelectIconString changed during selection; re-read the menu");
+        var entries = ReadSelectIconStringEntries(current, out var currentList, out var currentListener);
+        var list = (AtkComponentList*)currentList;
+        if (currentList != selected.List || currentListener != selected.Listener ||
+            selected.Index >= entries.Count || entries[selected.Index].Label != selected.Label ||
+            !TryNative(list, out var state) || state.SelectedItemIndex != selected.Index)
+            throw new ToolException("SelectIconString entry or list changed during selection; re-read the menu");
+        if (state.IsUpdatePending || state.IsScrollRefreshPending) return selected;
+        ValidateIconMenuSelection(currentList, currentListener, selected.Index);
+        list->DispatchItemEvent(selected.Index, AtkEventType.ListItemClick);
+        return PopupDispatched(name, selected.AddonId, selected.Index, selected.Label);
+    }
+
+    private static JObject PopupDispatched(string name, int addonId, int index, string label) => new()
+    {
+        ["addon"] = name, ["addonId"] = addonId, ["index"] = index, ["indexKind"] = "menuOrdinal",
+        ["label"] = label, ["selected"] = true, ["inputDispatched"] = true,
+        ["via"] = "AtkComponentList.DispatchItemEvent(ListItemClick)",
+    };
+
     private static unsafe List<(int Index, string Label)> ReadSelectStringEntries(AtkUnitBase* unit, out nint list)
     {
         list = 0;
         if (!TryNative((AddonSelectString*)unit, out var addon))
             throw new ToolException("SelectString layout is unreadable");
-        var menu = addon.PopupMenu;
+        return ReadPopupEntries(unit, addon.PopupMenu.PopupMenu, "SelectString", out list);
+    }
+
+    private static unsafe List<(int Index, string Label)> ReadSelectIconStringEntries(AtkUnitBase* unit, out nint list, out nint listener)
+    {
+        list = listener = 0;
+        if (!TryNative((AddonSelectIconString*)unit, out var addon))
+            throw new ToolException("SelectIconString layout is unreadable");
+        var entries = ReadPopupEntries(unit, addon.PopupMenu.PopupMenu, "SelectIconString", out list);
+        // The ListItemClick receiver is the in-place PopupMenu listener, not AtkUnitBase.
+        listener = (nint)(&((AddonSelectIconString*)unit)->PopupMenu.PopupMenu.AtkEventListener);
+        return entries;
+    }
+
+    private static unsafe List<(int Index, string Label)> ReadPopupEntries(AtkUnitBase* unit, PopupMenu menu, string name, out nint list)
+    {
+        list = 0;
         if (menu.Owner != unit || menu.EntryCount is < 1 or > 256 || menu.EntryNames is null ||
             !TryNative(menu.List, out var nativeList) || nativeList.ListLength != menu.EntryCount ||
             !TryNative(nativeList.OwnerNode, out var owner) || owner.Component != (AtkComponentBase*)menu.List ||
             ComponentKindOf(nativeList.OwnerNode) != ComponentType.List || !NodeVisible((AtkResNode*)nativeList.OwnerNode))
-            throw new ToolException("SelectString popup/list layout is not ready or inconsistent");
+            throw new ToolException($"{name} popup/list layout is not ready or inconsistent");
         if ((owner.NodeFlags & NodeFlags.Enabled) == 0)
-            throw new ToolException("SelectString list is disabled");
+            throw new ToolException($"{name} list is disabled");
         var entries = new List<(int, string)>();
         for (var i = 0; i < menu.EntryCount; i++)
         {
             if (!TryNative(menu.EntryNames + i, out var pointer) || ReadCString(pointer) is not { } label)
-                throw new ToolException($"SelectString entry {i} is unreadable");
+                throw new ToolException($"{name} entry {i} is unreadable");
             entries.Add((i, NormalizeMenuLabel(label)));
         }
         list = (nint)menu.List;
         return entries;
+    }
+
+    private static unsafe void ValidateIconMenuSelection(nint address, nint listener, int index)
+    {
+        if (!TryNative((AtkComponentList*)address, out var list) || list.IsUpdatePending || list.IsScrollRefreshPending ||
+            (uint)index >= (uint)list.ListLength)
+            throw new ToolException("SelectIconString list layout is pending or no longer valid");
+        if (!TryNative(list.VirtualTable, out var table) ||
+            MemoryProbe.Query((ulong)(nint)table.SelectItem)?.Executable != true ||
+            MemoryProbe.Query((ulong)(nint)table.GetItemDisabledState)?.Executable != true ||
+            MemoryProbe.Query((ulong)(nint)AtkComponentList.MemberFunctionPointers.DispatchItemEvent)?.Executable != true)
+            throw new ToolException("SelectIconString list SDK methods are unavailable");
+        ListRowTools.ValidateEvent(listener, (nint)list.OwnerNode);
+        if (((AtkComponentList*)address)->GetItemDisabledState(index))
+            throw new ToolException("SelectIconString entry is disabled");
     }
 
     /// <summary>

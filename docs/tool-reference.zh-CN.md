@@ -133,7 +133,7 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `list_addon_elements` | 在任意已加载 addon 中先筛选再限制结果数量。普通定位使用 `detail=compact`；完整模式保留几何信息。返回可精确定位的 `componentPath`。见 [addon 查询](addon-queries.md)。 | `addon` 或 `addonId`、`label`、`containsMatch`、`componentType`、`visibleOnly`、`enabledOnly`、`clickableOnly`、`detail`、`allNodes`、`maxDepth`（12）、`maxNodes`（100） |
 | `click_addon_element` | 通过 `ReceiveEvent` 派发 Atk UI 事件。支持 `click`、`doubleClick`、`buttonClick`、`buttonPress`、`buttonRelease` 和 `registered`；实际效果取决于目标节点及其监听器。 | `addon` 或 `addonId`、`nodeId` 或 `index`、`event`、`param`（高级覆盖） |
 | `read_addon_text` | 读取原生界面文字的首选只读工具。合并可见 Text/Button/List 标签与字符串型 `AtkValue`，保留 `nodeId`/`componentPath`，支持字面筛选并明确报告截断。使用此工具读取原生界面文字。见 [addon 文本读取](addon-text.md)。 | `addon` 或 `addonId`、`contains`、`visibleOnly`（默认 true）、`includeNodeText`、`includeAtkValues`、`maxNodeTexts`（100）、`maxValueTexts`（100）、`maxTextLength`（512）、`maxDepth`（12） |
-| `select_addon_menu_item` | 按标签或索引选择菜单型 addon 的条目，并通过其回调提交选择。默认采用归一化后的精确匹配，可通过 `containsMatch` 启用包含匹配。 | `addon` 或 `addonId`、`label` 或 `index`、`containsMatch`、`dryRun` |
+| `select_addon_menu_item` | 按标签或索引选择；`SelectString` 与 `SelectIconString` 使用 SDK 菜单序号及列表事件，其它窗口仍须已知回调约定。详见[菜单选择](menu-selection.md)。 | `addon` 或 `addonId`、`label` 或 `index`、`containsMatch`、`dryRun` |
 | `probe_receive_event_enable` | 安装已加载 addon 的 `ReceiveEvent` 虚函数表探针，记录转发前的界面事件。配合 `probe_receive_event_dump` 比较用户输入与合成事件。 | `addon` 或 `addonId` |
 | `probe_receive_event_enable_listener` | 对指定节点的首个已注册监听器安装事件探针，用于分析组件级输入。 | `addon` 或 `addonId`、`nodeId`（必填） |
 | `probe_receive_event_disable` | 移除事件探针并恢复虚函数表入口。 | 无 |

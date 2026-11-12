@@ -184,6 +184,37 @@ unsafe class Program
                 Check(Refused(),"unreadable popup label refused before native selection");
                 Marshal.WriteIntPtr(entryNames,label0);Marshal.WriteIntPtr(unit,popupOffset+Offset(popupType,"Owner"),1);
                 Check(Refused(),"popup belonging to a different addon refused");
+                var iconType=fcs.GetType("FFXIVClientStructs.FFXIV.Client.UI.AddonSelectIconString")!;
+                var iconUnit=Allocate(Size(iconType));var iconPopupOffset=Offset(iconType,"PopupMenu");
+                var iconDerive=iconType.GetField("PopupMenu")!.FieldType;
+                var iconPopup=iconDerive.GetField("PopupMenu")!.FieldType;
+                Marshal.WriteIntPtr(iconUnit,iconPopupOffset+Offset(iconDerive,"Owner"),iconUnit);
+                Marshal.WriteIntPtr(iconUnit,iconPopupOffset+Offset(iconDerive,"List"),list);
+                Marshal.WriteInt32(iconUnit,iconPopupOffset+Offset(iconDerive,"EntryCount"),2);
+                Marshal.WriteIntPtr(iconUnit,iconPopupOffset+Offset(iconDerive,"EntryNames"),entryNames);
+                var readIcon=ui.GetMethod("ReadSelectIconStringEntries",BindingFlags.NonPublic|BindingFlags.Static)!;
+                object?[] iconArgs={Pointer.Box((void*)iconUnit,readIcon.GetParameters()[0].ParameterType),(nint)0,(nint)0};
+                var iconEntries=(System.Collections.IList)readIcon.Invoke(null,iconArgs)!;
+                var iconListener=iconUnit+iconPopupOffset+Offset(iconDerive,"PopupMenu")+Offset(iconPopup,"AtkEventListener");
+                Check(iconEntries.Count==2&&(nint)iconArgs[1]! == list&&(nint)iconArgs[2]! == iconListener&&iconListener!=iconUnit,
+                    "icon popup uses the SDK's embedded listener and native entry ordinals");
+                var iconEventType=T("AtkEvent");var iconEvent=Allocate(Size(iconEventType));
+                var eventStateType=iconEventType.GetField("State")!.FieldType;
+                var eventKindType=eventStateType.GetField("EventType")!.FieldType;
+                Marshal.WriteByte(iconEvent,Offset(iconEventType,"State")+Offset(eventStateType,"EventType"),Convert.ToByte(Enum.Parse(eventKindType,"ListItemClick")));
+                Marshal.WriteIntPtr(iconEvent,Offset(iconEventType,"Listener"),iconListener);
+                Marshal.WriteIntPtr(compNode,Offset(nodeType,"AtkEventManager")+Offset(T("AtkEventManager"),"Event"),iconEvent);
+                var iconVtableType=T("AtkEventListener").GetNestedType("AtkEventListenerVirtualTable")!;
+                var iconVtable=Allocate(Size(iconVtableType));
+                Marshal.WriteIntPtr(iconListener,Offset(T("AtkEventListener"),"VirtualTable"),iconVtable);
+                Marshal.WriteIntPtr(iconVtable,Offset(iconVtableType,"ReceiveEvent"),(nint)(delegate* unmanaged<nint,byte,int,nint,nint,void>)&ContextEvent);
+                var validatePopup=plugin.GetType("DalamudMCP.Tools.ListRowTools")!.GetMethod("ValidateEvent",BindingFlags.NonPublic|BindingFlags.Static)!;
+                validatePopup.Invoke(null,new object[]{iconListener,compNode});
+                Check(true,"one ListItemClick to the embedded icon popup receiver is accepted");
+                Marshal.WriteIntPtr(iconEvent,Offset(iconEventType,"Listener"),iconUnit);
+                try{validatePopup.Invoke(null,new object[]{iconListener,compNode});throw new Exception("foreign icon popup listener accepted");}
+                catch(TargetInvocationException e){Check(e.InnerException?.Message.Contains("foreign or ambiguous")==true,"replacing the icon receiver with the addon address is refused");}
+                Marshal.WriteIntPtr(compNode,Offset(nodeType,"AtkEventManager")+Offset(T("AtkEventManager"),"Event"),0);
             }
             finally{Marshal.FreeCoTaskMem(label0);Marshal.FreeCoTaskMem(label1);}
             var numberApi=plugin.GetType("DalamudMCP.Tools.NumericInputTools")!;
