@@ -1,0 +1,106 @@
+{
+  "releaseId": 443014785,
+  "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.50",
+  "version": "1.0.0.50",
+  "tag": "v1.0.0.50",
+  "sourceCommit": "1521f99aa5574d0b8b6a8470afe8e2c2ddec0957",
+  "guidanceRevision": "65aa705e4e1a48bffc87c7bf3ed38478cbc8ac260fd5125719435109128e6303",
+  "packageSha256": "fa0974eb60a0162d4b8e4f56c5f937f32582bbf9b0c1476d2370a70e9fc67426",
+  "assets": [
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 739673977,
+      "sha256": "6758debc54cd06d28fd10f0bdacc5543e4775e0631e83792d9b327d04e4f4762",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 739674020,
+      "sha256": "34644cd491ed6e38ef0a31207bdf7294b69176d5db92e204662d70c00e46a0d2",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 739674055,
+      "sha256": "5ca8cabbcec5633b2870d957711cc3fdc0f98538b4055fd7a60ea46ef0ba4012",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-mcp-bridge.zip",
+      "id": 739674095,
+      "sha256": "610e9fac05904062e7e4dfddcae58c2b7796663e99d9b4e2397698f67c05f151",
+      "downloadVerified": true
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 739673932,
+      "sha256": "7c6743e80215fc993d5be081fda36124522ffb6ca080a48b7a89b36695c15754",
+      "downloadVerified": true
+    },
+    {
+      "name": "latest.zip",
+      "id": 739673866,
+      "sha256": "fa0974eb60a0162d4b8e4f56c5f937f32582bbf9b0c1476d2370a70e9fc67426",
+      "downloadVerified": true
+    },
+    {
+      "name": "release-provenance.json",
+      "id": 739674141,
+      "sha256": "34f20ad25de526e71d101ea1c5a66f17cd2bdce41c75b31a2e264d4e95634400",
+      "downloadVerified": true
+    }
+  ],
+  "sourceWorkflow": {
+    "id": 43231182750,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43231182750",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": {
+      "plan": "success",
+      "build / build": "success",
+      "publish": "success",
+      "sync": "success"
+    }
+  },
+  "distributionCommit": "83733390a1ad9f31b83fd1e0f40246e1a876975d",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/83733390a1ad9f31b83fd1e0f40246e1a876975d/pluginmaster.json",
+  "indexEntry": {
+    "InternalName": "DalamudMCP",
+    "AssemblyVersion": "1.0.0.50",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.50/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.50/latest.zip",
+    "LastUpdate": "1794491553"
+  },
+  "otherIndexEntriesPreserved": true,
+  "validation": {
+    "builds": {
+      "Debug": "passed (0 warnings)",
+      "Release": "passed (0 warnings)"
+    },
+    "pluginLoadChecks": 237,
+    "nativeUiChecks": 259,
+    "protocolChecks": 88,
+    "skillCatalogChecks": 22,
+    "skillSyncTests": 23,
+    "releasePipelineTests": 13,
+    "live": {
+      "region": "CN",
+      "buildMvid": "a5d87338-1e85-45de-81cc-7f719b0e4e7a",
+      "catalogCount": 180,
+      "tool": "interact_with_npc",
+      "wrongBaseIdRefusedBeforeMovement": true,
+      "dryRunNoInput": true,
+      "territoryId": 1191,
+      "npcBaseId": 1049466,
+      "initialDistance": 14.8,
+      "interactionDistance": 2.6,
+      "movementCleanup": "stopped",
+      "elapsedMs": 2296,
+      "menuLabel": "开战！",
+      "resultAddon": "DpsChallengeList",
+      "expectedResultText": "挑战木人歼灭战（100级）",
+      "outcomeVerified": true,
+      "challengeStarted": false
+    }
+  }
+}
