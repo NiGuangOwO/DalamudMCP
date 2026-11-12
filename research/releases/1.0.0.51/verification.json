@@ -1,0 +1,118 @@
+{
+  "version": "1.0.0.51",
+  "sourceCommit": "f09f51ab010f832ec7f54d076d8647e7202adb9a",
+  "tag": "v1.0.0.51",
+  "releaseId": 443050845,
+  "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.51",
+  "sourceWorkflow": {
+    "id": 43236051986,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43236051986",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": {
+      "plan": "success",
+      "build / build": "success",
+      "publish": "success",
+      "sync": "success"
+    }
+  },
+  "guidanceRevision": "2c03023b9fa07efde784d3d82269cfd016ac41700730a0e8d4a9b3cdfc7d7fd1",
+  "distributionCommit": "6e9a1cea58070794cd231ccd9f292649f559851a",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/6e9a1cea58070794cd231ccd9f292649f559851a/pluginmaster.json",
+  "indexEntry": {
+    "InternalName": "DalamudMCP",
+    "AssemblyVersion": "1.0.0.51",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.51/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.51/latest.zip",
+    "LastUpdate": "1794493327"
+  },
+  "otherIndexEntriesPreserved": true,
+  "packageSha256": "600c216adde28ceae6a4b57e73c9bd6f297c3fdd580372f82e17c078e4eebd2c",
+  "assets": [
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 739773510,
+      "sha256": "c6d0e5ea1df5a5749cee25ca9cd4dd3231566e4556f9ec4ff713eeec5484ad81",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 739773548,
+      "sha256": "50981b311e6d165f95d2cd0b50c0069a88711922d04c4c8c1fa6704447874228",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 739773607,
+      "sha256": "8da132e62ddb7a56c30dc6c6122559fdae42390592739094ddb57b1d7c29c3e4",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-mcp-bridge.zip",
+      "id": 739773640,
+      "sha256": "be298616a69b4b1a8975df5c3187d81fa6e81cad389267bc88547b8659ede802",
+      "downloadVerified": true
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 739773468,
+      "sha256": "7350de0bc256f83b8ff6c8295a0ebacf987dfe9f35848df3c812a061686976dd",
+      "downloadVerified": true
+    },
+    {
+      "name": "latest.zip",
+      "id": 739773387,
+      "sha256": "600c216adde28ceae6a4b57e73c9bd6f297c3fdd580372f82e17c078e4eebd2c",
+      "downloadVerified": true
+    },
+    {
+      "name": "release-provenance.json",
+      "id": 739773689,
+      "sha256": "ed8ae84cd0aff792e22ce0f017bd61633f52699fe642d2a610d9091630ad7534",
+      "downloadVerified": true
+    }
+  ],
+  "validation": {
+    "builds": {
+      "Debug": "passed (0 warnings)",
+      "Release": "passed (0 warnings)"
+    },
+    "pluginLoadChecks": 240,
+    "nativeUiChecks": 261,
+    "protocolChecks": 88,
+    "combatRecordingTests": "passed",
+    "skillCatalogChecks": 22,
+    "skillSyncTests": 23,
+    "releasePipelineTests": 13,
+    "live": {
+      "region": "CN",
+      "buildMvid": "f138d2ad-cfcd-4bf5-9996-3de05df08a1b",
+      "catalogCount": 182,
+      "wrongPromptRefusedBeforeDispatch": true,
+      "dryRunNoInput": true,
+      "cancelledPromptVerifiedHidden": true,
+      "nextPromptOpenedMs": 120,
+      "sameTerritoryArenaArrivalMs": 4937,
+      "territoryId": 1191,
+      "encounterId": "17a47f2775754baf9c79f14e81519634",
+      "activeWaitTimedOutWithoutMatch": true,
+      "archived": true,
+      "archiveBytes": 9731,
+      "recordedDurationMs": 171834,
+      "partialStart": false,
+      "droppedEvents": 0,
+      "packetLoss": {
+        "droppedPackets": 0,
+        "invalidPackets": 0
+      },
+      "previousArchiveMatchedExactId": true,
+      "missingIdMatched": false,
+      "gameOutcome": "达成了木人歼灭战的目标！",
+      "gameOutcomeMsAfterRecordingEnd": 1985,
+      "returnVerified": true,
+      "returnApproachDistance": 30.04,
+      "returnApproachMs": 4485,
+      "returnArrivalMs": 5855
+    }
+  }
+}
