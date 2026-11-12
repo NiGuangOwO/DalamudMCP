@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -49,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 181;
+    private const int ExpectedTools = 179;
 
     private static int checks;
     private static int failures;
@@ -116,16 +115,6 @@ internal static class Program
         var pluginType = pluginAssembly.GetType("DalamudMCP.Plugin");
         Check("DalamudMCP.Plugin type is present", pluginType is not null);
         if (pluginType is null) return 1;
-
-        var gameKeyInputType = pluginAssembly.GetType("DalamudMCP.Tools.GameKeyInputTools", throwOnError: false);
-        Check("native game key input implementation is present", gameKeyInputType is not null);
-        var sinkType = pluginAssembly.GetType("DalamudMCP.Tools.GameWindowKeySink", throwOnError: false);
-        Check("game key delivery is scoped to a window", sinkType is not null);
-        var forbiddenImports = new[] { "SendInput", "keybd_event" };
-        var inputImports = new[] { gameKeyInputType, sinkType }.Where(t => t is not null)
-            .SelectMany(t => t!.GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
-            .Select(m => m.GetCustomAttribute<DllImportAttribute>()).Where(a => a is not null);
-        Check("game key paths import no global keyboard injection", !inputImports.Any(a => forbiddenImports.Contains(a!.EntryPoint)));
 
         Check("Plugin type is public", pluginType.IsPublic, pluginType.Attributes.ToString());
         Check("Plugin type is sealed and not abstract", pluginType.IsSealed && !pluginType.IsAbstract);
@@ -448,10 +437,6 @@ internal static class Program
         Check("list row activation is classified as mutating", Equals(Prop(rowActivate, "Mutating"), true));
         var numericTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "set_addon_numeric_input"));
         Check("native numeric editing is classified as mutating", Equals(Prop(numericTool, "Mutating"), true));
-        var gameKeyTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "press_game_key"));
-        Check("native game key input is classified as mutating", Equals(Prop(gameKeyTool, "Mutating"), true));
-        var holdKeyTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "hold_game_key"));
-        Check("native held key input is classified as mutating", Equals(Prop(holdKeyTool, "Mutating"), true));
         var ipcTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "call_plugin_ipc"));
         Check("IPC invocation is classified as mutating", Equals(Prop(ipcTool, "Mutating"), true));
         var windowTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "set_game_window_state"));
@@ -580,6 +565,15 @@ internal static class Program
                     addonTextSchema.GetProperty("maxTextLength").GetProperty("maximum").GetInt32() == 4096);
                 Check("independent screenshot capture is advertised in tools/list",
                     toolsList.Any(t => t.GetProperty("name").GetString() == "capture") && toolsList.Any(t => t.GetProperty("name").GetString() == "capture_game_screenshot"));
+                var inputTarget = toolsList.Single(t => t.GetProperty("name").GetString() == "input")
+                    .GetProperty("inputSchema").GetProperty("properties").GetProperty("target").GetProperty("enum");
+                Check("even with mutations enabled the catalog exposes only plugin input and no game key tools",
+                    inputTarget.GetArrayLength() == 1 && inputTarget[0].GetString() == "plugin" &&
+                    !toolsList.Any(t => t.GetProperty("name").GetString() is "press_game_key" or "hold_game_key"));
+                var callbackTool = toolsList.Single(t => t.GetProperty("name").GetString() == "fire_addon_callback");
+                Check("native callback advertises a preflight and a bounded payload",
+                    callbackTool.GetProperty("inputSchema").GetProperty("properties").GetProperty("dryRun").GetProperty("type").GetString() == "boolean" &&
+                    callbackTool.GetProperty("inputSchema").GetProperty("properties").GetProperty("values").GetProperty("maxItems").GetInt32() == 32);
                 foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin", "get_agent_guidance" })
                     Check(name + " is advertised as read-only",
                         toolsList.Single(t => t.GetProperty("name").GetString() == name)
@@ -767,12 +761,43 @@ internal static class Program
                 Check($"screenshot arguments validate before GPU access with mutation gate {allowMutating}",
                     removedError && removedPayload?.Contains("maxDimension", StringComparison.OrdinalIgnoreCase) == true);
             }
-            var invalidGameKey = await CallAsync(http, baseUrl, sessionId,
-                JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 206, method = "tools/call",
-                    @params = new { name = "press_game_key", arguments = new { key = "NOT_A_KEY" } } })).ConfigureAwait(false);
-            var (invalidGameKeyPayload, invalidGameKeyError) = UnwrapToolResult(invalidGameKey);
-            Check("native game key input rejects unknown names before client or native access",
-                invalidGameKeyError && invalidGameKeyPayload?.Contains("unknown native key", StringComparison.Ordinal) == true);
+            foreach (var keyTool in new[] { "press_game_key", "hold_game_key" })
+            {
+                var removedKey = await CallAsync(http, baseUrl, sessionId,
+                    JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 206, method = "tools/call",
+                        @params = new { name = keyTool, arguments = new { key = "RETURN" } } })).ConfigureAwait(false);
+                var (keyReply, error) = UnwrapToolResult(removedKey);
+                Check($"removed game input tool {keyTool} cannot be invoked from a cached catalog",
+                    error && keyReply?.Contains("Unknown tool: " + keyTool, StringComparison.Ordinal) == true);
+            }
+            foreach (var gameAction in new[] { "key", "click" })
+            {
+                var oldBatch = await CallAsync(http, baseUrl, sessionId,
+                    JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 206, method = "tools/call",
+                        @params = new { name = "input", arguments = new { action = "Play", target = "game", screenshot = "stale",
+                            actions = new[] { new { action = gameAction, key = "RETURN", x = 100, y = 100 } } } } })).ConfigureAwait(false);
+                var (batchReply, error) = UnwrapToolResult(oldBatch);
+                Check($"legacy game {gameAction} batch is refused before screenshot mapping with a callback migration hint",
+                    error && batchReply?.Contains("fire_addon_callback", StringComparison.Ordinal) == true);
+            }
+            foreach (var (arguments, field) in new (object, string)[]
+            {
+                (new { values = new[] { "1" } }, "values"),
+                (new { values = new[] { 1L << 32 } }, "values[0]"),
+                (new { values = new int[33] }, "values"),
+                (new { values = new[] { 1 }, types = new[] { "int", "uint" } }, "types"),
+                (new { values = new[] { 1 }, types = new[] { "string" }, strings = new[] { "invalid\0text" } }, "strings[0]"),
+                (new { dryRun = "true" }, "dryRun"),
+                (new { addonId = -1 }, "addonId"),
+            })
+            {
+                var callback = await CallAsync(http, baseUrl, sessionId,
+                    JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 206, method = "tools/call",
+                        @params = new { name = "fire_addon_callback", arguments } })).ConfigureAwait(false);
+                var (invalidReply, error) = UnwrapToolResult(callback);
+                Check($"invalid callback {field} is refused before native access",
+                    error && invalidReply?.Contains(field, StringComparison.Ordinal) == true);
+            }
             Set(config, "AllowMutatingTools", false);
             try
             {
@@ -810,12 +835,12 @@ internal static class Program
                 var (numericPayload, numericError) = UnwrapToolResult(disabledNumeric);
                 Check("closed mutation gate refuses numeric editing including dry runs before native access",
                     numericError && numericPayload?.Contains("changes game state and is disabled", StringComparison.Ordinal) == true);
-                var disabledGameKey = await CallAsync(http, baseUrl, sessionId,
+                var disabledCallback = await CallAsync(http, baseUrl, sessionId,
                     JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 207, method = "tools/call",
-                        @params = new { name = "hold_game_key", arguments = new { key = "W", dryRun = true } } })).ConfigureAwait(false);
-                var (gameKeyPayload, gameKeyError) = UnwrapToolResult(disabledGameKey);
-                Check("closed mutation gate refuses game key input including dry runs before client access",
-                    gameKeyError && gameKeyPayload?.Contains("changes game state and is disabled", StringComparison.Ordinal) == true);
+                        @params = new { name = "fire_addon_callback", arguments = new { addon = "SelectString", dryRun = true } } })).ConfigureAwait(false);
+                var (callbackPayload, callbackError) = UnwrapToolResult(disabledCallback);
+                Check("closed mutation gate refuses callback requests including dry runs before native access",
+                    callbackError && callbackPayload?.Contains("changes game state and is disabled", StringComparison.Ordinal) == true);
             }
             finally { Set(config, "AllowMutatingTools", true); }
             var eventHub = pluginType.GetField("eventHub", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(plugin)!;

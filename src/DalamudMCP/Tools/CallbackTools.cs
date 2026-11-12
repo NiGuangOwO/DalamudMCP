@@ -19,9 +19,8 @@ namespace DalamudMCP.Tools;
 /// Semantic addon callbacks and duty finder agent control.
 ///
 /// <para>
-/// Unlike <see cref="UiTools"/>, which emulates the mouse/keyboard level a shortcut would produce,
-/// this set calls the game's own higher level entry points directly: the <c>AtkUnitBase.FireCallback</c>
-/// virtual with a caller supplied <c>AtkValue</c> payload, and the <c>AgentContentsFinder</c> methods
+/// This set calls the game's higher level entry points directly: <c>AtkUnitBase.FireCallback</c>
+/// with a caller supplied <c>AtkValue</c> payload, and the <c>AgentContentsFinder</c> methods
 /// the native UI itself uses when a player clicks through the duty finder.
 /// </para>
 /// <para>
@@ -32,19 +31,30 @@ namespace DalamudMCP.Tools;
 /// </summary>
 internal static class CallbackTools
 {
+    private const int MaxCallbackValues = 32;
+    private const int MaxCallbackStringBytes = 1024;
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+
     public static void Register(ToolRegistry registry, GameServices svc)
     {
+        var callbackSchema = Json.Schema(
+            ("addon", "string", "Exact loaded name from list_loaded_addons; alternatively supply addonId.", false),
+            ("addonId", "integer", "Observed loaded addon ID. If addon is also supplied, both must match.", false),
+            ("values", "array of integer", "Observed callback payload, up to 32 signed 32-bit integers. Defaults to empty.", false),
+            ("types", "array of string", "Optional per-value types: int (default), uint, bool, float, string. If nonempty, same length as values.", false),
+            ("strings", "array of string", "Optional string entries, up to 1024 UTF-8 bytes each. If nonempty, same length as values.", false),
+            ("close", "boolean", "Native callback update-state flag (default false); use the observed contract.", false),
+            ("dryRun", "boolean", "Validate exact visible addon and describe the supplied payload without dispatching.", false));
+        foreach (var key in new[] { "values", "types", "strings" })
+            callbackSchema["properties"]![key]!["maxItems"] = MaxCallbackValues;
         registry.Add(
             "fire_addon_callback",
-            "Fire an addon callback with a crafted payload",
-            "Fires the addon's own callback virtual (AtkUnitBase.FireCallback) with an explicit AtkValue payload, the same call the native UI makes when a player activates a widget. Use this only when no click path exists: unlike click_addon_element it can express semantic callbacks such as \"unselect\" or \"join\" that the addon dispatches on the callback number rather than on the clicked node.",
-            Json.Schema(
-                ("addon", "string", "Name of the loaded addon, for example ContentsFinder.", true),
-                ("addonId", "integer", "Raw addon id, used instead of addon when the name is ambiguous.", false),
-                ("values", "array of integer", "Callback payload. Almost every addon treats values[0] as the callback number and the rest as parameters. Values are written as 32 bit integers unless types says otherwise. Defaults to an empty payload.", false),
-                ("types", "array of string", "Optional per value type override, same length as values. Each entry is one of int, uint, bool, float, string. Defaults to int for every value.", false),
-                ("strings", "array of string", "Optional per value string override, same length as values. When a value's type is string the matching entry here is used as its contents. Defaults to the empty string.", false),
-                ("close", "boolean", "Pass true to let the addon close itself after handling the callback. Defaults to false.", false)),
+            "Dispatch a verified native addon callback",
+            "Calls AtkUnitBase.FireCallback on one exact visible, ready addon using a known AtkValue contract. Prefer a typed adapter if available. " +
+            "Discover the exact addon name and ID, and obtain the callback payload from an observed or documented contract. " +
+            "dryRun validates target, payload shape and the SDK entry point; it cannot infer or certify the addon's callback semantics. " +
+            "Do not guess callback numbers or use virtual keys if no adapter exists. Read resulting UI state after dispatch.",
+            callbackSchema,
             args => FireAddonCallback(args),
             mutating: true);
 
@@ -92,115 +102,98 @@ internal static class CallbackTools
 
     private static unsafe object FireAddonCallback(JObject args)
     {
-        var addonName = args["addon"]?.Value<string>();
-        var unit = UiTools.ResolveAddon(addonName, args["addonId"]);
-        if (unit is null)
-        {
-            return Json.ToolError(
-                $"no loaded addon named '{addonName}' was found; open it with open_addon first, or pass the addon's raw addonId.");
-        }
+        var dryRun = CheckboxTools.StrictBoolean(args, "dryRun", false);
+        var close = CheckboxTools.StrictBoolean(args, "close", false);
+        var values = ReadCallbackArray(args, "values", JTokenType.Integer);
+        var types = ReadCallbackArray(args, "types", JTokenType.String);
+        var strings = ReadCallbackArray(args, "strings", JTokenType.String);
+        if (types.Count != 0 && types.Count != values.Count)
+            throw new ToolException("types must have the same length as values");
+        if (strings.Count != 0 && strings.Count != values.Count)
+            throw new ToolException("strings must have the same length as values");
 
-        var name = unit->NameString;
-        if (!unit->IsReady)
-        {
-            return Json.ToolError($"addon '{name}' is not ready yet");
-        }
-
-        var values = ReadIntArray(args["values"]);
-        var types = ReadStringArray(args["types"]);
-        var strings = ReadStringArray(args["strings"]);
-        var close = args["close"]?.Value<bool>() ?? false;
-
-        if (values.Length > 32)
-        {
-            return Json.ToolError($"at most 32 callback values are supported; got {values.Length}");
-        }
-
-        if (types.Length > 0 && types.Length != values.Length)
-        {
-            return Json.ToolError($"types has {types.Length} entries but values has {values.Length}; they must match");
-        }
-
-        if (strings.Length > 0 && strings.Length != values.Length)
-        {
-            return Json.ToolError($"strings has {strings.Length} entries but values has {values.Length}; they must match");
-        }
-
-        var payload = new AtkValue[values.Length];
+        var payload = new AtkValue[values.Count];
+        var managedStrings = new string?[values.Count];
         var described = new JArray();
 
-        for (var i = 0; i < values.Length; i++)
+        for (var i = 0; i < values.Count; i++)
         {
-            var requested = types.Length > 0 ? types[i] : "int";
-            var text = strings.Length > 0 ? strings[i] : string.Empty;
+            if (!int.TryParse(values[i].ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+                throw new ToolException($"values[{i}] must be a signed 32-bit integer");
+            var requested = types.Count > 0 ? types[i].Value<string>()! : "int";
+            var text = strings.Count > 0 ? strings[i].Value<string>()! : string.Empty;
 
             switch (requested.ToLowerInvariant())
             {
                 case "int":
                     payload[i].Type = AtkValueType.Int;
-                    payload[i].Int = values[i];
-                    described.Add(new JObject { ["type"] = "int", ["value"] = values[i] });
+                    payload[i].Int = number;
+                    described.Add(new JObject { ["type"] = "int", ["value"] = number });
                     break;
 
                 case "uint":
                     payload[i].Type = AtkValueType.UInt;
-                    payload[i].UInt = unchecked((uint)values[i]);
-                    described.Add(new JObject { ["type"] = "uint", ["value"] = unchecked((uint)values[i]) });
+                    payload[i].UInt = unchecked((uint)number);
+                    described.Add(new JObject { ["type"] = "uint", ["value"] = payload[i].UInt });
                     break;
 
                 case "bool":
                     payload[i].Type = AtkValueType.Bool;
-                    payload[i].Byte = values[i] == 0 ? (byte)0 : (byte)1;
-                    described.Add(new JObject { ["type"] = "bool", ["value"] = values[i] != 0 });
+                    payload[i].Byte = number == 0 ? (byte)0 : (byte)1;
+                    described.Add(new JObject { ["type"] = "bool", ["value"] = number != 0 });
                     break;
 
                 case "float":
                     payload[i].Type = AtkValueType.Float;
-                    payload[i].Float = values[i];
-                    described.Add(new JObject { ["type"] = "float", ["value"] = (float)values[i] });
+                    payload[i].Float = number;
+                    described.Add(new JObject { ["type"] = "float", ["value"] = payload[i].Float });
                     break;
 
                 case "string":
-                    payload[i].SetManagedString(text);
+                    ValidateCallbackString(text, i);
+                    managedStrings[i] = text;
                     described.Add(new JObject { ["type"] = "string", ["value"] = text });
                     break;
 
                 default:
-                    return Json.ToolError(
-                        $"unknown type '{requested}' at index {i}; use int, uint, bool, float or string");
+                    throw new ToolException($"types[{i}] must be int, uint, bool, float or string");
             }
         }
 
-        var accepted = false;
-        string? failure = null;
-
-        try
+        var unit = UiTools.ResolveObservedAddon(args);
+        if (MemoryProbe.Query((ulong)(nint)AtkUnitBase.MemberFunctionPointers.FireCallback)?.Executable != true)
+            throw new ToolException("native addon FireCallback entry point is unavailable");
+        // The callback can close the addon; do not dereference its pointer after dispatch.
+        var result = new JObject
         {
-            fixed (AtkValue* first = payload)
-            {
-                accepted = unit->FireCallback((uint)payload.Length, payload.Length == 0 ? null : first, close);
-            }
-        }
-        catch (Exception ex)
-        {
-            failure = ex.GetType().Name + ": " + ex.Message;
-        }
-
-        if (failure is not null)
-        {
-            return Json.ToolError($"firing the callback on addon '{name}' failed: {failure}");
-        }
-
-        return new JObject
-        {
-            ["addon"] = name,
+            ["addon"] = unit->NameString,
             ["addonId"] = unit->Id,
             ["valueCount"] = payload.Length,
             ["values"] = described,
             ["close"] = close,
-            ["fired"] = true,
-            ["callbackAccepted"] = accepted,
+            ["dryRun"] = dryRun,
+            ["fired"] = false,
+            ["callbackAccepted"] = JValue.CreateNull(),
+            ["outcomeVerified"] = false,
         };
+        if (dryRun) return result;
+
+        try
+        {
+            for (var i = 0; i < managedStrings.Length; i++)
+                if (managedStrings[i] is { } text)
+                    payload[i].SetManagedString(text);
+            fixed (AtkValue* first = payload)
+                result["callbackAccepted"] = unit->FireCallback((uint)payload.Length, first, close);
+            result["fired"] = true;
+            return result;
+        }
+        finally
+        {
+            for (var i = 0; i < managedStrings.Length; i++)
+                if (payload[i].Type == AtkValueType.ManagedString)
+                    payload[i].ReleaseManagedMemory();
+        }
     }
 
     private static unsafe object ContentsFinderState()
@@ -586,25 +579,21 @@ internal static class CallbackTools
         return null;
     }
 
-    private static int[] ReadIntArray(JToken? token)
+    private static JArray ReadCallbackArray(JObject args, string name, JTokenType itemType)
     {
-        return token switch
-        {
-            null => Array.Empty<int>(),
-            JArray array => array.Select(t => t.Value<int>()).ToArray(),
-            JObject => Array.Empty<int>(),
-            _ => new[] { token.Value<int>() },
-        };
+        if (args[name] == null) return new JArray();
+        if (args[name] is not JArray array || array.Count > MaxCallbackValues || array.Any(value => value.Type != itemType))
+            throw new ToolException($"{name} must be an array of at most {MaxCallbackValues} {itemType.ToString().ToLowerInvariant()} values");
+        return array;
     }
 
-    private static string[] ReadStringArray(JToken? token)
+    private static void ValidateCallbackString(string text, int index)
     {
-        return token switch
+        try
         {
-            null => Array.Empty<string>(),
-            JArray array => array.Select(t => t.Value<string>() ?? string.Empty).ToArray(),
-            JObject => Array.Empty<string>(),
-            _ => new[] { token.Value<string>() ?? string.Empty },
-        };
+            if (!text.Contains('\0') && StrictUtf8.GetByteCount(text) <= MaxCallbackStringBytes) return;
+        }
+        catch (EncoderFallbackException) { }
+        throw new ToolException($"strings[{index}] must be valid NUL-free UTF-8 of at most {MaxCallbackStringBytes} bytes");
     }
 }

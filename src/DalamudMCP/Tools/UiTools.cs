@@ -247,19 +247,18 @@ internal static class UiTools
         registry.AddAsync(
             "select_addon_menu_item",
             "Select an item in an addon (UI window) menu",
-            "Selects a menu entry by normalized label or index. SelectString and SelectIconString read their guarded native popup " +
-            "entries and send ListItemClick through the list; index is the zero-based menu ordinal, " +
-            "NOT the label's AtkValue index. Use dryRun to inspect indexKind and the selected entry. " +
+            "Selects an entry in SelectString or SelectIconString by normalized label or zero-based menu ordinal. " +
+            "Reads guarded native popup entries and sends ListItemClick through the list. Use dryRun to inspect the selected entry. " +
             "SelectIconString may wait up to four framework ticks for selection layout to settle before clicking. " +
-            "Other addons retain legacy AtkValue-index callback behavior and require a known callback contract. " +
+            "Other layouts require their own native adapter or an observed fire_addon_callback contract; AtkValue indices are not menu ordinals. " +
             "Ambiguous labels are refused even with containsMatch. A dispatched input is not proof of transition. This is a " +
             "mutating tool: it is hidden from tools/list and refused by tools/call while the " +
             "plugin's allow-mutating-tools switch is off.",
             Json.Schema(
-                ("addon", "string", "Addon name whose menu to select from", false),
-                ("addonId", "integer", "Raw AtkUnitBase id (overrides addon)", false),
+                ("addon", "string", "Exact loaded SelectString or SelectIconString name; alternatively supply addonId", false),
+                ("addonId", "integer", "Observed loaded addon ID; if addon is also supplied both must match", false),
                 ("label", "string", "Menu entry label to select (required unless index is given)", false),
-                ("index", "integer", "SelectString/SelectIconString: zero-based menu ordinal; other addons: legacy AtkValue index", false),
+                ("index", "integer", "Zero-based menu ordinal from the native popup", false),
                 ("containsMatch", "boolean", "Match labels by substring instead of exact (default false)", false),
                 ("dryRun", "boolean", "Report the entry that would be selected without activating it", false)),
             args => SelectAddonMenuItemAsync(svc, args, inputLifetime),
@@ -1250,49 +1249,18 @@ internal static class UiTools
 
     private static unsafe object SelectAddonMenuItem(JObject args)
     {
-        var unit = ResolveAddon(args["addon"]?.Value<string>(), args["addonId"]);
-        if (unit is null)
-            return Json.ToolError("no addon resolved; pass 'addon' or 'addonId'");
-
-        if (!unit->IsReady)
-            return Json.ToolError($"addon '{unit->NameString}' is not ready yet");
-
+        var unit = ResolveObservedAddon(args);
         var name = unit->NameString;
+        if (name is not ("SelectString" or "SelectIconString"))
+            throw new ToolException($"addon '{name}' has no popup adapter; inspect its native controls or use a verified fire_addon_callback contract. Add an adapter if the action is unsupported.");
         var addonId = (int)unit->Id;
         var iconMenu = name == "SelectIconString";
-        var nativeMenu = name == "SelectString" || iconMenu;
-        if (iconMenu && !unit->IsVisible)
-            throw new ToolException("SelectIconString is hidden");
-        var values = nativeMenu ? default : unit->AtkValuesSpan;
-        var candidates = new List<(int Index, string Label)>();
-        nint nativeList = 0;
         nint popupListener = 0;
-        if (iconMenu)
-            candidates = ReadSelectIconStringEntries(unit, out nativeList, out popupListener);
-        else if (nativeMenu)
-            candidates = ReadSelectStringEntries(unit, out nativeList);
-        for (var i = 0; !nativeMenu && i < values.Length; i++)
-        {
-            AtkValue* value = null;
-            try
-            {
-                fixed (AtkValue* p = &values[i]) value = p;
-                if (!IsStringValue(value->Type)) continue;
-                var entryLabel = DecodeAddonValue(value);
-                if (string.IsNullOrWhiteSpace(entryLabel)) continue;
-                candidates.Add((i, NormalizeMenuLabel(entryLabel)));
-            }
-            catch
-            {
-                // Skip unreadable values; the menu may still be selectable by index.
-            }
-        }
-
+        var candidates = iconMenu
+            ? ReadSelectIconStringEntries(unit, out var nativeList, out popupListener)
+            : ReadSelectStringEntries(unit, out nativeList);
         if (candidates.Count == 0)
-        {
-            return Json.ToolError($"addon '{unit->NameString}' carries no string entries in its " +
-                                  "value table, so no menu could be read from it");
-        }
+            throw new ToolException($"addon '{name}' has no popup entries");
 
         var indexArg = args["index"];
         var label = args["label"]?.Value<string>();
@@ -1303,13 +1271,9 @@ internal static class UiTools
         if (indexArg is not null && indexArg.Type != JTokenType.Null)
         {
             var index = indexArg.Value<int>();
-            if (index < 0 || index >= (nativeMenu ? candidates.Count : values.Length))
-                throw new ToolException(nativeMenu
-                    ? $"menu index {index} must be between 0 and {candidates.Count - 1}"
-                    : $"index {index} is outside the addon's value table (0-{values.Length - 1})");
-
-            var hit = candidates.FirstOrDefault(c => c.Index == index);
-            selected = hit.Label is null ? (index, string.Empty) : hit;
+            if (index < 0 || index >= candidates.Count)
+                throw new ToolException($"menu index {index} must be between 0 and {candidates.Count - 1}");
+            selected = candidates[index];
         }
         else
         {
@@ -1346,34 +1310,20 @@ internal static class UiTools
                 ["addon"] = name,
                 ["addonId"] = addonId,
                 ["index"] = selected.Index,
-                ["indexKind"] = nativeMenu ? "menuOrdinal" : "atkValueIndex",
+                ["indexKind"] = "menuOrdinal",
                 ["label"] = selected.Label,
                 ["dryRun"] = true,
                 ["selected"] = false,
             };
         }
 
-        // Popup entries, not the AtkValue title/metadata indices, define the selection.
-        if (nativeMenu)
-        {
-            var list = (AtkComponentList*)nativeList;
-            if (!iconMenu || list->SelectedItemIndex != selected.Index)
-                list->SelectItem(selected.Index, false);
-            if (iconMenu)
-                return CompleteIconMenuSelection(new((nint)unit, nativeList, popupListener, addonId, selected.Index, selected.Label));
-            list->DispatchItemEvent(selected.Index, AtkEventType.ListItemClick);
-            return PopupDispatched(name, addonId, selected.Index, selected.Label);
-        }
-        var fired = unit->FireCallbackInt(selected.Index);
-        return new JObject
-        {
-            ["addon"] = unit->NameString,
-            ["addonId"] = (int)unit->Id,
-            ["index"] = selected.Index,
-            ["label"] = selected.Label,
-            ["selected"] = true,
-            ["callbackAccepted"] = fired,
-        };
+        var list = (AtkComponentList*)nativeList;
+        if (!iconMenu || list->SelectedItemIndex != selected.Index)
+            list->SelectItem(selected.Index, false);
+        if (iconMenu)
+            return CompleteIconMenuSelection(new((nint)unit, nativeList, popupListener, addonId, selected.Index, selected.Label));
+        list->DispatchItemEvent(selected.Index, AtkEventType.ListItemClick);
+        return PopupDispatched(name, addonId, selected.Index, selected.Label);
     }
 
     private static unsafe object CompleteIconMenuSelection(IconMenuSelection selected)
@@ -1486,6 +1436,42 @@ internal static class UiTools
     }
 
     // ---------------------------------------------------------------- node helpers
+
+    /// <summary>Resolve an exact, unique, visible addon on the framework thread before a native callback.</summary>
+    internal static unsafe AtkUnitBase* ResolveObservedAddon(JObject args)
+    {
+        var name = args["addon"]?.Type == JTokenType.String ? args.Value<string>("addon") : null;
+        if (args["addon"] != null && string.IsNullOrWhiteSpace(name))
+            throw new ToolException("addon must be an exact loaded name from list_loaded_addons");
+        ushort? id = null;
+        if (args["addonId"] is { } idArg)
+        {
+            if (idArg.Type != JTokenType.Integer || !ushort.TryParse(idArg.ToString(), out var parsed) || parsed == 0)
+                throw new ToolException("addonId must be a loaded addon ID from 1 to 65535");
+            id = parsed;
+        }
+        if (name is null && id is null)
+            throw new ToolException("provide an exact addon name or addonId from list_loaded_addons");
+
+        var manager = SafeRaptureAtkUnitManager();
+        if (manager is null)
+            throw new ToolException("native addon manager is unavailable");
+        var list = &manager->AllLoadedUnitsList;
+        var entries = list->Entries;
+        AtkUnitBase* match = null;
+        for (var i = 0; i < Math.Min((int)list->Count, entries.Length); i++)
+        {
+            var unit = entries[i].Value;
+            if (unit == null || unit == match || (id.HasValue && unit->Id != id.Value) ||
+                (name != null && unit->NameString != name)) continue;
+            if (match != null)
+                throw new ToolException("addon is ambiguous; provide both the exact name and observed addonId");
+            match = unit;
+        }
+        if (match == null || !match->IsReady || !match->IsVisible)
+            throw new ToolException("no visible, ready addon matches the exact name and/or addonId; rediscover it with list_loaded_addons");
+        return match;
+    }
 
     /// <summary>
     /// Resolves an AtkUnitBase either by allowlist name (through the agent layer's addon

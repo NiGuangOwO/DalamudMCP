@@ -727,7 +727,12 @@ public sealed class McpServer : IDisposable
                         "controls or geometry are needed. Use capture for visual pixels and same-frame cached crops, not ordinary native text. " +
                         "Independent runtime exploration uses service_list, object_access, ffcs_index/call, mem_read/write/scan and observe/evidence; " +
                         "discover exact member ids before invocation, respect bounded signatures and remove observers/release handles. " +
-                        "These tools do not use the DalamudCN MCP endpoint. input supports screenshot-relative plugin actions and foreground-only game HWND messages; dispatch is not outcome verification. " +
+                        "These tools do not use the DalamudCN MCP endpoint. input playback and imgui_* target Dear ImGui plugin UI only. " +
+                        "Operate native game UI only through verified game callbacks, registered native events or supported native UI APIs. " +
+                        "Use a typed adapter or fire_addon_callback with an observed contract, exact addon and dryRun first. " +
+                        "If a native addon action is unsupported, discover its contract and add an adapter. Never substitute virtual keys, " +
+                        "window messages, coordinate clicks, desktop automation, or input simulation through generic runtime tools. " +
+                        "Use dedicated movement/action tools for gameplay. Dispatch is not outcome verification. " +
                         "Copy nodeId/componentPath to clicks or node snapshots. " +
                         "Use set_addon_text_input for native TextInput fields " +
                         "and imgui_text for Dear ImGui; inspect actual text/exactMatch and verify search results separately. " +

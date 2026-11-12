@@ -26,11 +26,9 @@ Ambiguous labels are refused, including substring matches. Use the complete labe
 包含匹配出现多个候选项时也会拒绝操作，应使用完整标签或明确的选项编号。
 `selected` 和 `inputDispatched` 仅表示已派发输入；需读取后续界面或游戏状态确认结果。
 
-Other addons retain legacy `AtkValue`-index callback behavior for compatibility. This does not establish a valid selection contract for arbitrary windows.
-Raw callbacks require a known addon-specific contract; do not derive callback arguments from text positions alone.
+Other layouts are refused. Discover a supported native control or add an adapter based on the observed event/callback contract. `fire_addon_callback` supports a preflight for known contracts; do not derive callback arguments from text positions alone.
 
-其他 addon 保留旧版按 `AtkValue` 索引提交回调的兼容行为，不表示任意窗口均适用。
-原始回调必须有明确的窗口参数约定，不能仅根据文本位置推测。
+其他布局会被拒绝。应定位受支持的原生控件，或按实际观察到的事件和回调契约补充适配。已确认的回调可用 `fire_addon_callback` 预检；不能仅根据文本位置推测参数。
 
 The `click_addon_element` list-index shortcut now searches the bounded ULD node array instead of child/sibling links.
 Negative/out-of-range indices, unreadable arrays and ambiguous lists are refused.

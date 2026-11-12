@@ -14,7 +14,7 @@ This page groups principal tools and summarizes their arguments. The running ser
 | Agent guidance | `get_agent_guidance` | Read the running build's bundled skill and synchronization materials. See [skill synchronization](agent-guidance.md). |
 | Services and native structs | `service_list`, `object_access`, `ffcs_index`, `ffcs_call` | Discover constructed services, managed members and SDK native wrappers; all `object_access` actions require mutation access. |
 | Memory and observations | `mem_read`, `mem_write`, `mem_scan`, `observe`, `evidence` | Bounded reads/writes, scans and finite observations; clean up observers and references. |
-| Screenshots and input | `capture`, `capture_game_screenshot`, `input` | Game render-target capture, cached crops and structured input; prefer `read_addon_text` for native text. |
+| Screenshots and input | `capture`, `capture_game_screenshot`, `input` | Game render-target capture, cached crops and structured Dear ImGui input; prefer `read_addon_text` for native text. |
 | Data and runtime state | `data`, `control`, `trace` | Game-data routing, thread/state inspection and recent operation summaries. |
 
 See [independent runtime tools](runtime-explorer.md) for arguments, permissions, budgets and validation limits.
@@ -28,7 +28,7 @@ Use `set_addon_checkbox` for native checkbox state. See [checkbox behavior and v
 Use `set_addon_text_input` for native text fields; `imgui_text` targets Dear ImGui. See [native text input and live validation](native-text-input.md).
 Use `open_addon_context_menu` for an observed carried-bag DragDrop control and `get_inventory_context` to verify the real target item. See [inventory context menus](inventory-context-menu.md).
 Use `set_addon_numeric_input` for bounded native number edits with actual Min/Max and value readback. It does not confirm a quantity dialog. See [numeric inputs](native-numeric-input.md).
-Use `press_game_key` for one-shot native game keys and `hold_game_key` for bounded continuous movement. See [native game key input](native-key-input.md).
+Operate native game UI through a verified callback, registered native event, or supported UI API. See [native UI input and migration](native-key-input.md).
 Use `get_map_state` to distinguish current/selected maps and page static markers; raw marker coordinates must not be used for movement. See [map state](map-state.md).
 Use `get_addon_dropdown`, `set_addon_dropdown_open`, then `select_addon_dropdown_item` for observed native dropdowns; wait for settled open state and verify the actual addon result. See [native dropdowns](native-dropdown.md).
 Use `get_addon_list_row` and `activate_addon_list_row` for guarded List/TreeList renderer activation with actual indices and text. Wait for the business outcome before repeating. See [native list rows](native-list-rows.md).
@@ -134,7 +134,8 @@ Original handler addresses for static analysis are available through `get_addon_
 | `list_addon_elements` | Searches any loaded addon's nodes before applying the result limit. Use `detail=compact` for ordinary lookup; full detail preserves geometry. Returns exact `componentPath` scopes. See [addon queries](addon-queries.md). | `addon` or `addonId`, `label`, `containsMatch`, `componentType`, `visibleOnly`, `enabledOnly`, `clickableOnly`, `detail`, `allNodes`, `maxDepth` (12), `maxNodes` (100) |
 | `click_addon_element` | Dispatches an Atk UI event through `ReceiveEvent`. Supports `click`, `doubleClick`, `buttonClick`, `buttonPress`, `buttonRelease` and `registered`. Behavior depends on the target node and listener. | `addon` or `addonId`, `nodeId` or `index`, `event`, `param` (advanced override) |
 | `read_addon_text` | Preferred read-only path for native UI text. Combines visible Text/Button/List labels with string-valued `AtkValue` entries, keeps `nodeId`/`componentPath`, filters literally and explicitly reports truncation. Use this to read native UI text. See [addon text reads](addon-text.md). | `addon` or `addonId`, `contains`, `visibleOnly` (default true), `includeNodeText`, `includeAtkValues`, `maxNodeTexts` (100), `maxValueTexts` (100), `maxTextLength` (512), `maxDepth` (12) |
-| `select_addon_menu_item` | Selects by label or index. `SelectString` and `SelectIconString` use SDK popup ordinals and list events; other windows require an established callback contract. See [menu selection](menu-selection.md). | `addon` or `addonId`, `label` or `index`, `containsMatch`, `dryRun` |
+| `select_addon_menu_item` | Selects in `SelectString` and `SelectIconString` by label or zero-based popup ordinal using native list events. Other layouts require their own adapter. See [menu selection](menu-selection.md). | exact `addon` or `addonId`, `label` or `index`, `containsMatch`, `dryRun` |
+| `fire_addon_callback` | Dispatches an observed `AtkValue` contract on an exact visible, ready addon. `dryRun` validates the target and payload shape without dispatch; it does not establish the contract. | exact `addon`, `addonId` (both must match if provided), `values`, `types`, `strings`, `close`, `dryRun` |
 | `probe_receive_event_enable` | Installs a `ReceiveEvent` vtable probe on a loaded addon and records events before forwarding. Use the dump tool to compare user input with synthetic events. | `addon` or `addonId` |
 | `probe_receive_event_enable_listener` | Installs an event probe on the specified node's first registered listener for component-level input analysis. | `addon` or `addonId`, `nodeId` (required) |
 | `probe_receive_event_disable` | Restores the hooked vtable slot. | none |
@@ -195,8 +196,6 @@ See [ImGui input, cancellation and limits](imgui-input.md).
 | `jump` | Jumps. | none |
 | `toggle_autorun` | Toggles auto-run. | none |
 | `face_target` | Turns the character toward the current target. | none |
-| `press_game_key` | Posts bounded key-down/key-up messages only to the verified game window, never to the system input stream. Focus loss stops further input; cleanup attempts to release the key. The window must be foreground unless `activateWindow` is requested. See [native key input](native-key-input.md). | `key` (required, exact `SeVirtualKey` name), `repeat` (1-8), `intervalFrames` (1-30), `expectedTerritoryId`, `activateWindow`, `dryRun` |
-| `hold_game_key` | Sends a bounded Win32 key-down/hold/key-up sequence for continuous movement. Key-up is attempted in a cleanup path on timeout or failure. | `key` (required), `durationMs` (50-2000, default 250), `expectedTerritoryId`, `activateWindow`, `dryRun` |
 
 These character-control tools are mutating and hidden until `AllowMutatingTools` is on. The general-action tools
 (`use_general_action`, `toggle_sprint`, `jump`, `toggle_autorun`, `dismount`, `accept_raise`) report the

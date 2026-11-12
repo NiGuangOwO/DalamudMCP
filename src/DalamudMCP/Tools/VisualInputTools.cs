@@ -57,19 +57,20 @@ internal static class VisualInputTools
             ["x"]=new JObject{["type"]="number"},["y"]=new JObject{["type"]="number"},["endX"]=new JObject{["type"]="number"},["endY"]=new JObject{["type"]="number"},
             ["button"]=new JObject{["type"]="integer",["minimum"]=0,["maximum"]=2},["frames"]=new JObject{["type"]="integer",["minimum"]=2,["maximum"]=120},
             ["key"]=new JObject{["type"]="string"},["ctrl"]=new JObject{["type"]="boolean"},["shift"]=new JObject{["type"]="boolean"},["alt"]=new JObject{["type"]="boolean"},["text"]=new JObject{["type"]="string"},["wheel"]=new JObject{["type"]="number"}},["required"]=new JArray("action")}};
-        var schema=Json.SchemaWithEnum("action",new[]{"Play","Command"},"Operation",true,("target","string","plugin (default) or game (foreground HWND messages)",false),("screenshot","string","Optional capture reference for image-pixel coordinates; at most 15 seconds old",false),("actions","array","Structured actions",false),("command","string","Exact discovered slash command",false),("expectedWindow","string","Exact observed plugin window guard",false));
+        var schema=Json.SchemaWithEnum("action",new[]{"Play","Command"},"Operation",true,("target","string","Dear ImGui plugin UI only; defaults to plugin",false),("screenshot","string","Optional capture reference for image-pixel coordinates; at most 15 seconds old",false),("actions","array","Structured Dear ImGui actions",false),("command","string","Exact discovered slash command",false),("expectedWindow","string","Exact observed plugin window guard",false));
         ((JObject)schema["properties"]!)["actions"]=actionSchema;
-        registry.AddAsync("input","Play structured input","Independent plugin/game input: move/click/double_click/drag/scroll/key/text/wait (text is plugin-only). Plugin uses owned frame-based virtual input. Game uses foreground-only HWND messages; it never focuses the game, and some game controls may ignore these messages. No global cursor movement. Human pointer activity cancels. Screenshot coordinates are mapped; stale/resized viewports are refused. Completion proves dispatch only; inspect resulting state.",schema,async args=>
+        schema["properties"]!["target"]!["enum"] = new JArray("plugin");
+        registry.AddAsync("input","Play structured plugin input","Dear ImGui only: move/click/double_click/drag/scroll/key/text/wait use owned frame-based input. Human input preempts playback. Screenshot coordinates are mapped; stale/resized viewports are refused. Command runs an exact discovered slash command. Native game UI requires a game callback or a supported native UI operation. Discover the addon and add a verified adapter for missing actions. Completion proves dispatch only; inspect resulting state.",schema,async args=>
         {
             lifetime.ThrowIfCancellationRequested();
+            if (args["target"] is { } target && (target.Type != JTokenType.String || target.Value<string>() != "plugin"))
+                throw new ToolException("input only targets Dear ImGui (target=plugin). For native game UI, discover the addon with list_loaded_addons and use a supported native operation or a verified fire_addon_callback contract. Add an adapter if the action is unsupported.");
             if(args.Value<string>("action")=="Command")
             {
                 var cmd=args.Value<string>("command")??throw new ToolException("command required");
                 return await svc.Framework.RunOnFrameworkThread(()=>registry.Find("slash_command")!.Handler!(new JObject{["command"]=cmd})).ConfigureAwait(false);
             }
             if(args.Value<string>("action")!="Play")throw new ToolException("Unknown input action");
-            var target=args.Value<string>("target")??"plugin";
-            if(target is not ("plugin" or "game"))throw new ToolException("target must be plugin or game");
             if(args["actions"] is not JArray actions||actions.Count is <1 or >32||actions.Any(a=>a is not JObject))throw new ToolException("actions must contain 1..32 objects");
             var copy=(JArray)actions.DeepClone();
             if(args.Value<string>("screenshot") is {} id)
@@ -82,11 +83,11 @@ internal static class VisualInputTools
                     if(step[pair.Item1] is null||step[pair.Item2] is null)throw new ToolException("Both coordinates are required");
                     var x=step.Value<double>(pair.Item1);var y=step.Value<double>(pair.Item2);
                     if(!double.IsFinite(x)||!double.IsFinite(y)||x<0||x>=frame.Width||y<0||y>=frame.Height)throw new ToolException("Input lies outside referenced screenshot");
-                    step[pair.Item1]=(target=="plugin"?frame.ViewportX:0)+(frame.X+x*frame.ExtentWidth/frame.Width)/frame.SourceWidth*frame.ViewportWidth;
-                    step[pair.Item2]=(target=="plugin"?frame.ViewportY:0)+(frame.Y+y*frame.ExtentHeight/frame.Height)/frame.SourceHeight*frame.ViewportHeight;
+                    step[pair.Item1]=frame.ViewportX+(frame.X+x*frame.ExtentWidth/frame.Width)/frame.SourceWidth*frame.ViewportWidth;
+                    step[pair.Item2]=frame.ViewportY+(frame.Y+y*frame.ExtentHeight/frame.Height)/frame.SourceHeight*frame.ViewportHeight;
                 }
             }
-            return target=="game"?await GameMouseBatch.PlayAsync(registry,svc,copy,lifetime).ConfigureAwait(false):await ImGuiInputTools.PlayBatchAsync(copy,args.Value<string>("expectedWindow")).ConfigureAwait(false);
+            return await ImGuiInputTools.PlayBatchAsync(copy,args.Value<string>("expectedWindow")).ConfigureAwait(false);
         },true);
     }
     // Only decodes PNGs emitted by ScreenshotPixels: RGBA8, noninterlaced, Sub-filtered rows.

@@ -14,7 +14,7 @@
 | Agent 指引 | `get_agent_guidance` | 读取当前构建内置的 Skill 与同步材料。见[技能同步](agent-guidance.md)。 |
 | 服务与结构体发现 | `service_list`、`object_access`、`ffcs_index`、`ffcs_call` | 发现已构造服务、托管成员和 SDK 原生包装；`object_access` 整体受变更门控。 |
 | 内存与观察 | `mem_read`、`mem_write`、`mem_scan`、`observe`、`evidence` | 有界读写、扫描与有限时长观察；完成后清理观察点及引用。 |
-| 截图与输入 | `capture`、`capture_game_screenshot`、`input` | 游戏渲染目标截图、缓存裁剪与结构化输入；原生文字优先使用 `read_addon_text`。 |
+| 截图与输入 | `capture`、`capture_game_screenshot`、`input` | 游戏渲染目标截图、缓存裁剪与 Dear ImGui 结构化输入；原生文字优先使用 `read_addon_text`。 |
 | 数据与运行状态 | `data`、`control`、`trace` | 数据表入口、线程与状态查询，以及最近操作摘要。 |
 
 通用运行时工具的参数、权限、容量与验证范围见[独立运行时工具](runtime-explorer.md)。
@@ -28,6 +28,7 @@
 原生文本框使用 `set_addon_text_input`，支持中文、预检、旧文本及窗口 ID 校验，并返回实际保留的文本；搜索按钮需另行操作。`imgui_text` 面向 Dear ImGui。详见[原生文本输入及实测记录](native-text-input.md)。
 随身物品格的右键菜单使用 `open_addon_context_menu`，并通过只读 `get_inventory_context` 核对真实物品；不能从显示格子编号推测底层物品槽位。详见[背包物品菜单说明](inventory-context-menu.md)。
 数字控件使用 `set_addon_numeric_input`，读取动态上下限、校验旧值并返回实际数值，不自动确认数量弹窗。详见[原生数字输入说明](native-numeric-input.md)。
+操作原生游戏 UI 必须使用已确认的游戏回调、注册的原生事件或受支持的 UI 接口。详见[原生 UI 操作及迁移](native-key-input.md)。
 地图使用只读 `get_map_state` 区分当前/选中地图并分页读取静态图标；原生图标坐标不能直接用于移动。详见[地图状态说明](map-state.md)。
 原生下拉框通过 `get_addon_dropdown`、`set_addon_dropdown_open` 和 `select_addon_dropdown_item` 读取、展开和明确选择；需等待展开完成并核对实际业务结果。详见[原生下拉框说明](native-dropdown.md)。
 List/TreeList 行通过 `get_addon_list_row` 和 `activate_addon_list_row` 读取真实下标并校验文字后激活；需等待业务结果，避免重复操作。详见[原生列表行说明](native-list-rows.md)。
@@ -133,7 +134,8 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `list_addon_elements` | 在任意已加载 addon 中先筛选再限制结果数量。普通定位使用 `detail=compact`；完整模式保留几何信息。返回可精确定位的 `componentPath`。见 [addon 查询](addon-queries.md)。 | `addon` 或 `addonId`、`label`、`containsMatch`、`componentType`、`visibleOnly`、`enabledOnly`、`clickableOnly`、`detail`、`allNodes`、`maxDepth`（12）、`maxNodes`（100） |
 | `click_addon_element` | 通过 `ReceiveEvent` 派发 Atk UI 事件。支持 `click`、`doubleClick`、`buttonClick`、`buttonPress`、`buttonRelease` 和 `registered`；实际效果取决于目标节点及其监听器。 | `addon` 或 `addonId`、`nodeId` 或 `index`、`event`、`param`（高级覆盖） |
 | `read_addon_text` | 读取原生界面文字的首选只读工具。合并可见 Text/Button/List 标签与字符串型 `AtkValue`，保留 `nodeId`/`componentPath`，支持字面筛选并明确报告截断。使用此工具读取原生界面文字。见 [addon 文本读取](addon-text.md)。 | `addon` 或 `addonId`、`contains`、`visibleOnly`（默认 true）、`includeNodeText`、`includeAtkValues`、`maxNodeTexts`（100）、`maxValueTexts`（100）、`maxTextLength`（512）、`maxDepth`（12） |
-| `select_addon_menu_item` | 按标签或索引选择；`SelectString` 与 `SelectIconString` 使用 SDK 菜单序号及列表事件，其它窗口仍须已知回调约定。详见[菜单选择](menu-selection.md)。 | `addon` 或 `addonId`、`label` 或 `index`、`containsMatch`、`dryRun` |
+| `select_addon_menu_item` | 在 `SelectString` 和 `SelectIconString` 中按标签或从零开始的菜单序号派发原生列表事件。其他布局需要自己的适配。详见[菜单选择](menu-selection.md)。 | 精确 `addon` 或 `addonId`、`label` 或 `index`、`containsMatch`、`dryRun` |
+| `fire_addon_callback` | 向精确匹配、可见且已就绪的 addon 派发已确认的 `AtkValue` 回调。`dryRun` 只校验目标与参数格式，不证明参数语义。 | 精确 `addon`、`addonId`（同时提供时须一致）、`values`、`types`、`strings`、`close`、`dryRun` |
 | `probe_receive_event_enable` | 安装已加载 addon 的 `ReceiveEvent` 虚函数表探针，记录转发前的界面事件。配合 `probe_receive_event_dump` 比较用户输入与合成事件。 | `addon` 或 `addonId` |
 | `probe_receive_event_enable_listener` | 对指定节点的首个已注册监听器安装事件探针，用于分析组件级输入。 | `addon` 或 `addonId`、`nodeId`（必填） |
 | `probe_receive_event_disable` | 移除事件探针并恢复虚函数表入口。 | 无 |
@@ -194,8 +196,6 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `jump` | 跳跃。 | 无 |
 | `toggle_autorun` | 切换自动奔跑。 | 无 |
 | `face_target` | 面向当前目标。 | 无 |
-| `press_game_key` | 向已验证的游戏窗口发送有界按下/释放消息，不使用全局输入；失焦后停止后续输入并尝试清理按键。窗口须在前台，除非显式请求 `activateWindow`。见[原生按键](native-key-input.md)。 | `key`（精确 `SeVirtualKey` 名称）、`repeat`（1–8）、`intervalFrames`（1–30）、`expectedTerritoryId`、`activateWindow`、`dryRun` |
-| `hold_game_key` | 向同一游戏窗口发送按下、短时保持与释放消息；失焦提前结束，超时或失败时尝试释放。不使用全局输入。 | `key`、`durationMs`（50–2000，默认 250）、`expectedTerritoryId`、`activateWindow`、`dryRun` |
 
 上述角色控制工具均为可变更工具，在 `AllowMutatingTools` 启用前隐藏。未登录时，相关工具返回
 `{"available": false, "reason": "not logged in"}`。

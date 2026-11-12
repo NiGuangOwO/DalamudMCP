@@ -12,6 +12,12 @@ If a task needs a missing capability, first check the complete catalog and mutat
 
 User and project-specific restrictions on game input, computer use, spending, commits and pushes remain authoritative. Do not inherit another developer's authorization from an example or an audit report. Keep the skill, server instructions and tool schemas consistent when capabilities change.
 
+## Native game UI requires native callbacks
+
+Operate FFXIV addons through their verified callbacks, registered native events, or supported native UI APIs. Discover the exact live addon and control first. Prefer a typed adapter; use `fire_addon_callback` only with an observed or documented argument contract. An `AtkValue` index or a familiar key binding is not a callback contract.
+
+If the requested addon action has no supported path, observe the real interaction and add a bounded adapter with target and state guards. Validate it offline and on the running build before continuing. Do not work around a missing adapter with virtual keys, mouse/window messages, desktop automation, key-state writes, or generic calls that synthesize input. `input` and `imgui_*` are for Dear ImGui plugin UI; use movement and action tools for gameplay.
+
 ## Discover target-plugin features through MCP
 
 When testing or operating another plugin, do not read that target plugin's local source code to discover commands, IPC contracts, UI callbacks, module names or behavior. This includes searching its checkout or consulting previously captured source excerpts. Source-derived knowledge from earlier runs is not current runtime evidence; rediscover the entry point through MCP.
