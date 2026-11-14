@@ -160,8 +160,6 @@ Agent 应先调用 `get_client_state`、`get_local_player`，发现当前打开�
 
 这些是工作流示例。实际可执行内容取决于工具目录、权限和当前游戏状态；派发成功后仍需检查实际结果。
 
-[开发插件管理工具](docs/dev-plugin-management.md)支持列出本地构建、设置启动加载／自动重载／错误通知、卸载，以及移除单个 DLL 注册。加载本地版前，通过 `disable_repository_plugin` 先禁用并验证同名在线插件，保留其安装文件和配置。
-
 ### 让 Agent 掌握开发流程
 
 内置的 [`dalamud-development` Skill](.agents/skills/dalamud-development/SKILL.md) 说明运行时发现、界面检查、构建验证和结果核对流程。

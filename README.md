@@ -162,8 +162,6 @@ Use the plugin's runtime help and UI to find its supported features.
 These are workflow examples. Available tools, permissions and the current game state determine what can run;
 a successful dispatch must be followed by a check of the actual result.
 
-Use the [developer-plugin management tools](docs/dev-plugin-management.md) to list local builds, change startup/reload/error flags, unload them or remove an explicit DLL registration. Before loading a local build, disable and verify any same-name online installation with `disable_repository_plugin`; the online files and configuration are preserved.
-
 ### Give your agent the development workflow
 
 The bundled [`dalamud-development` skill](.agents/skills/dalamud-development/SKILL.md) covers runtime discovery,
