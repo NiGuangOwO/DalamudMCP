@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0.53",
+  "sourceCommit": "69e068cd7831d162c2c5e3fdeb83d9242a70f067",
+  "tag": "v1.0.0.53",
+  "releaseId": 445212029,
+  "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.53",
+  "sourceWorkflow": {
+    "id": 43585395784,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43585395784",
+    "conclusion": "success",
+    "jobs": {
+      "plan": "success",
+      "build / build": "success",
+      "publish": "success",
+      "sync": "success"
+    }
+  },
+  "guidanceRevision": "b50d8aaf9fdd7ed166ffe4b973f26cc0cffe741cc926e5f8e98a8783466c6858",
+  "installedUserSkillUpdated": true,
+  "distributionCommit": "d4ee98061033cc8aefe38ac086c8b48f019565d3",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/d4ee98061033cc8aefe38ac086c8b48f019565d3/pluginmaster.json",
+  "indexEntry": {
+    "InternalName": "DalamudMCP",
+    "AssemblyVersion": "1.0.0.53",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.53/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.53/latest.zip",
+    "LastUpdate": "1794652175"
+  },
+  "otherIndexEntriesPreserved": true,
+  "distributionContainsNewZip": false,
+  "packageSha256": "fb1aa51e661f302abede66ba88ef78e31254e3edd9db48c36842d258d3d12ba4",
+  "assets": [
+    {
+      "name": "dalamud-development-skill.zip",
+      "id": 747132656,
+      "sha256": "7b3b2ba9203c2bdad6793ba00a0e6e303d8ce6be5a90b0b1cc12ef8e43874376",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.manifest.json",
+      "id": 747132672,
+      "sha256": "7cfe2489e7be7fa0da6a964864a63fbded0ee6fd5d446bb4c3f97a7454e1acac",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-development.payload.json",
+      "id": 747132702,
+      "sha256": "c64c0963f59e28410571ebd80a8c72209cadf75e72406d7ab02faa3661e9e224",
+      "downloadVerified": true
+    },
+    {
+      "name": "dalamud-mcp-bridge.zip",
+      "id": 747132717,
+      "sha256": "88d4378916ebb1d79c0d7024a9ca64869c6db671067dc5202c5061c08f59125f",
+      "downloadVerified": true
+    },
+    {
+      "name": "DalamudMCP.json",
+      "id": 747132626,
+      "sha256": "62a2d36e17f9420e4f0b12d34b0f3060de99f0ff7d8f544fbfc9788ad97826d8",
+      "downloadVerified": true
+    },
+    {
+      "name": "latest.zip",
+      "id": 747132600,
+      "sha256": "fb1aa51e661f302abede66ba88ef78e31254e3edd9db48c36842d258d3d12ba4",
+      "downloadVerified": true
+    },
+    {
+      "name": "release-provenance.json",
+      "id": 747132733,
+      "sha256": "29dcdbc14224619fd1017a77719c5f021fced064c49f542fc4fa1a67c459e3e6",
+      "downloadVerified": true
+    }
+  ],
+  "offline": {
+    "debugAndReleaseBuilds": true,
+    "developerPluginChecks": 113,
+    "installerChecks": 60,
+    "pluginLoadReleaseChecks": 254,
+    "protocolChecks": 89,
+    "stdioBridgeChecks": 57,
+    "guidanceCatalogChecks": 22,
+    "guidanceSyncChecks": 23,
+    "releasePipelineChecks": 13,
+    "skillAndDocumentLinks": 29
+  },
+  "liveCn": {
+    "buildConfiguration": "Debug",
+    "buildMvid": "8d4dc4fc-ec03-49e4-a6e6-70f96b155313",
+    "toolCount": 189,
+    "checkCount": 30,
+    "onlineDisabledBeforeLocalLoad": true,
+    "existingDeveloperEntriesPreserved": 23,
+    "temporaryRegistrationsAndSettingsCleaned": true,
+    "gameplayInputUsed": false
+  },
+  "limitations": [
+    "Live validation used a local CN Debug build and temporary inert plugins; the published CI package was not loaded in game.",
+    "Global-client runtime behavior, all third-party plugins and profile override scenarios were not tested live.",
+    "Default-folder rediscovery and enabled-watcher reloads remain possible; configuration saves are queued acknowledgements."
+  ]
+}
