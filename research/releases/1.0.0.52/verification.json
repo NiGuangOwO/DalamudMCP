@@ -1,0 +1,90 @@
+{
+  "version": "1.0.0.52",
+  "sourceCommit": "f375fb237d0d22288e30a48d42fcec8e9f457b93",
+  "tag": "v1.0.0.52",
+  "releaseId": 445112587,
+  "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.52",
+  "sourceWorkflow": {
+    "id": 43571068290,
+    "url": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43571068290",
+    "conclusion": "success",
+    "jobs": {
+      "plan": "success",
+      "build / build": "success",
+      "publish": "success",
+      "sync": "success"
+    }
+  },
+  "guidanceRevision": "6dc5574fcc173199acd5ede1fb9ea8c49b078df3977f84a0409ccb723f5deb8e",
+  "distributionCommit": "38930392ca72cfe4a89ed6557beafcb7dd71c14c",
+  "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/38930392ca72cfe4a89ed6557beafcb7dd71c14c/pluginmaster.json",
+  "indexEntry": {
+    "InternalName": "DalamudMCP",
+    "AssemblyVersion": "1.0.0.52",
+    "DownloadLinkInstall": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.52/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NiGuangOwO/DalamudMCP/releases/download/v1.0.0.52/latest.zip",
+    "LastUpdate": 1794641390
+  },
+  "otherIndexEntriesPreserved": true,
+  "packageSha256": "8e71df89e8d3052ede7db9e1d01d3aaac9270d13fb76c215aefc642eedc040df",
+  "assets": [
+    { "name": "dalamud-development-skill.zip", "id": 746698717, "sha256": "66f803d3372f29373963247552e26c6fbe7f464094273aa63adca109c513c850", "downloadVerified": true },
+    { "name": "dalamud-development.manifest.json", "id": 746698749, "sha256": "a1d85af98b35ef311fa40a9ddfbb8002c79f4de9c9f2c0303a3192fa03175d8e", "downloadVerified": true },
+    { "name": "dalamud-development.payload.json", "id": 746698771, "sha256": "47a55b4a7a98e1e670d8ee2e38d9451f4bdedc39369c85123f5e80d56fb3151a", "downloadVerified": true },
+    { "name": "dalamud-mcp-bridge.zip", "id": 746698783, "sha256": "88123dce2a904a0d78e9ad5c31a5565b1d66fde482591c91f510d106e4bb45e3", "downloadVerified": true },
+    { "name": "DalamudMCP.json", "id": 746698701, "sha256": "1d35cf26ce41ebd0ea6726e027c4a4d059b4477cceccbc43aa75f65a2b5a3217", "downloadVerified": true },
+    { "name": "latest.zip", "id": 746698668, "sha256": "8e71df89e8d3052ede7db9e1d01d3aaac9270d13fb76c215aefc642eedc040df", "downloadVerified": true },
+    { "name": "release-provenance.json", "id": 746698805, "sha256": "e5c01bfbdcabbcafc9ee9fdc12ceeebc327c096a5c90adb2432128baf6e0acca", "downloadVerified": true }
+  ],
+  "offline": {
+    "debugAndReleaseBuilds": true,
+    "globalSdkReleaseBuild": true,
+    "pluginLoadChecks": 249,
+    "protocolChecks": 88,
+    "stdioBridgeChecks": 57,
+    "developerPluginChecks": 57,
+    "recordingAndDiagnosticsChecks": 71,
+    "guidanceCatalogChecks": 22,
+    "guidanceSyncChecks": 23,
+    "releasePipelineChecks": 13
+  },
+  "liveCn": {
+    "buildConfiguration": "Debug",
+    "finalBuildMvid": "b6d4fab5-cef0-4268-acab-91206a25c742",
+    "runtimeToolCount": 184,
+    "longRouteEarlierDebug": {
+      "startedUnmounted": true,
+      "mountedByWorkflow": true,
+      "flightObserved": true,
+      "initialDistanceYalms": 760.98,
+      "elapsedMs": 40095,
+      "arrivalDistanceYalms": 0.32,
+      "dismounted": true
+    },
+    "finalBuild": {
+      "shortFlightMountAndArrival": true,
+      "landingDistanceYalms": 0.26,
+      "npcApproachDistanceYalms": 1.83,
+      "longRouteTimedOutAwaitingDismount": true,
+      "timedOutRouteStopped": true,
+      "territoryId": 814,
+      "syncedEffectiveLevel": 80,
+      "dummyBaseId": 8065,
+      "opener": { "status": "submitted", "readinessChecks": 1 },
+      "encounterId": "5cde01a2bb654a5bacdea0decc92327b",
+      "outcome": "clear",
+      "pullToClearNoticeMs": 173713,
+      "recordedEvents": 281,
+      "droppedEvents": 0,
+      "droppedPackets": 0
+    },
+    "developerReloadEarlierDebug": {
+      "plugin": "AEAssist4.Loader",
+      "buildVerified": true,
+      "watcherPreserved": true,
+      "selfReloadRefused": true
+    },
+    "globalClientLiveTested": false,
+    "releaseAssetLoadedInGame": false
+  }
+}
