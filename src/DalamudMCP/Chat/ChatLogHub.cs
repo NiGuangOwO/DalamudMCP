@@ -16,6 +16,7 @@ public sealed class ChatLogHub : IDisposable
     private bool started;
 
     public ChatLogBuffer Buffer { get; } = new();
+    public string StreamId { get; } = Guid.NewGuid().ToString("N");
 
     public bool IsRunning => started;
 

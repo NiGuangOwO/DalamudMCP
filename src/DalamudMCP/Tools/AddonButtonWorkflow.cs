@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Enums;
 using DalamudMCP.Mcp;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Newtonsoft.Json.Linq;
@@ -36,10 +37,17 @@ internal static class AddonButtonWorkflow
             ("addon", "string", "Different native addon which must newly appear (addon_visible)", false),
             ("text", "string", "Optional exact visible text in the new addon (addon_visible)", false),
             ("territoryId", "integer", "Expected settled territory (destination)", false),
-            ("position", "object", "Optional {x,y,z,radius}; required for a destination in the source territory", false));
+            ("position", "object", "Optional {x,y,z,radius}; same-territory transitions need position or a newly satisfied state guard", false),
+            ("effectiveLevel", "integer", "Optional exact effective level (destination)", false),
+            ("isLevelSynced", "boolean", "Optional exact level-sync flag (destination)", false),
+            ("nearbyObject", "object", "Optional exactly one live targetable object matching this guard (destination)", false));
         schema["properties"]!["result"]!["properties"]!["position"] = Json.Schema(
             ("x", "number", "World X", true), ("y", "number", "World Y", true),
             ("z", "number", "World Z", true), ("radius", "number", "3D distance tolerance, 0.5–25 yalms", true));
+        schema["properties"]!["result"]!["properties"]!["nearbyObject"] = Json.SchemaWithEnum(
+            "objectKind", ["BattleNpc", "EventNpc"], "Required object kind", true,
+            ("baseId", "integer", "Exact object base ID", true),
+            ("radius", "number", "Max distance from the player, 0.5–25 yalms", true));
 
         registry.AddAsync("click_addon_button_and_wait", "Click an observed native button and verify the result",
             "Checks an exact visible, enabled labelled Button and an addon-owned registered ButtonClick event. " +
@@ -58,10 +66,38 @@ internal static class AddonButtonWorkflow
     }
 
     private sealed record TextGuard(int NodeId, uint[] Path, string Text);
-    private sealed record Destination(int Territory, Vector3? Position, float Radius)
+    private sealed record NearbyObject(ObjectKind Kind, int BaseId, float Radius);
+
+    private sealed record Destination(int Territory, Vector3? Position, float Radius,
+        int? EffectiveLevel, bool? IsLevelSynced, NearbyObject? Nearby)
     {
-        public bool Matches(uint territory, Vector3 at) => territory == Territory &&
+        public bool Matches(uint territory, Vector3 at, int level, bool synced) => territory == Territory &&
+            (EffectiveLevel is null || level == EffectiveLevel) && (IsLevelSynced is null || synced == IsLevelSynced) &&
             (Position is null || Vector3.Distance(Position.Value, at) <= Radius);
+
+        public JObject? Read(GameServices svc, Vector3 at)
+        {
+            var territory = svc.ClientState.TerritoryType;
+            var level = svc.PlayerState.EffectiveLevel;
+            var synced = svc.PlayerState.IsLevelSynced;
+            if (!Matches(territory, at, level, synced)) return null;
+            var result = new JObject { ["kind"] = "destination", ["territoryId"] = territory,
+                ["position"] = Conv.Vec3(at), ["effectiveLevel"] = level, ["isLevelSynced"] = synced };
+            if (Nearby is not { } nearby) return result;
+            ulong id = 0;
+            foreach (var obj in svc.ObjectTable)
+            {
+                if (obj is null || obj.ObjectKind != nearby.Kind || obj.BaseId != nearby.BaseId ||
+                    !obj.IsTargetable || obj.IsDead || obj.GameObjectId == 0 ||
+                    !(Vector3.Distance(at, obj.Position) <= nearby.Radius)) continue;
+                if (id != 0) return null;
+                id = obj.GameObjectId;
+            }
+            if (id == 0) return null;
+            result["nearbyObject"] = new JObject { ["gameObjectId"] = CombatFrameProjection.ObjectId(id),
+                ["objectKind"] = nearby.Kind.ToString(), ["baseId"] = nearby.BaseId };
+            return result;
+        }
     }
 
     private sealed record Result(string Kind, string? Addon = null, string? Text = null, Destination? Destination = null)
@@ -79,19 +115,36 @@ internal static class AddonButtonWorkflow
                     RequireKeys(args, "kind");
                     return new("source_hidden");
                 case "destination":
-                    RequireKeys(args, "kind", "territoryId", "position");
+                    RequireKeys(args, "kind", "territoryId", "position", "effectiveLevel", "isLevelSynced", "nearbyObject");
                     var target = Id(args, "territoryId");
-                    if (args["position"] is null)
+                    var level = args["effectiveLevel"] is null ? (int?)null : Id(args, "effectiveLevel", byte.MaxValue);
+                    var synced = args["isLevelSynced"] is null ? (bool?)null : CheckboxTools.StrictBoolean(args, "isLevelSynced", false);
+                    NearbyObject? nearby = null;
+                    if (args["nearbyObject"] is { } near)
                     {
-                        if (target == territory) throw new ToolException("a same-territory destination needs position and radius");
-                        return new("destination", Destination: new(target, null, 0));
+                        if (near is not JObject match) throw new ToolException("result.nearbyObject must be an object");
+                        RequireKeys(match, "objectKind", "baseId", "radius");
+                        var kind = TextValue(match, "objectKind", 16) switch
+                        {
+                            "BattleNpc" => ObjectKind.BattleNpc,
+                            "EventNpc" => ObjectKind.EventNpc,
+                            _ => throw new ToolException("result.nearbyObject requires BattleNpc or EventNpc"),
+                        };
+                        nearby = new(kind, Id(match, "baseId"), Number(match, "radius", 0.5f, 25));
                     }
-                    if (args["position"] is not JObject position)
-                        throw new ToolException("result.position must be an object");
-                    RequireKeys(position, "x", "y", "z", "radius");
-                    var point = new Vector3(Number(position, "x", -100000, 100000),
-                        Number(position, "y", -100000, 100000), Number(position, "z", -100000, 100000));
-                    return new("destination", Destination: new(target, point, Number(position, "radius", 0.5f, 25)));
+                    Vector3? point = null;
+                    var radius = 0f;
+                    if (args["position"] is { } pos)
+                    {
+                        if (pos is not JObject position) throw new ToolException("result.position must be an object");
+                        RequireKeys(position, "x", "y", "z", "radius");
+                        point = new Vector3(Number(position, "x", -100000, 100000),
+                            Number(position, "y", -100000, 100000), Number(position, "z", -100000, 100000));
+                        radius = Number(position, "radius", 0.5f, 25);
+                    }
+                    if (target == territory && point is null && nearby is null && level is null && synced is null)
+                        throw new ToolException("a same-territory destination needs a position, sync, or nearby-object guard");
+                    return new("destination", Destination: new(target, point, radius, level, synced, nearby));
                 default:
                     throw new ToolException("result.kind must be addon_visible, source_hidden, or destination");
             }
@@ -197,7 +250,7 @@ internal static class AddonButtonWorkflow
         }
         if (request.Result.Addon is { } next && NativeAddonCheckpoint.Visible(next))
             throw new ToolException("the expected result addon is already visible");
-        if (request.Result.Destination?.Matches(svc.ClientState.TerritoryType, player.Position) == true)
+        if (request.Result.Destination?.Read(svc, player.Position) is not null)
             throw new ToolException("the expected destination is already satisfied");
         var param = NativeUiEvents.RegisteredParameter((nint)button, AtkEventType.ButtonClick, (nint)unit);
         var vtable = MemoryProbe.TryReadStruct<AtkEventListener.AtkEventListenerVirtualTable>((ulong)unit->VirtualTable, out _);
@@ -232,14 +285,13 @@ internal static class AddonButtonWorkflow
     private static JObject? Observe(GameServices svc, Request request, ulong contentId)
     {
         if (!svc.ClientState.IsLoggedIn || !svc.PlayerState.IsLoaded ||
-            svc.Condition[ConditionFlag.BetweenAreas] || svc.ObjectTable.LocalPlayer is not { } player)
+            svc.Condition[ConditionFlag.BetweenAreas] || svc.Condition[ConditionFlag.BetweenAreas51] ||
+            svc.ObjectTable.LocalPlayer is not { IsDead: false } player)
             return null;
         if (svc.PlayerState.ContentId != contentId) throw new ToolException("the active character changed");
         var territory = svc.ClientState.TerritoryType;
         if (request.Result.Destination is { } target)
-            return target.Matches(territory, player.Position)
-                ? new JObject { ["kind"] = "destination", ["territoryId"] = territory, ["position"] = Conv.Vec3(player.Position) }
-                : null;
+            return !NativeAddonCheckpoint.Visible(request.Addon) ? target.Read(svc, player.Position) : null;
         if (territory != request.Territory) throw new ToolException("the territory changed before the addon result was verified");
         if (request.Result.Kind == "source_hidden")
             return !NativeAddonCheckpoint.Visible(request.Addon)

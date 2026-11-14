@@ -90,6 +90,7 @@ internal static class NavTools
             ["mapId"] = svc.ClientState.MapId,
             ["inCombat"] = svc.Condition[ConditionFlag.InCombat],
             ["mounted"] = svc.Condition[ConditionFlag.Mounted],
+            ["inFlight"] = svc.Condition[ConditionFlag.InFlight],
             ["betweenAreas"] = svc.Condition[ConditionFlag.BetweenAreas],
         };
 

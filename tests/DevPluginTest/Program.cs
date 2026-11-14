@@ -29,6 +29,8 @@ Check(local.GetProperty("AutomaticReload", BindingFlags.Instance | BindingFlags.
     "installed SDK exposes a bool AutomaticReload on LocalDevPlugin");
 foreach (var name in new[] { "DllFile", "InternalName", "IsDev", "IsLoaded", "State", "Assembly" })
     Check(local.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is not null, "SDK snapshot property " + name);
+Check(local.GetMethod("ReloadAsync", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+        Type.EmptyTypes)?.ReturnType == typeof(Task), "installed SDK has the expected developer reload lifecycle");
 
 var registry = new ToolRegistry();
 DevPluginTools.Register(registry, new GameServices());
@@ -156,7 +158,30 @@ try
     await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration),
         "loaded obsolete build with disabled watcher fails instead of claiming readiness");
     Check(!stale.AutomaticReload && stale.Writes == 0 && stale.Loads == 0, "obsolete disabled build is not force-loaded or silently enabled");
+    var sameBuild = new FakePlugin(false) { DllFile = new FileInfo(path), Assembly = assembly };
+    loadManager.InstalledPlugins = new object[] { sameBuild };
+    var reloadArgs = LoadArgs();
+    reloadArgs["buildWaitMs"] = 1800;
+    var unchanged = (JObject)(await DevPluginTools.Reload(services, reloadArgs, () => loadManager))!;
+    Check(!unchanged.Value<bool>("buildVerified") && sameBuild.Reloads == 1,
+        "a successful lifecycle call with the same assembly instance is not a fresh load");
+    var newAssembly = Assembly.Load(File.ReadAllBytes(path));
+    sameBuild.OnReload = () => { sameBuild.Assembly = newAssembly; return Task.CompletedTask; };
+    var reloaded = (JObject)(await DevPluginTools.Reload(services, reloadArgs, () => loadManager))!;
+    Check(reloaded.Value<bool>("buildVerified") && sameBuild.Reloads == 2 && sameBuild.Writes == 0,
+        "reloading unchanged bytes verifies a new assembly instance without changing the watcher");
+    sameBuild.InternalName = "DalamudMCP";
+    await Reject(() => DevPluginTools.Reload(services, LoadArgs(), () => loadManager), "reload refuses the MCP host");
+    sameBuild.InternalName = "DevPluginTest";
+    var blockedReload = new TaskCompletionSource();
+    sameBuild.OnReload = () => blockedReload.Task;
+    var pendingReload = (JObject)(await DevPluginTools.Reload(services, LoadArgs(), () => loadManager))!;
+    Check(pendingReload.Value<bool>("reloadAttempted") && !pendingReload.Value<bool>("lifecycleCompleted"),
+        "a lifecycle timeout reports that the underlying operation may still run");
+    await Reject(() => DevPluginTools.Reload(services, LoadArgs(), () => loadManager), "a timed-out pending reload blocks duplicates");
+    blockedReload.SetResult();
     services.Config.AllowMutatingTools = false;
+    await Reject(() => DevPluginTools.Reload(services, LoadArgs(), () => loadManager), "reload respects closed mutation gate");
     await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration), "loader respects closed mutation gate");
     var invalidArgs = LoadArgs(); invalidArgs["autoReload"] = "true";
     await Reject(() => DevPluginTools.Load(services, invalidArgs, () => loadManager, () => configuration), "loader refuses nonboolean watcher setting");
@@ -190,6 +215,9 @@ internal sealed class FakePlugin
     public int Writes { get; private set; }
     public bool AutomaticReload { get => automaticReload; set { Writes++; automaticReload = value; } }
     public int Loads { get; private set; }
+    public int Reloads { get; private set; }
+    public Func<Task>? OnReload { get; set; }
     public Task LoadAsync(PluginLoadReason reason, bool flag, CancellationToken token)
     { Loads++; IsLoaded = true; return Task.CompletedTask; }
+    public Task ReloadAsync() { Reloads++; return OnReload?.Invoke() ?? Task.CompletedTask; }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -39,6 +40,16 @@ internal static class DevPluginTools
                 ("autoReload", "boolean", "Explicitly change auto-reload; omitted preserves existing settings, new registrations default true.", false),
                 ("buildWaitMs", "integer", "Wait for the matching loaded build, 1000-30000ms (default 15000).", false)),
             args => Load(svc, args), mutating: true);
+        registry.AddAsync("reload_dev_plugin", "Reload one registered development plugin",
+            "Explicitly reloads a loaded developer plugin by exact path using Dalamud's lifecycle. " +
+            "Verifies a fresh loaded assembly and the finished DLL MVID for 750ms. " +
+            "Never changes the watcher or registration; refuses this MCP host. " +
+            "A timeout is not cancellation of an in-flight reload. Child assemblies loaded by a wrapper need their own evidence.",
+            Json.Schema(
+                ("filePath", "string", "Exact absolute DLL path of a loaded development plugin.", true),
+                ("expectedBuildMvid", "string", "Optional exact finished DLL MVID.", false),
+                ("buildWaitMs", "integer", "Reload and verification budget, 1000-30000ms (default 15000).", false)),
+            args => Reload(svc, args), mutating: true);
     }
 
     private static object Service(Assembly assembly, string name)
@@ -111,6 +122,87 @@ internal static class DevPluginTools
         var expected = DevPluginBuildWaiter.ExpectedBuild(path, args);
         return await DevPluginBuildWaiter.Wait(path, expected, waitMs,
             () => svc.Framework.RunOnFrameworkThread(() => Snapshot(Manager(), path)), () => DevBuildIdentity.Read(path));
+    }
+
+    internal static async Task<object?> Reload(GameServices svc, JObject args, Func<object>? getManager = null)
+    {
+        var path = DllPath(args);
+        var waitMs = DevPluginBuildWaiter.WaitMs(args);
+        Guid expected;
+        try { expected = DevPluginBuildWaiter.ExpectedBuild(path, args); }
+        catch (Exception ex) when (ex is IOException or BadImageFormatException or InvalidOperationException)
+        { throw new ToolException($"plugin DLL metadata is not readable: {ex.Message}"); }
+        if (!Gate.Wait(0)) throw new ToolException("another developer lifecycle operation is active");
+        var timer = Stopwatch.StartNew();
+        using var deadline = new CancellationTokenSource(waitMs);
+        var token = deadline.Token;
+        Task<(object Manager, WeakReference<Assembly> Previous, Task Operation)>? dispatch = null;
+        var attempted = 0;
+        try
+        {
+            // The async lifecycle is owned by Dalamud. Start it on the framework thread,
+            // but wait off that thread so loading and plugin callbacks can keep running.
+            dispatch = svc.Framework.RunOnFrameworkThread(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                if (svc.Framework.IsFrameworkUnloading) throw new ToolException("framework is unloading");
+                if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled");
+                var manager = (getManager ?? Manager)();
+                var state = Snapshot(manager, path);
+                if (string.IsNullOrWhiteSpace(state.InternalName) ||
+                    state.InternalName.Equals("DalamudMCP", StringComparison.OrdinalIgnoreCase))
+                    throw new ToolException("register the exact plugin first; reloading the MCP host is refused");
+                if (!state.IsLoaded || state.State != "Loaded" || state.Instance is null ||
+                    Property(state.Instance, "Assembly") is not Assembly previous)
+                    throw new ToolException("the registered development plugin is not stably loaded");
+                if (DevBuildIdentity.Read(path) != expected)
+                    throw new ToolException("plugin DLL changed before reload");
+                var reload = Method(state.Instance, "ReloadAsync", 0);
+                if (!typeof(Task).IsAssignableFrom(reload.ReturnType))
+                    throw new ToolException("unsupported Dalamud ReloadAsync return type");
+                token.ThrowIfCancellationRequested();
+                Volatile.Write(ref attempted, 1);
+                var operation = (Task)(reload.Invoke(state.Instance, null) ??
+                    throw new ToolException("reload returned no task"));
+                return (manager, new WeakReference<Assembly>(previous), operation);
+            });
+            var start = await dispatch.WaitAsync(token).ConfigureAwait(false);
+            await start.Operation.WaitAsync(token).ConfigureAwait(false);
+            var remaining = (int)Math.Max(0, waitMs - timer.ElapsedMilliseconds);
+            var result = await DevPluginBuildWaiter.Wait(path, expected, remaining, async () =>
+            {
+                return await svc.Framework.RunOnFrameworkThread(() =>
+                {
+                    var state = Snapshot(start.Manager, path);
+                    if (state.Instance is not null && start.Previous.TryGetTarget(out var previous) &&
+                        ReferenceEquals(Property(state.Instance, "Assembly"), previous))
+                        return state with { LoadedMvid = null };
+                    return state;
+                }).ConfigureAwait(false);
+            }, () => DevBuildIdentity.Read(path)).ConfigureAwait(false);
+            result["reloadAttempted"] = true;
+            result["lifecycleCompleted"] = true;
+            return result;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            return new JObject { ["filePath"] = path, ["status"] = "timeout", ["buildVerified"] = false,
+                ["reloadAttempted"] = Volatile.Read(ref attempted) != 0, ["lifecycleCompleted"] = false };
+        }
+        catch (TargetInvocationException ex)
+        { throw new ToolException($"developer reload failed: {ex.InnerException?.Message ?? ex.Message}"); }
+        finally
+        {
+            if (dispatch is not null) _ = ReleaseAfterDispatch(dispatch);
+            else Gate.Release();
+        }
+
+        static async Task ReleaseAfterDispatch(Task<(object Manager, WeakReference<Assembly> Previous, Task Operation)> dispatch)
+        {
+            try { await (await dispatch.ConfigureAwait(false)).Operation.ConfigureAwait(false); }
+            catch (Exception) { /* The request already reports failure or timeout. Observe late faults. */ }
+            finally { Gate.Release(); }
+        }
     }
 
     internal static async Task<object?> Load(GameServices svc, JObject args,

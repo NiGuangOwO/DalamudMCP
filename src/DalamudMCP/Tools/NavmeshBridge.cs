@@ -30,7 +30,7 @@ internal sealed class NavmeshBridge
     /// Optional read of "is a path being followed right now", used only to verify a stop after the
     /// fact. Nothing depends on it: if vnavmesh does not expose it the field is simply omitted.
     /// </summary>
-    private const string IsRunningIpcName = "vnavmesh.Query.Path.IsRunning";
+    private const string IsRunningIpcName = "vnavmesh.Path.IsRunning";
 
     /// <summary>Candidate stop entry points, most plausible first.</summary>
     private static readonly string[] StopCandidateNames =
@@ -82,19 +82,21 @@ internal sealed class NavmeshBridge
     public static IReadOnlyList<string> StopCandidates => StopCandidateNames;
 
     /// <summary>Projects a raw position onto the navigation mesh, falling back to the input.</summary>
-    public NumericsVector3 PointOnFloor(NumericsVector3 raw)
+    public NumericsVector3 PointOnFloor(NumericsVector3 raw) => TryPointOnFloor(raw) ?? raw;
+
+    /// <summary>Returns an observed floor point; a missing reply is not proof of ground.</summary>
+    public NumericsVector3? TryPointOnFloor(NumericsVector3 raw)
     {
-        if (pointOnFloor is null || !HasFunction(pointOnFloor)) return raw;
+        if (pointOnFloor is null || !HasFunction(pointOnFloor)) return null;
 
         try
         {
-            // The bool selects "closest point in the same mesh area"; 4 yalms is the vertical
-            // search span the vnavmesh query expects.
-            return pointOnFloor.InvokeFunc(raw, false, 4f) ?? raw;
+            // Exclude unlandable surfaces; the 4-yalm half extent is in the horizontal plane.
+            return pointOnFloor.InvokeFunc(raw, false, 4f);
         }
         catch (Exception)
         {
-            return raw;
+            return null;
         }
     }
 

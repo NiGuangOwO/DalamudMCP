@@ -37,7 +37,11 @@ internal static class CombatFrameReader
         var tick = Stopwatch.GetTimestamp();
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var player = Actor(context.Player, options.IncludeStatuses);
-        player["effectiveLevel"] = svc.PlayerState.IsLoaded ? new JValue(svc.PlayerState.EffectiveLevel) : JValue.CreateNull();
+        var playerStateLoaded = svc.PlayerState.IsLoaded;
+        var effectiveLevel = playerStateLoaded ? svc.PlayerState.EffectiveLevel : (short)0;
+        player["effectiveLevel"] = playerStateLoaded ? new JValue(effectiveLevel) : JValue.CreateNull();
+        player["isLevelSynced"] = playerStateLoaded ? new JValue(svc.PlayerState.IsLevelSynced) : JValue.CreateNull();
+        var targetObject = svc.TargetManager.Target;
         var frame = new JObject
         {
             ["available"] = true, ["timestamp"] = now,
@@ -46,7 +50,7 @@ internal static class CombatFrameReader
             ["territoryId"] = context.Identity.TerritoryId, ["jobId"] = context.Identity.JobId,
             ["inCombat"] = svc.Condition[ConditionFlag.InCombat], ["isPvP"] = context.Identity.IsPvP,
             ["player"] = player,
-            ["target"] = svc.TargetManager.Target is { } target ? Actor(target, options.IncludeStatuses) : null,
+            ["target"] = targetObject is { } target ? Actor(target, options.IncludeStatuses) : null,
         };
 
         var instance = ActionManager.Addresses.Instance.Value == 0 ? null : ActionManager.Instance();
@@ -61,7 +65,9 @@ internal static class CombatFrameReader
                 {
                     var row = sheet.GetRowOrDefault(id);
                     actions.Add(row is null ? UnavailableAction(id, "unknown_action_row") :
-                        !row.Value.IsPlayerAction ? UnavailableAction(id, "not_player_action") : ReadAction(instance, ref manager, id));
+                        !row.Value.IsPlayerAction ? UnavailableAction(id, "not_player_action")
+                        : ReadAction(instance, ref manager, sheet, id, effectiveLevel,
+                            targetObject?.GameObjectId ?? 0xE0000000));
                 }
                 frame["actions"] = actions;
             }
@@ -90,7 +96,8 @@ internal static class CombatFrameReader
         return frame;
     }
 
-    private static unsafe JObject ReadAction(ActionManager* instance, ref ActionManager manager, uint id)
+    private static unsafe JObject ReadAction(ActionManager* instance, ref ActionManager manager,
+        Lumina.Excel.ExcelSheet<ActionRow> sheet, uint id, short level, ulong target)
     {
         if (ActionManager.Addresses.GetAdjustedActionId.Value == 0 || ActionManager.Addresses.GetRecastGroup.Value == 0 ||
             ActionManager.Addresses.GetAdditionalRecastGroup.Value == 0 || ActionManager.Addresses.GetAdjustedRecastTime.Value == 0 ||
@@ -101,14 +108,29 @@ internal static class CombatFrameReader
         if (adjusted == 0) return UnavailableAction(id, "adjusted_action_unavailable");
         var primary = instance->GetRecastGroup((int)ActionType.Action, adjusted);
         var extra = instance->GetAdditionalRecastGroup(ActionType.Action, adjusted);
+        var interval = ActionManager.GetAdjustedRecastTime(ActionType.Action, adjusted);
+        var charges = instance->GetCurrentCharges(adjusted);
+        var cap = ActionManager.GetMaxCharges(adjusted, 0);
+        var actionRow = sheet.GetRowOrDefault(adjusted);
+        uint? status = ActionManager.Addresses.GetActionStatus.Value != 0
+            ? instance->GetActionStatus(ActionType.Action, adjusted, target, true, true, null) : null;
+        var groups = manager.Cooldowns;
+        var recast = (uint)primary < groups.Length
+            ? CooldownTools.DescribeRecast(groups[primary].Elapsed, interval / 1000f, charges, cap) : null;
         return new JObject
         {
             ["actionId"] = id, ["adjustedActionId"] = adjusted, ["available"] = true,
             ["primaryRecast"] = CombatFrameProjection.Recast(ref manager, primary),
             ["additionalRecast"] = CombatFrameProjection.Recast(ref manager, extra),
-            ["adjustedRecastMs"] = ActionManager.GetAdjustedRecastTime(ActionType.Action, adjusted),
-            ["currentCharges"] = instance->GetCurrentCharges(adjusted),
-            ["maxCharges"] = ActionManager.GetMaxCharges(adjusted, 0),
+            ["adjustedRecastMs"] = interval,
+            ["currentCharges"] = charges,
+            ["maxCharges"] = cap,
+            ["nextChargeMs"] = cap > 1 && recast is not null ? Math.Round(recast.NextCharge * 1000d, 3) : null,
+            ["requiredLevel"] = actionRow?.ClassJobLevel,
+            ["levelRequirementMet"] = level > 0 && actionRow is { } row ? level >= row.ClassJobLevel : null,
+            ["nativeStatus"] = status,
+            ["nativeUsable"] = status.HasValue ? status == 0 : null,
+            ["nativeStatusReason"] = status is > 0 ? ControlTools.ReasonForStatus(status.Value) : null,
         };
     }
 

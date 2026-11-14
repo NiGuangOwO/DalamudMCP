@@ -10,12 +10,13 @@ using Vector3 = System.Numerics.Vector3;
 namespace DalamudMCP.Tools;
 
 /// <summary>
-/// A short walk with separate planning and movement. A cancelled plan cannot start
-/// walking later. All IPC calls run on the framework thread.
+/// Plans separately from following so a cancelled plan cannot start moving later.
+/// All IPC calls run on the framework thread.
 /// </summary>
-internal sealed class NpcApproach
+internal sealed class OwnedNavPath
 {
     private readonly NavmeshBridge navmesh;
+    private readonly ICallGateSubscriber<bool> ready;
     private readonly ICallGateSubscriber<Vector3, Vector3, bool, CancellationToken, Task<List<Vector3>>> plan;
     private readonly ICallGateSubscriber<List<Vector3>, bool, object> move;
     private readonly ICallGateSubscriber<bool> stop;
@@ -24,42 +25,45 @@ internal sealed class NpcApproach
     private readonly ICallGateSubscriber<List<Vector3>> waypoints;
     private List<Vector3>? ownedPath;
 
-    public NpcApproach(IDalamudPluginInterface? pi)
+    public OwnedNavPath(IDalamudPluginInterface? pi)
     {
         if (pi is null) throw new ToolException("vnavmesh IPC is unavailable");
         navmesh = new NavmeshBridge(pi);
+        ready = pi.GetIpcSubscriber<bool>("vnavmesh.Nav.IsReady");
         plan = pi.GetIpcSubscriber<Vector3, Vector3, bool, CancellationToken, Task<List<Vector3>>>("vnavmesh.Nav.PathfindCancelable");
         move = pi.GetIpcSubscriber<List<Vector3>, bool, object>("vnavmesh.Path.MoveTo");
         stop = pi.GetIpcSubscriber<bool>("vnavmesh.Path.Stop");
         running = pi.GetIpcSubscriber<bool>("vnavmesh.Path.IsRunning");
         pending = pi.GetIpcSubscriber<bool>("vnavmesh.SimpleMove.PathfindInProgress");
         waypoints = pi.GetIpcSubscriber<List<Vector3>>("vnavmesh.Path.ListWaypoints");
-        if (!plan.HasFunction || !move.HasAction || !stop.HasAction || !running.HasFunction ||
+        if (!ready.HasFunction || !plan.HasFunction || !move.HasAction || !stop.HasAction || !running.HasFunction ||
             !pending.HasFunction || !waypoints.HasFunction)
             throw new ToolException("vnavmesh does not expose the required cancellable planning and path controls");
     }
 
     public bool Started => ownedPath is not null;
 
-    public Task<List<Vector3>> Plan(Vector3 from, Vector3 to, CancellationToken token)
+    public Vector3? FloorAt(Vector3 point) => navmesh.TryPointOnFloor(point);
+
+    public Task<List<Vector3>> Plan(Vector3 from, Vector3 to, bool fly, CancellationToken token)
     {
         RequireIdle();
-        return plan.InvokeFunc(from, navmesh.PointOnFloor(to), false, token);
+        return plan.InvokeFunc(from, to, fly, token);
     }
 
-    public void Start(List<Vector3> path, Vector3 from, Vector3 to, float reach)
+    public void Start(List<Vector3> path, bool fly)
     {
         RequireIdle();
-        if (!IsUsablePath(path, from, to, reach))
-            throw new ToolException("vnavmesh did not return a short path ending within interaction range");
         // The follower may mutate the supplied waypoint list as it consumes it.
         ownedPath = new List<Vector3>(path);
-        move.InvokeAction(path, false);
+        move.InvokeAction(path, fly);
     }
 
     public bool FollowingOwnedPath()
         => running.InvokeFunc() && !pending.InvokeFunc() &&
            IsRemainingPath(ownedPath, waypoints.InvokeFunc());
+
+    public bool HasActivePath => running.InvokeFunc() || pending.InvokeFunc();
 
     public string Finish()
     {
@@ -81,8 +85,9 @@ internal sealed class NpcApproach
         }
     }
 
-    private void RequireIdle()
+    public void RequireIdle()
     {
+        if (!ready.InvokeFunc()) throw new ToolException("vnavmesh is not ready");
         if (running.InvokeFunc() || pending.InvokeFunc())
             throw new ToolException("vnavmesh is already following or planning a move");
     }
@@ -97,9 +102,10 @@ internal sealed class NpcApproach
         return true;
     }
 
-    internal static bool IsUsablePath(IReadOnlyList<Vector3>? path, Vector3 from, Vector3 to, float reach)
+    internal static bool IsUsablePath(IReadOnlyList<Vector3>? path, Vector3 from, Vector3 to, float reach, float maxLength,
+        int maxWaypoints = 2048)
     {
-        if (path is null || path.Count is < 1 or > 512 || !(Vector3.Distance(path[^1], to) <= reach))
+        if (path is null || path.Count < 1 || path.Count > maxWaypoints || !(Vector3.Distance(path[^1], to) <= reach))
             return false;
         var total = 0f;
         foreach (var point in path)
@@ -107,6 +113,6 @@ internal sealed class NpcApproach
             total += Vector3.Distance(from, point);
             from = point;
         }
-        return total <= 120;
+        return total <= maxLength;
     }
 }

@@ -214,6 +214,7 @@ Use `get_game_objects` to identify a destination object before requesting moveme
 | `move_to_entity` | Starts auto-movement toward a game object, snapping the destination to the floor mesh first. | `gameObjectId` (required, decimal or `0x` hex), `allowFlight` |
 | `move_to_nearby_targetable_object` | Finds the closest targetable object whose name contains the given text and starts auto-movement toward it. Player characters are skipped unless `includePlayers` is set. | `name` (required), `maxDistance` (default 30), `includePlayers`, `allowFlight` |
 | `move_to_position` | Walks to raw world coordinates. The requested point is snapped onto the navigation mesh first, and the response reports the destination actually used, whether snapping moved it, and whether pathfinding started. | `x`, `y`, `z` (required, yalms), `allowFlight` |
+| `move_and_wait` | Uses a bounded vnavmesh path, prefers mounted flight on longer trips, verifies real arrival, and stops only its own path. Defaults to arrival on foot for an exact NPC. | `expectedTerritoryId`, `position` or `gameObjectId`+`expectedBaseId`, `mode`, `arrivalRadius`, `dismountOnArrival`, `timeoutMs`, `dryRun` |
 | `stop_movement` | Cancels the active auto-move. The entry point is discovered rather than assumed: a fixed list of vnavmesh stop candidates is probed and the one that exists is invoked. When none is registered the response says so with the probed names and warns that the walk may continue, instead of claiming it stopped. | none |
 
 ### Travel (mutating)
@@ -251,6 +252,8 @@ that classification does not imply that local queues or configuration remain unc
 ### Combat encounter recording
 
 Use `get_combat_snapshot` or `sample_combat_frames` for same-frame action queue, recast, gauge and target evidence. Use `analyze_combat_recording` to summarize retained effects and status observations without changing capture. See [combat diagnostics](combat-diagnostics.md) for filters, clock fields and coverage.
+
+`execute_action` can wait for native readiness with `readyWaitMs`, an explicit target, job and territory, and optional level-sync/base-ID/out-of-combat guards. A result of `submitted` means one successful native submission; verify combat or its effect separately. See the [gameplay workflow](../.agents/skills/dalamud-development/references/gameplay-workflows.md) for composing verified arrival, readiness and results.
 
 Combat recording runs automatically in the background while mutating tools are allowed, independently of MCP clients/listener. New settings default to `all` nearby actors; valid saved scopes are preserved. Completed fights are compressed with 7-day, 1000-fight and 100 MiB retention limits. Five `combat_recording_*` tools inspect/configure recording and read archives after reload. See [combat recording](combat-recording.md) for schemas and coverage limitations.
 

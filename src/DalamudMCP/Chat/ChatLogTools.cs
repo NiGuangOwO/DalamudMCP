@@ -47,6 +47,7 @@ internal static class ChatLogTools
         return new JObject
         {
             ["running"] = hub.IsRunning,
+            ["streamId"] = hub.StreamId,
             ["count"] = lines.Count,
             ["bufferSize"] = hub.Buffer.Count,
             ["maxBufferSize"] = hub.Buffer.MaxSize,

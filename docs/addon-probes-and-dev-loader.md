@@ -52,6 +52,8 @@ This uses narrowly scoped, shape-checked reflection over Dalamud's managed devel
 
 The loader shares the same build barrier, but treats an unverified timeout as a tool error and retains its mutation gate. It does not force-reload an already loaded obsolete assembly. `manage_plugin`'s load action also inherits the preserved-watcher default.
 
+For an explicit reload of an already loaded developer plugin, use `reload_dev_plugin` with its exact path and optional `expectedBuildMvid`. It preserves registration and the watcher, invokes Dalamud reload once, and verifies a new loaded assembly matching the file MVID for 750 ms. This also handles an unchanged wrapper DLL. Its child assemblies need separate plugin diagnostics. The MCP host cannot reload itself; a timeout can leave a Dalamud operation in flight.
+
 This addresses an observed development race: a slash command sent immediately after a build could reach the old plugin instance, which then unloaded and lost the just-started test session. Wait for verified readiness before test commands even if `plugin_list` already says loaded. The MCP host can be inspected and verified read-only while running, but its own reload disconnects pending requests: reconnect and compare `/health.buildMvid` with the tested DLL. Never use its loader to load itself.
 
 `tests/BuildIdentityTest` checks actual PE MVID reading. `tests/DevPluginTest` covers installed SDK shapes, read-only tool visibility, exact path resolution, watcher preservation, bounds/MVID guards, stale builds, unloads, replacement instances, transient/partial writes, timeout and stalled framework reads. These fixtures do not certify every actual developer loader lifecycle branch.

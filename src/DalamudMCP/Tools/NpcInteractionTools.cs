@@ -110,7 +110,7 @@ internal static class NpcInteractionTools
             ["territoryId"] = request.Territory,
         };
         private ulong? playerId;
-        private NpcApproach? route;
+        private OwnedNavPath? route;
         private string stage = "preflight";
 
         public async Task<JObject> Execute(CancellationToken lifetime)
@@ -234,8 +234,11 @@ internal static class NpcInteractionTools
                     var (player, npc) = BeforeInteraction();
                     if (Distance(player, npc) > MaxApproachDistance)
                         throw new ToolException("NPC moved beyond the permitted approach range");
-                    route = new NpcApproach(svc.PluginInterface);
-                    return (player.Position, npc.Position, route.Plan(player.Position, npc.Position, ct));
+                    route = new OwnedNavPath(svc.PluginInterface);
+                    var target = npc.Position;
+                    var planned = route.FloorAt(target) is { } floor && Vector3.Distance(target, floor) <= Reach
+                        ? floor : target;
+                    return (player.Position, target, route.Plan(player.Position, planned, false, ct));
                 }, ct).ConfigureAwait(false);
                 var path = await pending.WaitAsync(ct).ConfigureAwait(false);
                 stage = "walk";
@@ -245,7 +248,9 @@ internal static class NpcInteractionTools
                     if (Distance(player, npc) <= Reach) return false;
                     if (Vector3.Distance(player.Position, origin) > Reach || Vector3.Distance(npc.Position, destination) > 1f)
                         throw new ToolException("player or NPC moved while the route was planned");
-                    route!.Start(path, player.Position, npc.Position, Reach);
+                    if (!OwnedNavPath.IsUsablePath(path, player.Position, npc.Position, Reach, 120, 512))
+                        throw new ToolException("vnavmesh did not return a short path ending within interaction range");
+                    route!.Start(path, false);
                     return true;
                 }, ct).ConfigureAwait(false);
                 if (!walking) return;

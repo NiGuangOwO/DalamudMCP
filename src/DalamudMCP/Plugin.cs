@@ -157,7 +157,7 @@ public sealed class Plugin : IDalamudPlugin
         InventoryTools.Register(registry, services);
         itemHoldings = new ItemHoldingsTools(registry, services);
         BuddyTools.Register(registry, services);
-        ControlTools.Register(registry, services);
+        ControlTools.Register(registry, services, inputLifetime.Token);
         CooldownTools.Register(registry, services);
         combatFrames = new CombatFrameTools(registry, services);
         GearsetTools.Register(registry, services);
@@ -165,6 +165,7 @@ public sealed class Plugin : IDalamudPlugin
         TeleportTools.Register(registry, services);
         MovementTools.Register(registry, services);
         NavTools.Register(registry, services);
+        MoveWorkflow.Register(registry, services, inputLifetime.Token);
         NpcInteractionTools.Register(registry, services, inputLifetime.Token);
         ChatTools.Register(registry, services);
         QuestTools.Register(registry, services);
@@ -179,7 +180,7 @@ public sealed class Plugin : IDalamudPlugin
         VisualInputTools.Register(registry, services, screenshots, inputLifetime.Token);
         PluginBridgeTools.Register(registry, services, ipcHub);
         EventTools.Register(registry, services, eventHub);
-        combatRecorder = new CombatRecorder(registry, services, inputLifetime.Token);
+        combatRecorder = new CombatRecorder(registry, services, chatLogHub, inputLifetime.Token);
         networkPackets = new NetworkPacketTools(registry, services);
         ChatLogTools.Register(registry, chatLogHub);
         DalamudLogTools.Register(registry, dalamudLogHub);

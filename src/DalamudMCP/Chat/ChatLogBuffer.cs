@@ -96,4 +96,6 @@ public sealed class ChatLogBuffer
 
     /// <summary>Highest id handed out so far; a caller passes its previous value back as afterId.</summary>
     public long LastId => Interlocked.Read(ref nextId);
+
+    public long OldestId => queue.TryPeek(out var entry) ? entry.Id : 0;
 }

@@ -210,6 +210,7 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 | `move_to_entity` | 将目标对象位置投影至导航网格并开始自动移动。 | `gameObjectId`（必需，十进制或 `0x` 十六进制）、`allowFlight` |
 | `move_to_nearby_targetable_object` | 找到名称包含给定文本的最近可选中对象并开始向其自动移动。除非设置 `includePlayers`，玩家角色会被跳过。 | `name`（必需）、`maxDistance`（默认 30）、`includePlayers`、`allowFlight` |
 | `move_to_position` | 将世界坐标投影至导航网格再开始自动移动；返回实际目标位置、是否发生投影偏移及寻路是否启动。 | `x`、`y`、`z`（必需，yalms）、`allowFlight` |
+| `move_and_wait` | 使用有期限的 vnavmesh 路径，野外较远时优先上坐骑飞行，按实际距离确认到达，只清理本次路径。精确 NPC 目标默认要求落地并下坐骑。 | `expectedTerritoryId`、`position` 或 `gameObjectId`＋`expectedBaseId`、`mode`、`arrivalRadius`、`dismountOnArrival`、`timeoutMs`、`dryRun` |
 | `stop_movement` | 发现并调用可用的 vnavmesh 停止入口；入口不存在时返回检查过的名称并提示移动可能继续，不宣称已经停止。 | 无 |
 
 ### 出行（可变更）
@@ -246,6 +247,8 @@ FFXIVClientStructs 静态地址解析器尚未初始化时，相关工具返回�
 ### 战斗与网络记录
 
 用 `get_combat_snapshot` 或 `sample_combat_frames` 同帧核对动作队列、复唱、量谱和目标。用 `analyze_combat_recording` 整理已经保留的动作效果及状态观测，不改录制设置。过滤条件、时钟字段及覆盖范围见[战斗诊断](combat-diagnostics.md)。
+
+`execute_action` 可以用 `readyWaitMs` 等待原生就绪，必须提供精确目标、职业和区域，可选校验有效等级、同步标志、目标基础 ID 和未进战状态。`submitted` 表示只提交过一次，仍需单独验证进战或事件。怎样组合到场、开怪和结算见[游戏工作流](../.agents/skills/dalamud-development/references/gameplay-workflows.md)。
 
 允许变更工具时，默认在后台按进出战斗记录服务端技能效果，不依赖 MCP 客户端或监听器。新配置默认记录 `all` 附近单位，已保存的有效范围会保留。每场结束自动压缩保存，最多保留 7 天、1000 场、总计 100 MiB。五个 `combat_recording_*` 工具可查询/配置，并在重载后读取归档。详见[战斗记录](combat-recording.md)的使用方式、容量和覆盖范围。
 

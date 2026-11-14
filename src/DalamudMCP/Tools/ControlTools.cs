@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -21,22 +22,27 @@ internal static unsafe class ControlTools
 {
     private const ulong SelfTargetId = 0xE0000000;
 
-    public static void Register(ToolRegistry registry, GameServices svc)
+    public static void Register(ToolRegistry registry, GameServices svc, CancellationToken lifetime)
     {
-        registry.Add(
+        registry.AddAsync(
             "execute_action",
             "Execute action",
-            "Casts a job/general action by id, optionally by action name resolved from the Action sheet. " +
-            "Uses the normal UseAction path, so cooldowns, cast times and range checks all apply. " +
-            "Pass dryRun to ask whether the action could be used right now without using it.",
+            "Uses an Action sheet skill by id or exact name. Pass dryRun to check native availability. " +
+            "Optionally wait briefly for cooldown or a transient state lock on an explicit target, " +
+            "revalidate job/territory/target, then submit at most once. Use use_general_action for GeneralAction ids.",
             Json.Schema(
                 ("actionId", "integer", "Action row id", false),
                 ("actionName", "string", "Exact action sheet name; resolved to an id", false),
-                ("targetObjectId", "integer", "Target game object id (defaults to self)", false),
+                ("targetObjectId", "integer", "Exact target game object ID (omitted: current hard target, then self)", false),
                 ("dryRun", "boolean", "Check usability instead of using the action", false),
                 ("requiredClassJobId", "integer", "Optional guard: refuse unless the current job has this id", false),
-                ("requiredTerritoryId", "integer", "Optional guard: refuse unless the current territory has this id", false)),
-            args => ExecuteAction(svc, args),
+                ("requiredTerritoryId", "integer", "Optional guard: refuse unless the current territory has this id", false),
+                ("requiredEffectiveLevel", "integer", "Optional exact effective level, including level sync", false),
+                ("requiredLevelSynced", "boolean", "Optional exact level-sync flag", false),
+                ("requiredTargetBaseId", "integer", "Optional base ID guard, requires targetObjectId", false),
+                ("requireOutOfCombat", "boolean", "Refuse if already in combat (use for openers)", false),
+                ("readyWaitMs", "integer", "0 = immediate; 1-12000 waits for native readiness, requires an explicit target, job, and territory", false)),
+            args => ActionReadyWorkflow.Run(svc, args, lifetime),
             mutating: true);
 
         registry.Add(
@@ -147,7 +153,7 @@ internal static unsafe class ControlTools
     // Handlers
     // ------------------------------------------------------------------
 
-    private static JObject ExecuteAction(GameServices svc, JObject args)
+    internal static uint ResolveActionId(GameServices svc, JObject args)
     {
         EnsureLoggedIn(svc);
 
@@ -170,7 +176,12 @@ internal static unsafe class ControlTools
 
         if (actionId == 0)
             throw new ToolException("provide actionId or actionName");
+        return actionId;
+    }
 
+    internal static JObject ExecuteAction(GameServices svc, JObject args)
+    {
+        var actionId = ResolveActionId(svc, args);
         // Falls back to the current hard target instead of self: with no explicit id, an attack
         // used to be cast on the player even though a monster was selected, and reported success.
         var (targetId, targetName, targetSource) = ResolveActionTarget(svc, args);
@@ -264,20 +275,21 @@ internal static unsafe class ControlTools
 
     private static JObject UseGeneralAction(GameServices svc, JObject args)
     {
-        EnsureLoggedIn(svc);
         var actionId = (uint)(args.Value<int?>("actionId") ?? 0);
         if (actionId == 0)
             throw new ToolException("actionId is required");
+        var result = UseGeneralAction(svc, actionId);
+        result["actionId"] = actionId;
+        result["actionType"] = "GeneralAction";
+        return result;
+    }
 
+    internal static JObject UseGeneralAction(GameServices svc, uint actionId)
+    {
+        EnsureLoggedIn(svc);
         var manager = RequireActionManager();
         var ok = manager->UseAction(ActionType.GeneralAction, actionId, SelfTargetId, 0, 0, 0, null);
-        var result = new JObject
-        {
-            ["actionId"] = actionId,
-            ["actionType"] = "GeneralAction",
-            ["success"] = ok,
-        };
-
+        var result = new JObject { ["success"] = ok };
         if (!ok)
             result.Merge(FailureStatus(svc, ActionType.GeneralAction, actionId, SelfTargetId));
 
@@ -476,7 +488,7 @@ internal static unsafe class ControlTools
     /// Short English cause for the status codes the game returns for a refused action. The codes
     /// are LogMessage row ids, which is why they are not consecutive.
     /// </summary>
-    private static string ReasonForStatus(uint status) => status switch
+    internal static string ReasonForStatus(uint status) => status switch
     {
         562 => "the target is not visible (line of sight)",
         563 => "the target cannot be selected",

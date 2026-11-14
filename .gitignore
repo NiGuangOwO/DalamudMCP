@@ -21,4 +21,5 @@
 /tests/**/obj
 /tools/**/bin
 /tools/**/obj
+/artifacts/workflow-check/
 **/__pycache__/

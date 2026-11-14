@@ -6,7 +6,7 @@
 
 | 工具 | 用法 |
 | --- | --- |
-| `get_combat_snapshot` | 一次框架线程读数。默认返回本地玩家、当前目标、GCD 槽、动画锁、读条与动作队列。可传最多 16 个不同的玩家 `actionIds`，读取实际动作 ID、主／附加复唱组与充能。加 `includeStatuses: true` 可读取玩家和目标各最多 16 个状态，加 `includeGauge: true` 可读取当前职业量谱。 |
+| `get_combat_snapshot` | 一次框架线程读数。默认返回本地玩家（含有效等级和同步）、当前目标、GCD 槽、动画锁、读条与队列。可传最多 16 个不同的玩家 `actionIds`，读取实际动作 ID、原生动作状态、技能等级门槛、单层复唱与充能。加 `includeStatuses: true` 可读取玩家和目标各最多 16 个状态，加 `includeGauge: true` 可读取当前职业量谱。 |
 | `sample_combat_frames` | 同一份快照按更新次数采样：例如 `{"frames":30,"intervalFrames":2,"includeGauge":true}` 观测 30 次框架更新，在第 0、2、4… 次读取。最多 120 次更新和 10 秒，同一时间只接受一个采样请求。掉线、读图、玩家／职业／区域／PvP 上下文变化、监听停止或超时可返回部分结果，检查 `complete`、`reason` 与 `framesObserved`。 |
 | `analyze_combat_recording` | 用 `combat_recording_list` 选择一场，传 `encounterId`（省略时优先最新内存场次，然后最新归档）。可按闭区间 `fromMs` / `toMs`、`sourceId` 和 `actionId` 过滤；指定 ID 时排除没有对应字段的行。返回按来源／动作类型／动作 ID 分组的效果事件次数与间隔，以及按 `(elapsedMs,id)` 排序的精简时间线。 |
 
@@ -20,7 +20,7 @@ These three tools remain available with mutation access off. They send no game i
 
 | Tool | Use |
 | --- | --- |
-| `get_combat_snapshot` | Read on one framework frame. Returns the player, current target, global recast slot, animation lock, cast and action queue. Supply up to 16 distinct player `actionIds` for adjusted IDs, primary/additional recast groups and charges. Opt into up to 16 statuses each on the player and target with `includeStatuses: true`, or the job gauge with `includeGauge: true`. |
+| `get_combat_snapshot` | Read on one framework frame. Returns the player (including effective level and sync), current target, global recast slot, animation lock, cast and queue. Supply up to 16 distinct player `actionIds` for adjusted IDs, native action status, level requirements, per-charge recast and charges. Opt into up to 16 statuses each on the player and target with `includeStatuses: true`, or the job gauge with `includeGauge: true`. |
 | `sample_combat_frames` | Sample the same snapshot by framework update. For example, `{"frames":30,"intervalFrames":2,"includeGauge":true}` observes 30 updates and reads on updates 0, 2, 4, and so on. One request at a time, up to 120 updates or 10 seconds. Logout, area loading, changes in player/job/territory/PvP context, listener stop or timeout can return a partial series. Check `complete`, `reason` and `framesObserved`. |
 | `analyze_combat_recording` | Select an encounter with `combat_recording_list` and pass its `encounterId`. If omitted, use the latest memory encounter, then the latest archive. Filter by inclusive `fromMs` / `toMs`, `sourceId` and `actionId`; an ID filter excludes rows without that field. Returns effect counts and gaps by source/action type/action ID and a compact timeline ordered by `(elapsedMs,id)`. |
 

@@ -153,7 +153,7 @@ internal static unsafe class CooldownTools
             && flag.GetValue(category.Value) is true;
     }
 
-    private sealed record RecastState(float AvailableIn, float NextCharge, float FullRecharge,
+    internal sealed record RecastState(float AvailableIn, float NextCharge, float FullRecharge,
         float Interval, uint Charges, uint MaxCharges);
 
     /// <summary>
@@ -161,7 +161,7 @@ internal static unsafe class CooldownTools
     /// Its modulo gives the next recharge, while the native current-charge count accounts for
     /// level-sync caps. Never divide the raw Total by the current cap (Total can use a higher cap).
     /// </summary>
-    private static RecastState? DescribeRecast(float elapsed, float interval, uint charges, ushort maxCharges)
+    internal static RecastState? DescribeRecast(float elapsed, float interval, uint charges, ushort maxCharges)
     {
         if (!float.IsFinite(elapsed) || !float.IsFinite(interval) || elapsed < 0 || interval <= 0) return null;
         var cap = Math.Max(1u, maxCharges);

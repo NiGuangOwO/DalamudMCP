@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 182;
+    private const int ExpectedTools = 184;
 
     private static int checks;
     private static int failures;
@@ -68,6 +68,40 @@ internal static class Program
     }
 
     private static void Note(string message) => Console.WriteLine($"  [note] {message}");
+
+    private static void CheckTravelWorkflow(Assembly assembly)
+    {
+        const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic;
+        var route = assembly.GetType("DalamudMCP.Tools.OwnedNavPath", true)!;
+        var validate = route.GetMethod("IsUsablePath", any | BindingFlags.Static)!;
+        var suffix = route.GetMethod("IsRemainingPath", any | BindingFlags.Static)!;
+        var progress = assembly.GetType("DalamudMCP.Tools.MoveWorkflow+MovementProgress", true)!;
+        var at = new System.Numerics.Vector3(0, 0, 0);
+        var target = new System.Numerics.Vector3(10, 0, 0);
+        var edge = new System.Numerics.Vector3(7, 0, 0);
+        bool Valid(System.Numerics.Vector3[] path) =>
+            validate.Invoke(null, new object[] { path, at, target, 2.7f, 20f, 512 }) is true;
+        Check("NPC travel rejects a navigable path ending outside the original reach",
+            !Valid(new[] { at, edge }) && Valid(new[] { at, target }));
+        Check("travel rejects non-finite or overlong substituted paths",
+            !Valid(new[] { new System.Numerics.Vector3(float.NaN, 0, 0), target }) &&
+            !Valid(new[] { new System.Numerics.Vector3(40, 0, 0), target }));
+        bool Owns(System.Numerics.Vector3[] path) =>
+            suffix.Invoke(null, new object[] { new[] { at, edge, target }, path }) is true;
+        Check("only the remaining owned route is eligible for cleanup",
+            Owns(new[] { edge, target }) && !Owns(new[] { edge, at }) && !Owns(Array.Empty<System.Numerics.Vector3>()));
+        var monitor = Activator.CreateInstance(progress, any | BindingFlags.Instance, null, new object[] { at, 0L }, null);
+        var stalled = progress.GetMethod("IsStalled", any | BindingFlags.Instance)!;
+        bool Stalled(System.Numerics.Vector3 pos, long time) => stalled.Invoke(monitor, new object[] { pos, time }) is true;
+        var climb = new System.Numerics.Vector3(0, 8, 0);
+        Check("a climb counts as progress; only sustained lack of movement stalls",
+            !Stalled(at, 3000) && !Stalled(climb, 3400) && !Stalled(climb, 6800) && Stalled(climb, 7000));
+        var action = assembly.GetType("DalamudMCP.Tools.ActionReadyWorkflow", true)!
+            .GetMethod("CanBecomeReady", any | BindingFlags.Static)!;
+        bool Retry(uint status) => action.Invoke(null, new object[] { status }) is true;
+        Check("action wait allows transient native locks, not wrong targets, jobs or missing resources",
+            Retry(579) && Retry(580) && Retry(582) && !Retry(563) && !Retry(574) && !Retry(568));
+    }
 
     private static async Task<int> Main(string[] args)
     {
@@ -398,6 +432,7 @@ internal static class Program
         // ------------------------------------------------------ tool registry
         var registry = Prop(plugin, "Registry");
         Check("Registry is present", registry is not null);
+        CheckTravelWorkflow(plugin.GetType().Assembly);
 
         var tools = registry is null ? null : Prop(registry, "Tools") as IEnumerable;
         var toolNames = tools is null
@@ -410,10 +445,11 @@ internal static class Program
         Check("registry exposes read_memory", toolNames.Contains("read_memory"));
         Check("registry exposes query_events", toolNames.Contains("query_events"));
         Check("registry exposes call_plugin_ipc", toolNames.Contains("call_plugin_ipc"));
-        foreach (var name in new[] { "add_plugin_repository", "remove_plugin_repository", "set_plugin_repository_enabled", "refresh_plugin_repositories", "install_plugin", "uninstall_plugin" })
+        foreach (var name in new[] { "add_plugin_repository", "remove_plugin_repository", "set_plugin_repository_enabled", "refresh_plugin_repositories", "install_plugin", "uninstall_plugin",
+            "move_and_wait", "reload_dev_plugin", "execute_action" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
         foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation",
-            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording" })
+            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         var holdingsTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "search_item_holdings"));
         Check("item holdings query is read-only", Equals(Prop(holdingsTool, "Mutating"), false));

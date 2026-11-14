@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/DalamudMCP/Events/CombatRecording.cs" Link="CombatRecording.cs" />
+    <Compile Include="../../src/DalamudMCP/Events/CombatOutcomeGuard.cs" Link="CombatOutcomeGuard.cs" />
+    <Compile Include="../../src/DalamudMCP/Chat/ChatLogBuffer.cs" Link="ChatLogBuffer.cs" />
     <Compile Include="../../src/DalamudMCP/Events/CombatArchive.cs" Link="CombatArchive.cs" />
     <Compile Include="../../src/DalamudMCP/Events/CombatEncounterAnalysis.cs" Link="CombatEncounterAnalysis.cs" />
     <Compile Include="../../src/DalamudMCP/Events/CombatFrameSession.cs" Link="CombatFrameSession.cs" />

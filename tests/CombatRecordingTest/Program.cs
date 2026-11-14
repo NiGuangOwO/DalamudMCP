@@ -70,5 +70,6 @@ unsafe class Program
         Console.WriteLine($"{checks}/{checks} passed");
         ArchiveTests.Run().GetAwaiter().GetResult();
         CombatDiagnosticsTests.Run().GetAwaiter().GetResult();
+        CombatOutcomeTests.Run();
     }
 }
