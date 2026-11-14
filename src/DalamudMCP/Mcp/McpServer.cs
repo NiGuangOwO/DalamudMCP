@@ -715,6 +715,12 @@ public sealed class McpServer : IDisposable
                         "install_plugin requires repositoryUrl and expectedVersion. Repository/install/uninstall mutations return " +
                         "operationId: poll get_plugin_operation to terminal before repeating. Refresh failures may leave saved " +
                         "repository settings; deletionScheduled is deferred cleanup, not filesDeleted. Plugin configuration is preserved. " +
+                        "For local developer plugins use list_dev_plugins and exact filePath, since internal names can repeat. " +
+                        "set_dev_plugin_settings changes startup/reload/error flags without loading. unload_dev_plugin retains registration/settings; " +
+                        "remove_dev_plugin removes one explicit DLL location and current instance while preserving files/configuration, never folders. " +
+                        "Default-folder files can be rediscovered. These mutations protect the MCP host; lifecycle timeouts do not cancel started tasks. " +
+                        "Before loading a local DLL, discover any same-name online plugin with plugin_list, use disable_repository_plugin with exact internalName/expectedVersion, " +
+                        "poll get_plugin_operation to terminal success with stateVerified=true, and confirm the online instance unloaded before load_dev_plugin. Preserve its installation/configuration. " +
                         "Use search_item_holdings for bags, equipment, armoury, saddlebags and visited retainers; read coverage/source/complete " +
                         "because unloaded or unvisited storage is unknown and session snapshots may be stale. " +
                         "Mutating tools are hidden/refused when AllowMutatingTools is off; follow the user's scope and " +

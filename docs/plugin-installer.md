@@ -4,6 +4,8 @@ Added in 1.0.0.33. The tools use the installed Dalamud managed plugin manager, w
 
 For **local development DLLs**, use `get_dev_plugin_state` to inspect the actual auto-reload setting and loaded/file MVID. When auto-reload is enabled, build and use read-only `wait_for_dev_plugin`; require `buildVerified=true` before testing rather than calling the mutating loader. `load_dev_plugin` is for registration/loading or an explicit watcher change; it preserves existing settings when `autoReload` is omitted. See [development build readiness](addon-probes-and-dev-loader.md#development-plugin-loader). Repository installation operations below do not manage developer watchers.
 
+When a same-name online installation is enabled, use `disable_repository_plugin` and verify its terminal result before loading the local DLL. The online copy remains installed with its configuration. See [developer-plugin management](dev-plugin-management.md) for the ordered switch and local settings/unload/removal tools.
+
 | Tool | Arguments and result |
 | --- | --- |
 | `list_plugin_repositories` | Read-only, paged `cursor` / `limit` (1–100). Lists configured and effective runtime repositories, main/preset protection, enabled state, refresh status and configuration/runtime agreement. |
@@ -14,9 +16,10 @@ For **local development DLLs**, use `get_dev_plugin_state` to inspect the actual
 | `list_available_plugins` | Read-only, paged `query`, exact optional `repositoryUrl`, `cursor`, `limit`. Reads Dalamud's currently filtered catalog, including stable/testing versions and installed state. It does not refresh. |
 | `install_plugin` | Exact `internalName`, `repositoryUrl`, `expectedVersion`, optional `testing` (default false). Installs a currently available manifest and attempts to load it. Testing requires Dalamud's testing setting to already be enabled. |
 | `uninstall_plugin` | Exact installed `internalName`, `expectedVersion`. Unloads, schedules file cleanup and removes the installed entry. Preserves configuration. Development plugins and the MCP host are refused. |
+| `disable_repository_plugin` | Exact online `internalName`, `expectedVersion`. Sets only that plugin's preference to false in its declaring profiles, unloads it and verifies that no active profile wants it. Keeps the installation, files and plugin configuration. Ignores same-name developer instances when selecting the online target. |
 | `get_plugin_operation` | Read-only `operationId`, or newest when omitted. Returns `running`, `succeeded` or `failed`, a `terminal` flag and result/error. |
 
-The six mutation tools require `AllowMutatingTools`. Each returns an operation record promptly; poll its ID until `terminal=true` before issuing another change. There is one active operation and at most 20 retained operation records. History is local to this MCP host session and is lost on reload. An unknown ID returns `available=false`.
+The seven mutation tools require `AllowMutatingTools`. Each returns an operation record promptly; poll its ID until `terminal=true` before issuing another change. There is one active operation and at most 20 retained operation records. History is local to this MCP host session and is lost on reload. An unknown ID returns `available=false`.
 
 Example: find a plugin, copy its exact observed values, install, then poll:
 

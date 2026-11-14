@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/DalamudMCP/Tools/DevPluginTools.cs" Link="DevPluginTools.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/DevPluginManagement.cs" Link="DevPluginManagement.cs" />
     <Compile Include="../../src/DalamudMCP/Tools/DevPluginBuildWaiter.cs" Link="DevPluginBuildWaiter.cs" />
     <Compile Include="../../src/DalamudMCP/Tools/DevBuildIdentity.cs" Link="DevBuildIdentity.cs" />
     <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />

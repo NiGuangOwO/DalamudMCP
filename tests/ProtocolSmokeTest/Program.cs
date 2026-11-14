@@ -153,6 +153,10 @@ public static class Program
             instructions.Contains("get_dev_plugin_state", StringComparison.Ordinal) &&
             instructions.Contains("When autoReload=true, use read-only wait_for_dev_plugin", StringComparison.Ordinal) &&
             instructions.Contains("omitted autoReload preserves existing settings", StringComparison.Ordinal));
+        Check("initialize instructions require verified online disable before local loading",
+            instructions.Contains("disable_repository_plugin with exact internalName/expectedVersion", StringComparison.Ordinal) &&
+            instructions.Contains("terminal success with stateVerified=true", StringComparison.Ordinal) &&
+            instructions.Contains("list_dev_plugins", StringComparison.Ordinal));
 
         var sid = sessionId!;
 

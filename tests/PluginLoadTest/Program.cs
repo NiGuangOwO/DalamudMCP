@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 184;
+    private const int ExpectedTools = 189;
 
     private static int checks;
     private static int failures;
@@ -446,10 +446,10 @@ internal static class Program
         Check("registry exposes query_events", toolNames.Contains("query_events"));
         Check("registry exposes call_plugin_ipc", toolNames.Contains("call_plugin_ipc"));
         foreach (var name in new[] { "add_plugin_repository", "remove_plugin_repository", "set_plugin_repository_enabled", "refresh_plugin_repositories", "install_plugin", "uninstall_plugin",
-            "move_and_wait", "reload_dev_plugin", "execute_action" })
+            "move_and_wait", "reload_dev_plugin", "execute_action", "set_dev_plugin_settings", "unload_dev_plugin", "remove_dev_plugin", "disable_repository_plugin" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
         foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation",
-            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait" })
+            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait", "list_dev_plugins" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         var holdingsTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "search_item_holdings"));
         Check("item holdings query is read-only", Equals(Prop(holdingsTool, "Mutating"), false));

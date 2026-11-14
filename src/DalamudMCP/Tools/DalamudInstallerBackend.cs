@@ -18,6 +18,7 @@ internal sealed class DalamudInstallerBackend : IPluginInstallerBackend
     private readonly Assembly sdk;
     private object? manager;
     private object? configuration;
+    private object? profileManager;
     private Assembly Sdk => sdk;
     private object Manager { get { Bind(); return manager!; } }
     private object Configuration { get { Bind(); return configuration!; } }
@@ -28,8 +29,9 @@ internal sealed class DalamudInstallerBackend : IPluginInstallerBackend
         dispatch = action => services.Framework.RunOnFrameworkThread(action);
     }
 
-    internal DalamudInstallerBackend(Assembly sdk, object manager, object configuration, Func<Func<object?>, Task<object?>> dispatch)
-    { this.sdk = sdk; this.manager = manager; this.configuration = configuration; this.dispatch = dispatch; }
+    internal DalamudInstallerBackend(Assembly sdk, object manager, object configuration, Func<Func<object?>, Task<object?>> dispatch,
+        object? profileManager = null)
+    { this.sdk = sdk; this.manager = manager; this.configuration = configuration; this.dispatch = dispatch; this.profileManager = profileManager; }
 
     private void Bind()
     {
@@ -172,6 +174,7 @@ internal sealed class DalamudInstallerBackend : IPluginInstallerBackend
     }
     public async Task<JObject> Execute(string kind, JObject args, Action checkMutation)
     {
+        if (kind == "disable") return await Disable(args, checkMutation);
         if (kind is "install" or "uninstall") return kind == "install" ? await Install(args, checkMutation) : await Uninstall(args, checkMutation);
         var changed = false;
         await OnThread(() =>
@@ -311,6 +314,90 @@ internal sealed class DalamudInstallerBackend : IPluginInstallerBackend
             return new JObject { ["internalName"] = name, ["version"] = version, ["isLoaded"] = false,
                 ["removedFromManager"] = true, ["deletionScheduled"] = true, ["filesDeleted"] = false,
                 ["configurationPreserved"] = true, ["stateVerified"] = true };
+        });
+    }
+
+    internal static void ValidateDisableShape(Assembly sdk)
+    {
+        var profile = sdk.GetType("Dalamud.Plugin.Internal.Profiles.Profile") ?? throw new ToolException("unsupported Dalamud profiles");
+        var manager = sdk.GetType("Dalamud.Plugin.Internal.Profiles.ProfileManager") ?? throw new ToolException("unsupported Dalamud profile manager");
+        RequireMethod(profile, "WantsPlugin", typeof(bool?), typeof(Guid));
+        RequireMethod(profile, "AddOrUpdateAsync", typeof(Task), typeof(Guid), typeof(string), typeof(bool), typeof(bool));
+        foreach (var name in new[] { "Profiles", "DefaultProfile", "IsBusy" }) RequireProperty(manager, name);
+        var local = sdk.GetType("Dalamud.Plugin.Internal.Types.LocalPlugin")!;
+        if (RequireProperty(local, "EffectiveWorkingPluginId").PropertyType != typeof(Guid) ||
+            RequireProperty(local, "IsWantedByAnyProfile").PropertyType != typeof(bool))
+            throw new ToolException("unsupported installed plugin profile identity");
+    }
+
+    private async Task<JObject> Disable(JObject args, Action check)
+    {
+        var name = args.Value<string>("internalName")!;
+        var version = args.Value<string>("expectedVersion")!;
+        object target = null!;
+        object profiles = null!;
+        Guid id = default;
+        object[] declaring = [];
+        void TargetGuard()
+        {
+            check();
+            var matches = Items(Manager, "InstalledPlugins", 4096).Where(p =>
+                String(p, "InternalName") == name && Get(p, "IsDev") is false).ToArray();
+            if (matches.Length != 1 || !ReferenceEquals(matches[0], target) || String(target, "EffectiveVersion") != version ||
+                !Equals(Get(target, "EffectiveWorkingPluginId"), id))
+                throw new ToolException("repository plugin identity/version changed; rediscover before disabling");
+        }
+        await OnThread(() =>
+        {
+            check(); Ready(); ValidateDisableShape(Sdk);
+            if (name.Equals("DalamudMCP", StringComparison.OrdinalIgnoreCase)) throw new ToolException("the MCP host cannot disable itself");
+            var matches = Items(Manager, "InstalledPlugins", 4096).Where(p =>
+                String(p, "InternalName") == name && Get(p, "IsDev") is false).ToArray();
+            if (matches.Length != 1 || String(matches[0], "EffectiveVersion") != version)
+                throw new ToolException("exact repository-installed plugin/version not found; discover isDev=false with plugin_list");
+            target = matches[0];
+            if (String(target, "State") is not ("Loaded" or "Unloaded" or "LoadError" or "DependencyResolutionFailed"))
+                throw new ToolException("repository plugin is transitioning or has an unload error");
+            if (Get(target, "EffectiveWorkingPluginId") is not Guid workingId || workingId == Guid.Empty)
+                throw new ToolException("repository plugin has no valid profile identity");
+            id = workingId;
+            profiles = profileManager ??= Service(Sdk, "Dalamud.Plugin.Internal.Profiles.ProfileManager");
+            if (Get(profiles, "IsBusy") is not false) throw new ToolException("Dalamud profiles are busy; inspect state before retrying");
+            declaring = Items(profiles, "Profiles", 512).Where(p => Invoke(p, "WantsPlugin", id) is bool).ToArray();
+            if (declaring.Length == 0) declaring = new[] { Get(profiles, "DefaultProfile") ?? throw new ToolException("default profile unavailable") };
+            foreach (var profile in declaring)
+                RequireMethod(profile.GetType(), "AddOrUpdateAsync", typeof(Task), typeof(Guid), typeof(string), typeof(bool), typeof(bool));
+            return true;
+        });
+        foreach (var profile in declaring)
+            await RunTask(() =>
+            {
+                TargetGuard();
+                if (Get(profiles, "IsBusy") is not false) throw new ToolException("Dalamud profiles became busy; inspect the partially changed state");
+                // apply=false updates only this identity's preference; do not reconcile unrelated plugins.
+                return (Task)Invoke(profile, "AddOrUpdateAsync", id, name, false, false)!;
+            }, check);
+        await RunTask(() =>
+        {
+            TargetGuard();
+            Invoke(Configuration, "QueueSave");
+            if (Get(target, "IsWantedByAnyProfile") is not false)
+                throw new ToolException("an active profile or override still wants the online plugin; local loading remains refused");
+            if (String(target, "State") is "Unloaded" or "DependencyResolutionFailed") return Task.CompletedTask;
+            if (String(target, "State") is not ("Loaded" or "LoadError")) throw new ToolException("repository plugin lifecycle changed before unload");
+            var mode = Enum.Parse(Sdk.GetType("Dalamud.Plugin.Internal.Types.PluginLoaderDisposalMode")!, "WaitBeforeDispose");
+            return (Task)Invoke(target, "UnloadAsync", mode)!;
+        }, check);
+        return await OnThread(() =>
+        {
+            TargetGuard();
+            if (Get(target, "IsLoaded") is not false || Get(target, "IsWantedByAnyProfile") is not false ||
+                (String(target, "State") != "Unloaded" && Get(target, "HasEverStartedLoad") is true))
+                throw new ToolException("online disable did not verify; inspect runtime state before loading the local plugin");
+            return new JObject { ["internalName"] = name, ["version"] = version, ["enabled"] = false,
+                ["isLoaded"] = false, ["installed"] = true, ["stateVerified"] = true,
+                ["declaringProfiles"] = declaring.Length, ["saveQueued"] = true,
+                ["filesDeleted"] = false, ["configurationPreserved"] = true };
         });
     }
 }

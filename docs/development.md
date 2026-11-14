@@ -109,6 +109,7 @@ Several suites require a local Dalamud installation and previously built plugin 
 | `tests/McpInterop` | Interoperability with the official TypeScript MCP SDK and JSON Schema validation. |
 | `tests/NativeUiReadTest`, `tests/AddonGeometryTest`, `tests/StatusSlotTest` | Guarded native UI reads, geometry and sparse status slots. |
 | `tests/IpcArgumentTest`, `tests/SignatureScanTest`, `tests/BuildIdentityTest` | IPC argument validation, signature-scan bounds and build identity. |
+| `tests/DevPluginTest` | Developer-plugin discovery, settings, guarded unload/removal, build barriers and lifecycle timeout serialization. |
 
 `McpInterop` also requires Node.js and npm. Inspect its output to distinguish completed checks from dependency-related skips.
 

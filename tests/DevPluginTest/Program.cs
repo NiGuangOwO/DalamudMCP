@@ -31,10 +31,21 @@ foreach (var name in new[] { "DllFile", "InternalName", "IsDev", "IsLoaded", "St
     Check(local.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is not null, "SDK snapshot property " + name);
 Check(local.GetMethod("ReloadAsync", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
         Type.EmptyTypes)?.ReturnType == typeof(Task), "installed SDK has the expected developer reload lifecycle");
+var all = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+foreach (var name in new[] { "StartOnBoot", "NotifyForErrors" })
+    Check(local.GetProperty(name, all) is { CanRead: true, CanWrite: true, PropertyType: var t } && t == typeof(bool),
+        "installed SDK has writable developer setting " + name);
+var disposalType = sdk.GetType("Dalamud.Plugin.Internal.Types.PluginLoaderDisposalMode", true)!;
+Check(Enum.IsDefined(disposalType, "WaitBeforeDispose") &&
+    local.GetMethod("UnloadAsync", all, new[] { disposalType })?.ReturnType == typeof(Task) &&
+    local.GetMethod("DisposeAsync", all, Type.EmptyTypes)?.ReturnType == typeof(ValueTask),
+    "installed SDK exposes the checked unload and disposal contracts");
+Check(sdk.GetType("Dalamud.Plugin.Internal.PluginManager", true)!.GetMethod("RemovePlugin", all,
+    new[] { local.BaseType! })?.ReturnType == typeof(void), "installed SDK exposes exact manager removal");
 
 var registry = new ToolRegistry();
 DevPluginTools.Register(registry, new GameServices());
-Check(registry.Visible().Select(t => t.Name).Order().SequenceEqual(new[] { "get_dev_plugin_state", "wait_for_dev_plugin" }),
+Check(registry.Visible().Select(t => t.Name).Order().SequenceEqual(new[] { "get_dev_plugin_state", "list_dev_plugins", "wait_for_dev_plugin" }),
     "state and wait remain available when mutation gate is closed; loader stays hidden");
 Check(registry.Find("wait_for_dev_plugin")!.ToJson()["annotations"]!.Value<bool>("readOnlyHint"), "wait advertises readOnlyHint");
 await Reject(() => registry.Find("get_dev_plugin_state")!.AsyncHandler is null
@@ -158,6 +169,31 @@ try
     await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration),
         "loaded obsolete build with disabled watcher fails instead of claiming readiness");
     Check(!stale.AutomaticReload && stale.Writes == 0 && stale.Loads == 0, "obsolete disabled build is not force-loaded or silently enabled");
+    var online = new FakePlugin { DllFile = new FileInfo(path + ".online.dll"), IsDev = false, Assembly = assembly };
+    loadManager.InstalledPlugins = new object[] { online };
+    var scansBeforeOnline = loadManager.Scans;
+    await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration),
+        "local loading refuses an enabled same-name online installation before any scan");
+    Check(loadManager.Scans == scansBeforeOnline && online.IsLoaded, "refused online conflict preserves the online plugin and registration state");
+    online.IsLoaded = false; online.IsWantedByAnyProfile = true;
+    await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration),
+        "an unloaded online instance still enabled by a profile is not considered disabled");
+    online.IsWantedByAnyProfile = false;
+    var localWithOnline = new FakePlugin(false) { DllFile = new FileInfo(path), Assembly = assembly, IsLoaded = false };
+    loadManager.OnScan = () => loadManager.InstalledPlugins = new object[] { online, localWithOnline };
+    var withOnline = (JObject)(await DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration))!;
+    Check(withOnline.Value<bool>("buildVerified") && localWithOnline.Loads == 1 && !online.IsLoaded && online.Unloads == 0 &&
+        loadManager.InstalledPlugins.Contains(online), "a disabled online installation remains installed while the verified local version loads");
+    online.IsLoaded = true;
+    await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration),
+        "the automatic-reload fast path also refuses an enabled online copy");
+    online.IsLoaded = false; localWithOnline.IsLoaded = false;
+    localWithOnline.AutomaticReload = false;
+    loadManager.OnScan = () => online.IsLoaded = true;
+    await Reject(() => DevPluginTools.Load(services, LoadArgs(), () => loadManager, () => configuration),
+        "online state is rechecked after a developer scan before local load dispatch");
+    Check(localWithOnline.Loads == 1 && !localWithOnline.IsLoaded, "a newly re-enabled online copy prevents the subsequent local load");
+    loadManager.OnScan = null;
     var sameBuild = new FakePlugin(false) { DllFile = new FileInfo(path), Assembly = assembly };
     loadManager.InstalledPlugins = new object[] { sameBuild };
     var reloadArgs = LoadArgs();
@@ -187,6 +223,140 @@ try
     await Reject(() => DevPluginTools.Load(services, invalidArgs, () => loadManager, () => configuration), "loader refuses nonboolean watcher setting");
 }
 finally { File.Delete(manifest); }
+
+var temporary = Path.Combine(Path.GetTempPath(), "DalamudMCP-DevManagement-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(temporary);
+var managedPath = Path.Combine(temporary, "Fixture.dll");
+File.Copy(path, managedPath);
+var originalBytes = File.ReadAllBytes(managedPath);
+var managedManifest = Path.ChangeExtension(managedPath, ".json");
+File.WriteAllText(managedManifest, "{}");
+object Location(string file, bool enabled = true)
+{
+    var location = Activator.CreateInstance(sdk.GetType("Dalamud.Configuration.DevPluginLocationSettings", true)!)!;
+    location.GetType().GetProperty("Path")!.SetValue(location, file);
+    location.GetType().GetProperty("IsEnabled")!.SetValue(location, enabled);
+    return location;
+}
+var managementServices = new GameServices(); managementServices.Config.AllowMutatingTools = true;
+var managementTarget = new FakePlugin { DllFile = new FileInfo(managedPath), Assembly = assembly };
+var duplicateName = new FakePlugin { DllFile = new FileInfo(Path.Combine(temporary, "Other.dll")), Assembly = assembly };
+var managementManager = new FakeManager { InstalledPlugins = new object[] { managementTarget, duplicateName } };
+var managementConfig = new FakeConfiguration();
+managementConfig.DevPluginLoadLocations.Add(Location(managedPath.ToUpperInvariant()));
+var missingPath = Path.Combine(temporary, "Missing.dll");
+managementConfig.DevPluginLoadLocations.Add(Location(missingPath, false));
+managementConfig.DevPluginLoadLocations.Add(Location(temporary));
+JObject ManagementArgs() => new() { ["filePath"] = managedPath, ["timeoutMs"] = 1000 };
+JObject Set(JObject args) => DevPluginTools.SetDevelopmentSettings(managementServices, args, () => managementManager, () => managementConfig);
+async Task<JObject> Stop(JObject? args = null, bool remove = false) =>
+    (JObject)(await DevPluginTools.StopDevelopment(managementServices, args ?? ManagementArgs(), remove,
+        () => managementManager, () => managementConfig))!;
+try
+{
+    var listed = DevPluginTools.ListDevelopment(managementManager, managementConfig, new JObject { ["limit"] = 1 });
+    Check(listed.Value<int>("total") == 3 && listed.Value<int>("count") == 1 && listed.Value<int>("nextCursor") == 1 &&
+        listed.Value<int>("otherLocationCount") == 1, "development inventory merges configured DLLs, pages and counts unscanned folder locations");
+    var rows = (JArray)DevPluginTools.ListDevelopment(managementManager, managementConfig, new JObject())["plugins"]!;
+    Check(rows.Count(r => r.Value<string>("internalName") == managementTarget.InternalName) == 2,
+        "duplicate internal names at different DLL paths stay independently discoverable");
+    var missingRow = rows.Single(r => r.Value<string>("filePath") == missingPath);
+    Check(!missingRow.Value<bool>("registered") && !missingRow.Value<bool>("fileExists") &&
+        missingRow.Value<bool>("loadLocationConfigured") && !missingRow.Value<bool>("loadLocationEnabled"),
+        "missing disabled DLL registrations stay discoverable without reading their assemblies");
+    Check(managementTarget.Writes == 0 && managementConfig.Saves == 0 && managementManager.Scans == 0,
+        "development listing makes no settings, scan or lifecycle changes");
+    foreach (var testArgs in new[] { new JObject { ["limit"] = 101 }, new JObject { ["cursor"] = -1 },
+        new JObject { ["limit"] = "1" }, new JObject { ["query"] = true }, new JObject { ["query"] = new string('x', 129) } })
+        await Reject(() => Task.FromResult(DevPluginTools.ListDevelopment(managementManager, managementConfig, testArgs)), "invalid developer inventory argument " + testArgs);
+    var settingsArgs = ManagementArgs(); settingsArgs["startOnBoot"] = false; settingsArgs["notifyForErrors"] = false; settingsArgs["autoReload"] = false;
+    var changed = Set(settingsArgs);
+    Check(changed.Value<bool>("stateVerified") && changed.Value<bool>("settingsChanged") && managementConfig.Saves == 1 &&
+        !managementTarget.StartOnBoot && !managementTarget.NotifyForErrors && !managementTarget.AutomaticReload,
+        "developer settings update only the exact DLL and queue one save");
+    Check(duplicateName.StartOnBoot && duplicateName.NotifyForErrors && duplicateName.AutomaticReload &&
+        managementTarget.Loads == 0 && managementTarget.Reloads == 0 && managementTarget.Unloads == 0,
+        "settings preserve a same-named DLL and perform no lifecycle operation");
+    Check(!Set(settingsArgs).Value<bool>("saveQueued") && managementConfig.Saves == 1, "unchanged developer settings do not save again");
+    foreach (var testArgs in new[] { ManagementArgs(), new JObject { ["filePath"] = managedPath, ["autoReload"] = "false" },
+        new JObject { ["filePath"] = managedPath, ["startOnBoot"] = JValue.CreateNull() } })
+        await Reject(() => Task.FromResult(Set(testArgs)), "settings require supplied strict booleans " + testArgs);
+    managementServices.Config.AllowMutatingTools = false;
+    await Reject(() => Task.FromResult(Set(settingsArgs)), "developer settings respect closed mutation gate");
+    await Reject(async () => await Stop(), "developer unload respects closed mutation gate");
+    await Reject(async () => await Stop(remove: true), "developer removal respects closed mutation gate");
+    managementServices.Config.AllowMutatingTools = true;
+    managementTarget.InternalName = "DalamudMCP";
+    await Reject(() => Task.FromResult(Set(settingsArgs)), "developer settings protect the MCP host");
+    await Reject(async () => await Stop(), "developer unload protects the MCP host");
+    await Reject(async () => await Stop(remove: true), "developer removal protects the MCP host");
+    managementTarget.InternalName = "DevPluginTest";
+    managementTarget.StateOverride = "Loading";
+    await Reject(() => Task.FromResult(Set(settingsArgs)), "developer settings refuse a lifecycle transition");
+    await Reject(async () => await Stop(), "developer unload refuses a lifecycle transition");
+    await Reject(async () => await Stop(remove: true), "developer removal refuses a lifecycle transition");
+    managementTarget.StateOverride = null;
+    managementTarget.IsDev = false;
+    await Reject(async () => await Stop(remove: true), "developer removal refuses an installed production plugin");
+    managementTarget.IsDev = true;
+    managementManager.InstalledPlugins = new object[] { managementTarget, managementTarget };
+    await Reject(async () => await Stop(), "developer unload refuses ambiguous exact DLL instances");
+    managementManager.InstalledPlugins = new object[] { managementTarget, duplicateName };
+    var unloadedResult = await Stop();
+    Check(unloadedResult.Value<bool>("stateVerified") && !managementTarget.IsLoaded && managementTarget.Unloads == 1 &&
+        !managementTarget.AutomaticReload && managementConfig.Saves == 1 && managementManager.Removes == 0,
+        "unload verifies state while preserving watcher, configuration and registration");
+    await Stop();
+    Check(managementTarget.Unloads == 1, "unloading an already unloaded plugin performs no lifecycle operation");
+    managementTarget.IsLoaded = true;
+    managementTarget.OnUnload = () => Task.CompletedTask;
+    await Reject(async () => await Stop(), "a completed unload task without an unloaded state is refused");
+    managementTarget.OnUnload = null;
+    managementConfig.DevPluginLoadLocations.RemoveAt(0);
+    await Reject(async () => await Stop(remove: true), "removal refuses a folder-only or implicit registration before unloading");
+    Check(managementTarget.IsLoaded, "unsupported registration removal does not unload the target");
+    managementConfig.DevPluginLoadLocations.Add(Location(managedPath));
+    managementConfig.DevPluginLoadLocations.Add(Location(managedPath));
+    await Reject(async () => await Stop(remove: true), "removal refuses duplicate explicit DLL locations");
+    managementConfig.DevPluginLoadLocations.RemoveAt(managementConfig.DevPluginLoadLocations.Count - 1);
+    var blocker = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    managementTarget.OnUnload = async () => { await blocker.Task; managementTarget.IsLoaded = false; };
+    var timedOut = await Stop();
+    Check(timedOut.Value<string>("status") == "timeout" && !timedOut.Value<bool>("stateVerified") &&
+        timedOut.Value<bool>("lifecycleAttempted") && timedOut.Value<bool>("operationMayContinue"),
+        "unload timeout stays distinct from completion of the underlying lifecycle");
+    await Reject(() => Task.FromResult(Set(settingsArgs)), "timed-out lifecycle retains serialization against settings");
+    await Reject(async () => await Stop(remove: true), "timed-out lifecycle blocks a duplicate removal");
+    blocker.SetResult();
+    await Task.Delay(30);
+    Check(!managementTarget.IsLoaded, "an already-started unload can finish after the request timeout");
+    managementTarget.OnUnload = null;
+    var savedLocations = managementConfig.DevPluginLoadLocations.Count;
+    var removedResult = await Stop(remove: true);
+    Check(removedResult.Value<bool>("stateVerified") && removedResult.Value<bool>("loadLocationRemoved") &&
+        managementTarget.Disposals == 1 && managementManager.Removes == 1 && managementConfig.DevPluginLoadLocations.Count == savedLocations - 1,
+        "removal disposes the developer instance and removes only its exact explicit DLL location");
+    Check(managementManager.InstalledPlugins.Single() == duplicateName &&
+        File.ReadAllBytes(managedPath).SequenceEqual(originalBytes) && File.ReadAllText(managedManifest) == "{}" &&
+        !removedResult.Value<bool>("filesDeleted") && removedResult.Value<bool>("configurationPreserved"),
+        "removal preserves plugin binaries, manifest, same-named plugin and configuration");
+    var missingRemoved = await Stop(new JObject { ["filePath"] = missingPath }, remove: true);
+    Check(missingRemoved.Value<bool>("loadLocationRemoved") && !missingRemoved.Value<bool>("lifecycleAttempted") &&
+        managementConfig.DevPluginLoadLocations.Count == 1, "missing DLL removal only removes its location and leaves the folder registration");
+    await Reject(async () => await Stop(), "unload refuses an unregistered DLL");
+    managementTarget.StateOverride = "Disposed";
+    managementManager.InstalledPlugins = new object[] { managementTarget };
+    managementConfig.DevPluginLoadLocations.Add(Location(managedPath));
+    await Stop(remove: true);
+    Check(managementTarget.Disposals == 1 && managementManager.InstalledPlugins.Length == 0,
+        "removal can finish cleanup of an already disposed instance without disposing twice");
+    foreach (var timeout in new JToken[] { 999, 30001, "1000", 1000.5 })
+        await Reject(async () => await Stop(new JObject { ["filePath"] = managedPath, ["timeoutMs"] = timeout }), "invalid developer lifecycle timeout " + timeout);
+}
+finally
+{
+    File.Delete(managedManifest); File.Delete(managedPath); Directory.Delete(temporary);
+}
 Console.WriteLine($"{checks}/{checks} developer plugin checks passed");
 
 internal sealed class FakeManager
@@ -195,6 +365,8 @@ internal sealed class FakeManager
     public int Scans { get; private set; }
     public Action? OnScan { get; set; }
     public Task ScanDevPluginsAsync() { Scans++; OnScan?.Invoke(); return Task.CompletedTask; }
+    public int Removes { get; private set; }
+    public void RemovePlugin(FakePlugin plugin) { Removes++; InstalledPlugins = InstalledPlugins.Where(p => !ReferenceEquals(p, plugin)).ToArray(); }
 }
 internal sealed class FakeConfiguration
 {
@@ -210,7 +382,11 @@ internal sealed class FakePlugin
     public string InternalName { get; set; } = "DevPluginTest";
     public bool IsDev { get; set; } = true;
     public bool IsLoaded { get; set; } = true;
-    public string State => IsLoaded ? "Loaded" : "Unloaded";
+    public bool IsWantedByAnyProfile { get; set; }
+    public string? StateOverride { get; set; }
+    public string State => StateOverride ?? (IsLoaded ? "Loaded" : "Unloaded");
+    public bool StartOnBoot { get; set; } = true;
+    public bool NotifyForErrors { get; set; } = true;
     public Assembly? Assembly { get; set; }
     public int Writes { get; private set; }
     public bool AutomaticReload { get => automaticReload; set { Writes++; automaticReload = value; } }
@@ -220,4 +396,13 @@ internal sealed class FakePlugin
     public Task LoadAsync(PluginLoadReason reason, bool flag, CancellationToken token)
     { Loads++; IsLoaded = true; return Task.CompletedTask; }
     public Task ReloadAsync() { Reloads++; return OnReload?.Invoke() ?? Task.CompletedTask; }
+    public int Unloads { get; private set; }
+    public int Disposals { get; private set; }
+    public Func<Task>? OnUnload { get; set; }
+    public Func<ValueTask>? OnDispose { get; set; }
+    public async Task UnloadAsync(FakeDisposal disposal)
+    { Unloads++; if (OnUnload is not null) await OnUnload(); else IsLoaded = false; }
+    public async ValueTask DisposeAsync()
+    { Disposals++; if (OnDispose is not null) await OnDispose(); IsLoaded = false; StateOverride = "Disposed"; }
 }
+internal enum FakeDisposal { WaitBeforeDispose }

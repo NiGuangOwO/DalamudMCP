@@ -62,6 +62,14 @@ internal sealed class PluginInstallerTools : IDisposable
             Json.Schema(("internalName", "string", "Exact installed internal name from plugin_list.", true),
                 ("expectedVersion", "string", "Exact installed version from plugin_list/plugin_describe.", true)),
             args => Start("uninstall", PluginArguments(args, false)), mutating: true);
+        registry.AddAsync("disable_repository_plugin", "Disable one repository-installed plugin",
+            "Disables one exact non-development internalName/version in its declaring Dalamud profiles, unloads that instance and verifies that no active profile wants it loaded. " +
+            "Preserves the online installation, files and plugin configuration, including when a same-name developer instance exists. " +
+            "Use before loading a same-name local DLL. Refuses the MCP host, ambiguous online installations, profile/lifecycle transitions and stale versions. " +
+            "Returns operationId; poll get_plugin_operation to terminal and require stateVerified before local loading.",
+            Json.Schema(("internalName", "string", "Exact repository-installed internal name from plugin_list, with isDev=false.", true),
+                ("expectedVersion", "string", "Exact installed online version from runtime discovery.", true)),
+            args => Start("disable", PluginArguments(args, false)), mutating: true);
         registry.Add("get_plugin_operation", "Read a plugin installer operation",
             "Reads one operation by operationId, or the newest operation when omitted. status=running/succeeded/failed; terminal is authoritative for this task, not for arbitrary later changes. History is bounded to 20 operations and lost on MCP host reload. No cancellation: an already-started Dalamud task may finish after mutation access is disabled. Do not repeat a nonterminal operation.",
             Json.Schema(("operationId", "string", "Returned operation ID; omitted selects newest.", false)),

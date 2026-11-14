@@ -16,13 +16,14 @@ namespace DalamudMCP.Tools;
 /// Managed developer-plugin bridge. Shape-checked against the installed Dalamud;
 /// never loads an arbitrary assembly into MCP's own load context or executes C# snippets.
 /// </summary>
-internal static class DevPluginTools
+internal static partial class DevPluginTools
 {
     private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
     private static readonly SemaphoreSlim Gate = new(1, 1);
 
     public static void Register(ToolRegistry registry, GameServices svc)
     {
+        RegisterManagement(registry, svc);
         registry.Add("get_dev_plugin_state", "Inspect a local development plugin",
             "Read-only inspection by exact absolute DLL path: registered path, lifecycle state, AutomaticReload, file and loaded assembly MVID, and buildMatches. Does not scan, load, save configuration or change auto-reload. A matching snapshot is not the 750ms readiness barrier; use wait_for_dev_plugin after building. Supports inspection of the MCP host.",
             Json.Schema(("filePath", "string", "Absolute path to the local plugin DLL.", true)),
@@ -34,7 +35,7 @@ internal static class DevPluginTools
                 ("buildWaitMs", "integer", "Read-only wait, 1000-30000ms (default 15000).", false)),
             args => Wait(svc, args));
         registry.AddAsync("load_dev_plugin", "Register and load a local development plugin",
-            "Registers/loads a local DLL and verifies its running MVID for 750ms. Prefer get_dev_plugin_state then wait_for_dev_plugin when auto-reload is enabled. Existing auto-reload settings are preserved unless autoReload is explicitly provided; new registrations default to true. An auto-reloading plugin already loaded or transitioning is awaited without scan/save/LoadAsync. Does not force reload a loaded obsolete build. Conflicting paths and loading the MCP host itself are refused.",
+            "Registers/loads a local DLL and verifies its running MVID for 750ms. Prefer get_dev_plugin_state then wait_for_dev_plugin when auto-reload is enabled. Existing auto-reload settings are preserved unless autoReload is explicitly provided; new registrations default to true. An auto-reloading plugin already loaded or transitioning is awaited without scan/save/LoadAsync. Does not force reload a loaded obsolete build. A same-name repository plugin must first be disabled with disable_repository_plugin and verified unloaded; its installation is preserved. Conflicting developer paths and loading the MCP host itself are refused.",
             Json.Schema(
                 ("filePath", "string", "Absolute path to a local plugin DLL with a sibling JSON manifest.", true),
                 ("autoReload", "boolean", "Explicitly change auto-reload; omitted preserves existing settings, new registrations default true.", false),
@@ -226,10 +227,11 @@ internal static class DevPluginTools
         var api = (int?)assembly.GetType("Dalamud.Plugin.Internal.PluginManager")?.GetProperty("DalamudApiLevel", All)?.GetValue(null);
         if (manifest.Value<int?>("DalamudApiLevel") != api) throw new ToolException("plugin manifest API does not match this Dalamud");
 
-        await Gate.WaitAsync();
+        if (!Gate.Wait(0)) throw new ToolException("another developer lifecycle operation is active");
         try
         {
             var manager = await svc.Framework.RunOnFrameworkThread(getManager ?? Manager);
+            await svc.Framework.RunOnFrameworkThread(() => CheckLoadConflicts(manager, path, name));
             var initial = await svc.Framework.RunOnFrameworkThread(() => Snapshot(manager, path));
             if (initial.Instance is not null && !string.Equals(initial.InternalName, name, StringComparison.OrdinalIgnoreCase))
                 throw new ToolException("registered plugin internal name does not match the sibling manifest");
@@ -244,14 +246,10 @@ internal static class DevPluginTools
                 ?? throw new ToolException("unsupported Dalamud developer-location collection");
             var locationType = assembly.GetType("Dalamud.Configuration.DevPluginLocationSettings")
                 ?? throw new ToolException("unsupported Dalamud developer-location settings");
-            var existing = (await svc.Framework.RunOnFrameworkThread(() => Installed(manager)))
-                .FirstOrDefault(p => string.Equals(Property(p, "InternalName") as string, name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null && !string.Equals((Property(existing, "DllFile") as FileInfo)?.FullName, path, StringComparison.OrdinalIgnoreCase))
-                throw new ToolException("a plugin with this internal name is already installed at another path");
-
             await svc.Framework.RunOnFrameworkThread(() =>
             {
                 if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled");
+                CheckLoadConflicts(manager, path, name);
                 var location = locations.Cast<object>().FirstOrDefault(p => string.Equals(Property(p, "Path") as string, path, StringComparison.OrdinalIgnoreCase));
                 if (location == null)
                 {
@@ -262,10 +260,18 @@ internal static class DevPluginTools
                 locationType.GetProperty("IsEnabled")!.SetValue(location, true);
                 save.Invoke(config, null);
             });
-            if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled before developer scan");
-            var scanTask = (Task)(scan.Invoke(manager, null) ?? throw new ToolException("scan returned no task"));
+            var scanTask = await svc.Framework.RunOnFrameworkThread<Task>(() =>
+            {
+                MutationGuard(svc);
+                CheckLoadConflicts(manager, path, name);
+                return (Task)(scan.Invoke(manager, null) ?? throw new ToolException("scan returned no task"));
+            });
             await scanTask;
-            var plugin = (await svc.Framework.RunOnFrameworkThread(() => Snapshot(manager, path))).Instance
+            var plugin = (await svc.Framework.RunOnFrameworkThread(() =>
+            {
+                CheckLoadConflicts(manager, path, name);
+                return Snapshot(manager, path);
+            })).Instance
                 ?? throw new ToolException("plugin was not registered after the developer scan; check Dalamud logs");
             if (Property(plugin, "IsDev") is not true) throw new ToolException("refusing to control a non-development plugin");
             var autoReload = plugin.GetType().GetProperty("AutomaticReload", All)
@@ -275,26 +281,33 @@ internal static class DevPluginTools
                 await svc.Framework.RunOnFrameworkThread(() =>
                 {
                     if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled");
+                    CheckLoadConflicts(manager, path, name);
                     autoReload.SetValue(plugin, requestedAutoReload ?? true);
                     save.Invoke(config, null);
                 });
             }
             // A watcher may already be unloading/loading this instance. Starting a
             // second LoadAsync would race its lifecycle lock; await that build below.
-            var lifecycleState = Property(plugin, "State")?.ToString();
-            if (Property(plugin, "IsLoaded") is not true && lifecycleState is not ("Loading" or "Unloading"))
+            var loadTask = await svc.Framework.RunOnFrameworkThread<Task>(() =>
             {
-                if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled");
+                MutationGuard(svc);
+                CheckLoadConflicts(manager, path, name);
+                var lifecycleState = Property(plugin, "State")?.ToString();
+                if (Property(plugin, "IsLoaded") is true || lifecycleState is "Loading" or "Unloading") return Task.CompletedTask;
                 var load = Method(plugin, "LoadAsync", 3);
-                var task = (Task)load.Invoke(plugin, new object[] { PluginLoadReason.Installer, false, CancellationToken.None })!;
-                await task;
-            }
+                return (Task)load.Invoke(plugin, new object[] { PluginLoadReason.Installer, false, CancellationToken.None })!;
+            });
+            await loadTask;
             return await Verify();
 
             async Task<object?> Verify()
             {
                 var result = await DevPluginBuildWaiter.Wait(path, expectedBuild, waitMs,
-                    () => svc.Framework.RunOnFrameworkThread(() => Snapshot(manager, path)), () => DevBuildIdentity.Read(path),
+                    () => svc.Framework.RunOnFrameworkThread(() =>
+                    {
+                        CheckLoadConflicts(manager, path, name);
+                        return Snapshot(manager, path);
+                    }), () => DevBuildIdentity.Read(path),
                     () => { if (!svc.Config.AllowMutatingTools) throw new ToolException("mutating tools disabled while waiting for plugin build"); });
                 if (!result.Value<bool>("buildVerified"))
                     throw new ToolException($"matching plugin build did not become ready: {result.ToString(Newtonsoft.Json.Formatting.None)}; check auto-reload and Dalamud logs");
@@ -303,5 +316,19 @@ internal static class DevPluginTools
         }
         catch (TargetInvocationException ex) { throw new ToolException($"developer plugin operation failed: {ex.InnerException?.Message ?? ex.Message}"); }
         finally { Gate.Release(); }
+    }
+
+    private static void CheckLoadConflicts(object manager, string path, string name)
+    {
+        foreach (var plugin in Installed(manager).Where(p =>
+            string.Equals(Property(p, "InternalName") as string, name, StringComparison.OrdinalIgnoreCase) &&
+            !SamePath((Property(p, "DllFile") as FileInfo)?.FullName, path)))
+        {
+            if (Property(plugin, "IsDev") is not false)
+                throw new ToolException("another development plugin with this internal name is registered at a different path");
+            if (Property(plugin, "IsLoaded") is not false || Property(plugin, "State")?.ToString() is not "Unloaded" ||
+                Property(plugin, "IsWantedByAnyProfile") is not false)
+                throw new ToolException("same-name repository plugin is enabled or not safely unloaded; discover it with plugin_list, use disable_repository_plugin with its exact internalName/expectedVersion, poll get_plugin_operation and verify its unloaded state before loading the local DLL");
+        }
     }
 }

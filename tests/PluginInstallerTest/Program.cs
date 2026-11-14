@@ -42,6 +42,7 @@ internal static class Tests
     internal static async Task Run(Assembly sdk)
     {
         DalamudInstallerBackend.ValidateShape(sdk);
+        DalamudInstallerBackend.ValidateDisableShape(sdk);
         Check(true, "all reflected installer signatures match the installed SDK");
         var unavailable = new DalamudInstallerBackend(new DalamudMCP.GameServices());
         await Reject(() => { unavailable.Repositories(); return Task.CompletedTask; }, "unavailable SDK services refuse without blocking the framework");
@@ -49,8 +50,10 @@ internal static class Tests
         var fake = new BlockingBackend();
         var registry = new ToolRegistry { AllowMutating = () => gate };
         using var tools = new PluginInstallerTools(registry, fake, () => gate);
-        Check(registry.Tools.Count == 9 && registry.Visible().Count() == 3, "six mutations hidden with gate disabled; three read tools available");
+        Check(registry.Tools.Count == 10 && registry.Visible().Count() == 3, "seven mutations hidden with gate disabled; three read tools available");
         await Reject(() => Call(registry, "refresh_plugin_repositories"), "direct handler also checks mutation gate");
+        await Reject(() => Call(registry, "disable_repository_plugin", new JObject { ["internalName"] = "Probe", ["expectedVersion"] = "1.2.3.4" }),
+            "repository disable also checks the mutation gate");
         gate = true;
         foreach (var url in new[] { "file:///tmp/index", "https://user:pass@example.test/x", "https://example.test/x#fragment", " https://example.test/x", "relative", "ftp://example.test/x" })
             await Reject(() => Call(registry, "add_plugin_repository", new JObject { ["url"] = url }), "invalid URL rejected: " + url);
@@ -125,6 +128,42 @@ internal static class Tests
         result = await backend.Execute("uninstall", uninstall, allow);
         Check(result.Value<bool>("removedFromManager") && result.Value<bool>("deletionScheduled") && !result.Value<bool>("filesDeleted") && result.Value<bool>("configurationPreserved"), "uninstall distinguishes scheduled file deletion and preserves configuration");
         Check(manager.InstalledPlugins.Count == 0 && local.Trace.SequenceEqual(new[] { "unload-failed", "unload", "schedule", "remove" }), "verified unload precedes schedule and manager removal");
+        var online = new Local();
+        var sameNameDeveloper = new Local { IsDev = true };
+        manager.InstalledPlugins.AddRange(new[] { online, sameNameDeveloper });
+        var profiles = new FakeProfiles();
+        var extraProfile = new Profile { IsEnabled = false };
+        profiles.ProfilesList.Add(extraProfile);
+        foreach (var profile in profiles.ProfilesList) profile.States[online.EffectiveWorkingPluginId] = true;
+        var unrelatedId = Guid.NewGuid(); profiles.DefaultProfile.States[unrelatedId] = true;
+        online.Wanted = () => profiles.ProfilesList.Any(p => p.IsEnabled && p.WantsPlugin(online.EffectiveWorkingPluginId) is true);
+        var disableBackend = new DalamudInstallerBackend(sdk, manager, config, action => Task.FromResult(action()), profiles);
+        profiles.IsBusy = true;
+        await Reject(() => disableBackend.Execute("disable", uninstall, allow), "repository disable refuses a busy profile manager");
+        profiles.IsBusy = false;
+        var wrongVersion = (JObject)uninstall.DeepClone(); wrongVersion["expectedVersion"] = "9.0.0.0";
+        await Reject(() => disableBackend.Execute("disable", wrongVersion, allow), "repository disable refuses stale versions before changing profiles");
+        online.State = "Loading";
+        await Reject(() => disableBackend.Execute("disable", uninstall, allow), "repository disable refuses lifecycle transitions"); online.State = "Loaded";
+        manager.InstalledPlugins.Add(new Local());
+        await Reject(() => disableBackend.Execute("disable", uninstall, allow), "repository disable refuses duplicate online identities even when one developer copy exists");
+        manager.InstalledPlugins.RemoveAt(manager.InstalledPlugins.Count - 1);
+        online.FailUnload = true;
+        await Reject(() => disableBackend.Execute("disable", uninstall, allow), "repository disable propagates unload failure after profile changes");
+        Check(online.IsLoaded && manager.InstalledPlugins.Count == 2 && !online.Manifest.ScheduledForDeletion,
+            "failed repository disable keeps both installations and never schedules deletion");
+        online.FailUnload = false;
+        result = await disableBackend.Execute("disable", uninstall, allow);
+        Check(result.Value<bool>("stateVerified") && result.Value<bool>("installed") && !result.Value<bool>("enabled") && !online.IsLoaded && !online.IsWantedByAnyProfile,
+            "repository disable confirms both profile-disabled and unloaded online state");
+        Check(sameNameDeveloper.IsLoaded && sameNameDeveloper.Trace.Count == 0 && manager.InstalledPlugins.Count == 2,
+            "exact online selection preserves the same-name developer instance");
+        Check(profiles.ProfilesList.All(p => p.WantsPlugin(online.EffectiveWorkingPluginId) is false && p.ApplyCalls == 0) &&
+            profiles.DefaultProfile.WantsPlugin(unrelatedId) is true && !online.Manifest.ScheduledForDeletion,
+            "disable updates only the selected GUID across declaring profiles without reconciling other plugins or deleting files");
+        var oldUnloads = online.Trace.Count;
+        await disableBackend.Execute("disable", uninstall, allow);
+        Check(online.Trace.Count == oldUnloads, "already disabled repository plugin is not unloaded twice");
         await backend.Execute("remove_repository", new JObject { ["url"] = Url }, allow);
         Check(config.ThirdRepoList.Count == 0, "remove deletes only selected repository entry");
         Check(dispatches > 10, "asynchronous phases return through framework dispatcher");
@@ -186,6 +225,9 @@ internal sealed class Local
     public bool IsLoaded => State == "Loaded";
     public bool HasEverStartedLoad => true;
     public bool FailUnload { get; set; }
+    public Guid EffectiveWorkingPluginId { get; } = Guid.NewGuid();
+    public Func<bool>? Wanted { get; set; }
+    public bool IsWantedByAnyProfile => Wanted?.Invoke() ?? IsLoaded;
     public Manifest Manifest { get; } = new();
     public List<string> Trace { get; } = new();
     public Task UnloadAsync(object mode)
@@ -195,6 +237,23 @@ internal sealed class Local
         State = "Unloaded"; return Task.CompletedTask;
     }
     public void ScheduleDeletion(bool enabled) { Trace.Add("schedule"); Manifest.ScheduledForDeletion = enabled; }
+}
+internal sealed class Profile
+{
+    public bool IsEnabled { get; set; } = true;
+    public Dictionary<Guid, bool> States { get; } = new();
+    public int ApplyCalls { get; private set; }
+    public bool? WantsPlugin(Guid id) => States.TryGetValue(id, out var value) ? value : null;
+    public Task AddOrUpdateAsync(Guid id, string name, bool state, bool apply)
+    { States[id] = state; if (apply) ApplyCalls++; return Task.CompletedTask; }
+}
+internal sealed class FakeProfiles
+{
+    public Profile DefaultProfile { get; } = new();
+    public List<Profile> ProfilesList { get; } = new();
+    public IEnumerable<Profile> Profiles => ProfilesList;
+    public bool IsBusy { get; set; }
+    public FakeProfiles() => ProfilesList.Add(DefaultProfile);
 }
 internal sealed class Manager
 {
