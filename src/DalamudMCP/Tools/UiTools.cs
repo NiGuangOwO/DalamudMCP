@@ -48,6 +48,7 @@ internal static class UiTools
     private static readonly Dictionary<string, AgentId> OpenableAgents = new()
     {
         ["inventory"] = AgentId.Inventory,
+        ["character"] = AgentId.Status,
         ["armoury"] = AgentId.ArmouryBoard,
         ["actionmenu"] = AgentId.ActionMenu,
         ["mirageprism"] = AgentId.MiragePrism,

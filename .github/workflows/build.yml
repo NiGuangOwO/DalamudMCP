@@ -56,6 +56,9 @@ jobs:
       - name: Test guarded armoury transfers
         run: dotnet run --project tests/ArmouryTransferTest -c Release
 
+      - name: Test native inventory popup guards
+        run: dotnet run --project tests/NativeUiReadTest -c Release -- src/DalamudMCP/bin/x64/Release/DalamudMCP.dll
+
       - name: Package agent guidance
         shell: pwsh
         run: |

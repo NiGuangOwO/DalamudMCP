@@ -45,8 +45,32 @@
     "subsequentInventoryChange": {
       "carriedEquipment": 127,
       "reason": "user confirmed manually returning equipment for another test",
-      "secondTransferRound": "in progress"
-    }
+      "secondTransferRound": "completed and verified"
+    },
+    "repeatTransferRound": {
+      "buildMvid": "7c9ed9ab-2224-4dc3-af85-72e61a460424",
+      "beforeCarriedItems": 127,
+      "moved": 127,
+      "hqMoved": 30,
+      "afterCarriedItems": 0,
+      "allMovesConfirmed": true,
+      "itemQuantitiesConservedAfterEveryMove": true,
+      "equippedItemsUnchangedAfterEveryMove": true,
+      "movedByDestination": {
+        "ArmoryLegs": 9,
+        "ArmoryFeets": 9,
+        "ArmoryEar": 7,
+        "ArmoryNeck": 7,
+        "ArmoryWrist": 7,
+        "ArmoryRings": 14,
+        "ArmoryOffHand": 13,
+        "ArmoryMainHand": 34,
+        "ArmoryHead": 9,
+        "ArmoryBody": 9,
+        "ArmoryHands": 9
+      }
+    },
+    "finalReadbackCarriedItems": 0
   },
   "limitations": [
     "Soul crystal reads/classification covered; no live soul crystal transfer",
@@ -56,10 +80,19 @@
     "Host reload clears session-local unconfirmed operation state"
   ],
   "publication": {
-    "status": "pending"
+    "status": "published before regression report",
+    "sourceCommit": "8922964bc82f95c3349aceb810c0de525642b67e",
+    "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43688784987",
+    "workflowConclusion": "success",
+    "supersededBy": "1.0.0.55"
   },
   "buildMvids": {
     "finalDebug": "7c9ed9ab-2224-4dc3-af85-72e61a460424",
     "finalRelease": "ec946934-5374-4548-93ee-d0ad60d00018"
+  },
+  "functionalValidation": {
+    "status": "regression reported; superseded by 1.0.0.55",
+    "report": "User observed wrong equipment slot/job and recommendation failures after direct MCP transfers; manual native-menu moves worked",
+    "previousConfirmationScope": "client inventory only; did not establish downstream equip behavior"
   }
 }

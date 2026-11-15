@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0.55",
+  "validationDate": "2026-11-15",
+  "builds": {
+    "Debug": "passed; zero warnings/errors",
+    "Release": "passed; zero warnings/errors"
+  },
+  "buildMvids": {
+    "finalDebug": "658cf941-7456-42a8-b78a-b6dd2b979204",
+    "finalRelease": "c810c936-4d82-4943-abec-593cfdf030c4"
+  },
+  "tests": {
+    "NativeUiReadTestDebug": "268/268",
+    "NativeUiReadTestRelease": "268/268",
+    "ArmouryTransferTest": "49/49",
+    "PluginLoadTest": "256/256",
+    "ProtocolSmokeTest": "89/89",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "13 passed"
+  },
+  "live": {
+    "version": "1.0.0.55",
+    "moves": 123,
+    "hqMoves": 30,
+    "remainingInventory": 0,
+    "allNativeMenuMovesConfirmed": true,
+    "itemQuantitiesConservedPerBatch": true,
+    "equippedItemsUnchangedDuringEachBatch": true,
+    "healerItemsConfirmedNormalByUser": [
+      49629,
+      49630
+    ],
+    "actualDestinationReadback": true,
+    "destinationCounts": {
+      "ArmoryMainHand": 32,
+      "ArmoryBody": 9,
+      "ArmoryHands": 9,
+      "ArmoryOffHand": 12,
+      "ArmoryEar": 7,
+      "ArmoryHead": 8,
+      "ArmoryLegs": 9,
+      "ArmoryFeets": 9,
+      "ArmoryNeck": 7,
+      "ArmoryWrist": 7,
+      "ArmoryRings": 14
+    },
+    "buildMvids": [
+      "6f51b0c0-5225-42b4-99c1-18096c3aa697",
+      "ea36d5e8-0f14-4b0f-b1fa-db3e1902c6f4"
+    ],
+    "finalRunningBuildVerified": true,
+    "finalReadbackCarriedItems": 0,
+    "temporaryObserversRemoved": true,
+    "capturedNativeOpenContract": {
+      "container": "Inventory4",
+      "slot": 13,
+      "a4": 0,
+      "ownerAddonId": 17,
+      "action": "observed carried-grid right-click; no menu selection during capture"
+    }
+  },
+  "limitations": [
+    "CN client connected to local Kawari test server; no official-server or Global validation",
+    "User confirmed downstream behavior of two healer items; not exhaustive equip/recommendation coverage",
+    "Complete low-level root cause of the old direct-move path not established",
+    "No live soul-crystal transfer or full-storage/timeout fault injection",
+    "Host reload clears session-local operation state"
+  ],
+  "publication": {
+    "status": "pending"
+  }
+}

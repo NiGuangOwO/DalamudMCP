@@ -8,6 +8,8 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Player;
 using DalamudMCP.Mcp;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
 using Newtonsoft.Json.Linq;
 
@@ -22,6 +24,8 @@ internal sealed class ArmouryTools
     // An unconfirmed call blocks another submission until readback confirms it or the character changes.
     private ArmouryMove? pending;
     private ulong pendingCharacter;
+    private ArmouryContainer? targetBefore;
+    private int observedDestinationSlot;
 
     internal ArmouryTools(ToolRegistry registry, GameServices services, CancellationToken lifetime)
     {
@@ -43,9 +47,10 @@ internal sealed class ArmouryTools
         schema["properties"]!["expectedItemId"]!["maximum"] = uint.MaxValue;
         schema["properties"]!["dryRun"]!["default"] = true;
         registry.AddAsync("move_inventory_item_to_armoury", "Move carried equipment to armoury",
-            "Moves one observed equipment item from Inventory1-4 to an empty slot in its matching armoury category through InventoryManager.MoveItemSlot. " +
+            "Moves one observed equipment item from Inventory1-4 through the game's inventory context menu and its exact localized Store in Armoury Chest entry. " +
             "Requires login, idle state, exact itemId/HQ and quantity 1, loaded live containers, an empty destination and mutation access. " +
-            "Dry-run defaults true. Serializes submissions, checks the item again immediately before dispatch, then waits up to 3000ms for an empty source " +
+            "Dry-run defaults true and validates the source/capacity without opening UI. Live execution opens inventory if necessary, verifies the native context target and menu label, " +
+            "and invokes its registered list handler. Serializes submissions, checks the item again immediately before dispatch, then waits up to 3000ms for an empty source " +
             "and matching target item/HQ, materia, dyes and other stored attributes. Native return codes are diagnostic only. " +
             "An unconfirmed dispatch blocks further submissions in this host session until readback confirms it or the character changes. " +
             "No swaps, discards, equipping, arbitrary destination or automatic retries. Inspect inventory before retrying a timeout.",
@@ -112,30 +117,65 @@ internal sealed class ArmouryTools
             if (request.DryRun) return result;
             var watch = Stopwatch.StartNew();
             long? matchingSince = null;
-            while (watch.ElapsedMilliseconds < 3000)
+            var menuOpened = false;
+            try
             {
-                lifetime.ThrowIfCancellationRequested();
-                var stable = matchingSince.HasValue && watch.ElapsedMilliseconds - matchingSince.Value >= 250;
-                var confirmed = await svc.Framework.RunOnFrameworkThread(() => ObservePending(stable));
-                if (confirmed)
+                while (watch.ElapsedMilliseconds < 3000)
                 {
-                    matchingSince ??= watch.ElapsedMilliseconds;
-                    if (stable)
+                    lifetime.ThrowIfCancellationRequested();
+                    if (!result.Value<bool>("dispatched"))
                     {
-                        result["success"] = true;
-                        result["confirmed"] = true;
-                        result["waitedMs"] = watch.ElapsedMilliseconds;
-                        return result;
+                        await svc.Framework.RunOnFrameworkThread(() =>
+                        {
+                            EnsureReady();
+                            ValidateSource();
+                            if (!menuOpened)
+                            {
+                                if (!InventoryUiTools.IsOpen()) InventoryUiTools.Set(true);
+                                menuOpened = ArmouryContextMenu.Open(pending!.Item);
+                            }
+                            else if (ArmouryContextMenu.IsVisible())
+                            {
+                                var label = svc.Sheet<Addon>().GetRow(1387).Text.ExtractText();
+                                ArmouryContextMenu.Activate(pending!.Item, label, () =>
+                                {
+                                    EnsureReady(); ValidateSource();
+                                    // Mark before the native handler: an exception after dispatch cannot authorize a retry.
+                                    result["dispatched"] = true;
+                                });
+                            }
+                        });
                     }
+                    var stable = matchingSince.HasValue && watch.ElapsedMilliseconds - matchingSince.Value >= 250;
+                    var confirmed = result.Value<bool>("dispatched") && await svc.Framework.RunOnFrameworkThread(() => ObservePending(stable));
+                    if (confirmed)
+                    {
+                        matchingSince ??= watch.ElapsedMilliseconds;
+                        if (stable)
+                        {
+                            result["success"] = true;
+                            result["confirmed"] = true;
+                            result["destination"]!["slot"] = observedDestinationSlot;
+                            result["waitedMs"] = watch.ElapsedMilliseconds;
+                            return result;
+                        }
+                    }
+                    else matchingSince = null;
+                    await Task.Delay(50, lifetime).ConfigureAwait(false);
                 }
-                else matchingSince = null;
-                await Task.Delay(50, lifetime).ConfigureAwait(false);
+                result["success"] = false;
+                result["confirmed"] = false;
+                result["waitedMs"] = watch.ElapsedMilliseconds;
+                result["reason"] = result.Value<bool>("dispatched")
+                    ? "native menu action was dispatched but matching inventory readback was not observed; inspect inventory, do not automatically retry"
+                    : "native inventory menu did not become ready for guarded activation; no item action was submitted";
+                return result;
             }
-            result["success"] = false;
-            result["confirmed"] = false;
-            result["waitedMs"] = watch.ElapsedMilliseconds;
-            result["reason"] = "move was dispatched but matching inventory readback was not observed; inspect inventory, do not automatically retry";
-            return result;
+            finally
+            {
+                if (!result.Value<bool>("dispatched"))
+                    await svc.Framework.RunOnFrameworkThread(() => { pending = null; targetBefore = null; });
+            }
         }
         finally { serial.Release(); }
     }
@@ -155,19 +195,26 @@ internal sealed class ArmouryTools
             ["dryRun"] = request.DryRun, ["dispatched"] = false, ["confirmed"] = false,
             ["source"] = ItemJson(move.Item),
             ["destination"] = new JObject { ["container"] = move.Destination.ToString(), ["slot"] = move.DestinationSlot },
-            ["via"] = "InventoryManager.MoveItemSlot",
+            ["via"] = "AgentInventoryContext.OpenForItemSlot -> native ContextMenu ListItemClick",
+            ["confirmationScope"] = "nativeMenuAndClientInventory",
         };
         ValidateFunctions();
         if (request.DryRun) return result;
-        // Re-resolve the manager and both live containers on this framework tick. A changed slot is refused.
-        EnsureReady();
-        var checkedMove = ArmouryTransfer.Plan(request, Capture(out _), Destination);
-        if (checkedMove != move) throw new ToolException("source or destination changed during validation; inspect inventory again");
+        if (ArmouryContextMenu.IsVisible()) throw new ToolException("an existing ContextMenu is open; inspect or close it first");
         pending = move;
         pendingCharacter = svc.PlayerState.ContentId;
-        result["nativeResultCode"] = Dispatch(move);
-        result["dispatched"] = true;
+        targetBefore = ArmouryTransfer.Container(containers, move.Destination);
         return result;
+    }
+
+    private void ValidateSource()
+    {
+        if (pending is null || svc.PlayerState.ContentId != pendingCharacter) throw new ToolException("transfer character/plan changed");
+        var containers = Capture(out _);
+        var current = ArmouryTransfer.Container(containers, pending.Item.Container).Slots[pending.Item.Slot];
+        if (current != pending.Item) throw new ToolException("source item changed before the native menu action");
+        if (!ArmouryTransfer.Container(containers, pending.Destination).Slots.Any(s => s.Empty))
+            throw new ToolException("armoury category became full before the native menu action");
     }
 
     private bool ObservePending(bool clear = true)
@@ -177,8 +224,16 @@ internal sealed class ArmouryTools
         if (svc.PlayerState.ContentId != pendingCharacter) throw new ToolException("character changed while observing the move");
         try
         {
-            if (!ArmouryTransfer.Confirmed(pending, Capture(out _))) return false;
-            if (clear) pending = null;
+            var containers = Capture(out _);
+            var target = ArmouryTransfer.Container(containers, pending.Destination);
+            if (targetBefore is null || target.Slots.Length != targetBefore.Slots.Length) return false;
+            var arrived = target.Slots.Where(s => targetBefore.Slots[s.Slot].Empty && s.ItemId == pending.Item.ItemId &&
+                s.Quantity == 1 && s.Fingerprint == pending.Item.Fingerprint).ToArray();
+            if (arrived.Length != 1) return false;
+            pending = pending with { DestinationSlot = arrived[0].Slot };
+            if (!ArmouryTransfer.Confirmed(pending, containers)) return false;
+            observedDestinationSlot = pending.DestinationSlot;
+            if (clear) { pending = null; targetBefore = null; }
             return true;
         }
         catch (ToolException) { return false; }
@@ -201,7 +256,8 @@ internal sealed class ArmouryTools
 
     private static unsafe void ValidateFunctions()
     {
-        if (MemoryProbe.Query((ulong)(nint)InventoryManager.MemberFunctionPointers.MoveItemSlot)?.Executable != true ||
+        if (MemoryProbe.Query((ulong)(nint)AgentInventoryContext.MemberFunctionPointers.OpenForItemSlot)?.Executable != true ||
+            MemoryProbe.Query((ulong)(nint)AtkComponentList.MemberFunctionPointers.DispatchItemEvent)?.Executable != true ||
             MemoryProbe.Query((ulong)(nint)InventoryManager.MemberFunctionPointers.GetInventoryContainer)?.Executable != true)
             throw new ToolException("SDK inventory functions are unresolved or not executable");
     }
@@ -216,9 +272,6 @@ internal sealed class ArmouryTools
             throw new ToolException("SDK inventory read function unresolved");
         return manager;
     }
-
-    private static unsafe int Dispatch(ArmouryMove move) => Manager()->MoveItemSlot(move.Item.Container,
-        (ushort)move.Item.Slot, move.Destination, (ushort)move.DestinationSlot);
 
     private static unsafe List<ArmouryContainer> Capture(out JArray unavailable)
     {

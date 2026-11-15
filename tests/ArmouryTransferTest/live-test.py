@@ -71,6 +71,7 @@ def main():
     parser.add_argument("--expected-mvid", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--move", action="store_true")
+    parser.add_argument("--item-id", type=int, action="append", help="Limit this verification to the observed encoded item IDs")
     parser.add_argument("--limit", type=int, default=1, choices=range(1, 141), metavar="1..140")
     args = parser.parse_args()
     client = Client(args.expected_mvid)
@@ -95,7 +96,8 @@ def main():
     print(json.dumps({"equipment": before["carriedEquipmentCount"], "categories": [
         {k: c[k] for k in ("container", "capacity", "used", "free")} for c in before["categories"]]}, ensure_ascii=False), flush=True)
     for _ in range(args.limit):
-        candidate = next((i for i in current["carriedEquipment"] if i["canMove"]), None)
+        candidate = next((i for i in current["carriedEquipment"] if i["canMove"] and
+                          (not args.item_id or i["itemId"] in args.item_id)), None)
         if candidate is None:
             break
         request = {"container": candidate["container"], "slot": candidate["slot"], "expectedItemId": candidate["itemId"]}

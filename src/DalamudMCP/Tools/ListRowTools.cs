@@ -121,6 +121,15 @@ internal static unsafe class ListRowTools
     }
 
     internal static JObject ActivateAt(nint unit, nint listNode, nint row, int expectedIndex, string expectedText, bool dryRun)
+        => ActivateCore(unit, listNode, row, expectedIndex, expectedText, dryRun, unit, null);
+
+    // A typed native popup adapter supplies its uniquely registered embedded listener and business guard.
+    internal static JObject ActivatePopupAt(nint unit, nint listNode, nint row, int expectedIndex,
+        string expectedText, bool dryRun, nint listener, Action beforeDispatch)
+        => ActivateCore(unit, listNode, row, expectedIndex, expectedText, dryRun, listener, beforeDispatch);
+
+    private static JObject ActivateCore(nint unit, nint listNode, nint row, int expectedIndex,
+        string expectedText, bool dryRun, nint listener, Action? beforeDispatch)
     {
         if (!TryRead(listNode, row, out var list, out var index, out var selectedBefore, out _, out var pending)) throw new ToolException("invalid List/TreeList renderer ownership/index");
         if (pending) throw new ToolException("list layout/update is pending; re-query after the next frame");
@@ -142,7 +151,7 @@ internal static unsafe class ListRowTools
         var rowNode = MemoryProbe.TryReadStruct<AtkComponentNode>((ulong)row, out _);
         if (!rowNode.HasValue || (nint)((AtkComponentList*)list)->GetItemRenderer(index) != (nint)rowNode.Value.Component || ((AtkComponentList*)list)->GetItemDisabledState(index))
             throw new ToolException("list renderer has been recycled or the item is disabled");
-        ValidateEvent(unit, listNode);
+        ValidateEvent(listener, listNode);
         if (!dryRun)
         {
             if (selectedBefore != index) ((AtkComponentList*)list)->SelectItem(index, false);
@@ -156,7 +165,8 @@ internal static unsafe class ListRowTools
                 NativeUiVisibility.Read(row) != true || (afterRow.Value.NodeFlags & NodeFlags.Enabled) == 0 ||
                 (nint)((AtkComponentList*)list)->GetItemRenderer(index) != (nint)rowNode.Value.Component)
                 return new JObject { ["dryRun"] = false, ["rowIndex"] = index, ["selectionDispatched"] = selectedBefore != index, ["inputDispatched"] = false, ["reason"] = "row text/renderer changed after selection; re-query UI" };
-            ValidateEvent(unit, listNode);
+            ValidateEvent(listener, listNode);
+            beforeDispatch?.Invoke();
             ((AtkComponentList*)list)->DispatchItemEvent(index, AtkEventType.ListItemClick);
         }
         return new JObject { ["dryRun"] = dryRun, ["rowIndex"] = index, ["text"] = expectedText,

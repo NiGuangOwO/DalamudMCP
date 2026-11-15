@@ -1,0 +1,5 @@
+*.log
+live-*.json
+menu-*.json
+publication-status.json
+published-assets/

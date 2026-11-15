@@ -52,6 +52,7 @@ unsafe class Program
     static int Main(string[] cliArgs)
     {
         var sdk=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"XIVLauncherCN","addon","Hooks","dev");
+        if(!File.Exists(Path.Combine(sdk,"Dalamud.dll")))sdk=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"XIVLauncher","addon","Hooks","dev");
         AppDomain.CurrentDomain.AssemblyResolve+=(_,e)=>{var path=Path.Combine(sdk,new AssemblyName(e.Name).Name+".dll");return File.Exists(path)?Assembly.LoadFrom(path):null;};
         var repo=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../"));
         var plugin=Assembly.LoadFrom(cliArgs.Length>0?Path.GetFullPath(cliArgs[0]):Path.Combine(repo,"src/DalamudMCP/bin/x64/Debug/DalamudMCP.dll"));
@@ -385,6 +386,26 @@ unsafe class Program
                 Marshal.WriteInt32(rowListControl,listRowSelectedOffset,0);listRowIgnore=true;rr=ActivateRow();Check(!rr.GetProperty("inputDispatched").GetBoolean()&&listRowEvents==2,"selection without transition never activates an unselected item");listRowIgnore=false;
                 Marshal.WriteInt32(rowListControl,listRowSelectedOffset,0);listRowChangeText=true;rr=ActivateRow();Check(!rr.GetProperty("inputDispatched").GetBoolean()&&listRowEvents==2,"same-index renderer with replaced text after selection never activates stale content");listRowChangeText=false;Marshal.WriteByte(rowTextBytes,111);
                 Marshal.WriteByte(rowListInfo,Offset(componentInfo,"ComponentType"),Convert.ToByte(Enum.Parse(kind,"List")));Check(ReadRow().GetProperty("rowIndex").GetInt32()==6,"same guarded renderer query supports ordinary native List");
+                // ContextMenu's registered popup listener is embedded beside AtkUnitBase, not the unit itself.
+                var popupListener=Allocate(Size(T("AtkEventListener")));Marshal.WriteIntPtr(popupListener,0,rowUnitTable);
+                Marshal.WriteIntPtr(rowEvent,Offset(dropEventType,"Listener"),popupListener);
+                var popupActivate=rowApi.GetMethod("ActivatePopupAt",BindingFlags.NonPublic|BindingFlags.Static)!;
+                System.Text.Json.JsonElement Popup(Action guard,nint receiver)=>System.Text.Json.JsonDocument.Parse(popupActivate.Invoke(null,new object[]{rowUnit,rowListNode,rowNode,6,"observed destination",false,receiver,guard})!.ToString()!).RootElement.Clone();
+                var menuApi=plugin.GetType("DalamudMCP.Tools.ArmouryContextMenu")!;var uniquePopup=menuApi.GetMethod("UniqueListener",BindingFlags.NonPublic|BindingFlags.Static)!;
+                Check((nint)uniquePopup.Invoke(null,new object[]{rowListNode})! == popupListener,"inventory menu discovers its unique registered embedded popup listener");
+                Check(DropRefuses(()=>ActivateRow(dry:true)),"ordinary row tool still refuses an unrelated popup listener");
+                var popupEvents=listRowEvents;var businessChecks=0;
+                var popupResult=Popup(()=>businessChecks++,popupListener);
+                Check(popupResult.GetProperty("inputDispatched").GetBoolean()&&listRowEvents==popupEvents+1&&businessChecks==1,"typed popup invokes its exact listener only after the source business guard");
+                Check(DropRefuses(()=>Popup(()=>businessChecks++,rowUnit)),"popup rejects a listener that no longer matches the registered event");
+                var rejected=false;popupEvents=listRowEvents;
+                try{Popup(()=>throw new InvalidOperationException("source item changed"),popupListener);}catch(TargetInvocationException e){rejected=e.InnerException is InvalidOperationException;}
+                Check(rejected&&listRowEvents==popupEvents,"changed inventory target in the final guard never dispatches the menu action");
+                Marshal.WriteIntPtr(rowEvent,Offset(dropEventType,"NextEvent"),rowEvent);
+                Check(DropRefuses(()=>uniquePopup.Invoke(null,new object[]{rowListNode})),"inventory popup listener discovery refuses a cyclic event chain");
+                Marshal.WriteIntPtr(rowEvent,Offset(dropEventType,"NextEvent"),0);
+                var nativeMenuActivate=menuApi.GetMethod("ActivateAt",BindingFlags.NonPublic|BindingFlags.Static)!;
+                Check(DropRefuses(()=>nativeMenuActivate.Invoke(null,new object[]{(nint)1,"observed destination",(Action)(()=>{})})),"inventory popup adapter refuses unreadable unit state before SDK calls");
             }finally{dropDispatchValue.SetValue(dropDispatchAddress,originalDropDispatch);}
             var readMap=mapApi.GetMethod("ReadAt",BindingFlags.NonPublic|BindingFlags.Static)!;
             var imageApi=plugin.GetType("DalamudMCP.Tools.NativeUiImage")!;var imageRead=imageApi.GetMethod("Read",BindingFlags.NonPublic|BindingFlags.Static)!;
