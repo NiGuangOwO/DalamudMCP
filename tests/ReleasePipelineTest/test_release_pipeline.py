@@ -23,13 +23,15 @@ def manifest(value="1.0.0.46"):
             "Tags": ["mcp"], "DalamudApiLevel": 15}
 
 
-def package(data=None):
+def package(data=None, capture_worker=None):
     data = data or manifest()
     memory = io.BytesIO()
     with zipfile.ZipFile(memory, "w") as archive:
         archive.writestr("DalamudMCP.json", json.dumps(data))
         archive.writestr("DalamudMCP.dll", b"MZtest-only-fixture")
         archive.writestr("DalamudMCP.deps.json", json.dumps({"libraries": {"DalamudMCP/" + data["AssemblyVersion"]: {}}}))
+        if capture_worker is not None:
+            archive.writestr("dalamud-mcp-capture.exe", capture_worker)
     return memory.getvalue()
 
 
@@ -61,6 +63,14 @@ class PublicationGuards(unittest.TestCase):
         bad = dict(manifest(), Description="different")
         with self.assertRaises(ValueError):
             pipeline.validate_package(package(), json.dumps(bad).encode(), "1.0.0.46")
+
+    def test_capture_release_requires_bundled_worker(self):
+        data = manifest("1.0.0.56")
+        external = json.dumps(data).encode()
+        for worker in (None, b"bad-file"):
+            with self.subTest(worker=worker), self.assertRaisesRegex(ValueError, "capture worker"):
+                pipeline.validate_package(package(data, worker), external, data["AssemblyVersion"])
+        self.assertEqual(pipeline.validate_package(package(data, b"MZworker-fixture"), external, data["AssemblyVersion"]), data)
 
     def test_invalid_archive_and_dependency_version(self):
         with self.assertRaises(zipfile.BadZipFile):

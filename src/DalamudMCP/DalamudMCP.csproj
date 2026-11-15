@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <PropertyGroup>
-    <Version>1.0.0.55</Version>
+    <Version>1.0.0.56</Version>
     <!--
       Plugin manifest. DalamudPackager (pulled in by the SDK) reads these properties and
       writes DalamudMCP.json next to the assembly on every build:
@@ -47,4 +47,20 @@
   </ItemGroup>
 
   <Import Project="../../build/AgentGuidanceResources.props" />
+
+  <PropertyGroup>
+    <CaptureWorkerOutput>$(BaseIntermediateOutputPath)window-capture/$(Configuration)</CaptureWorkerOutput>
+    <CaptureWorkerBinary>$(CaptureWorkerOutput)/dalamud-mcp-capture.exe</CaptureWorkerBinary>
+    <CaptureWorkerDigest>$(CaptureWorkerOutput)/window-capture.sha256</CaptureWorkerDigest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="$(CaptureWorkerBinary)" Link="dalamud-mcp-capture.exe" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="$(CaptureWorkerDigest)" LogicalName="DalamudMCP.WindowCapture.sha256" />
+  </ItemGroup>
+  <Target Name="BuildCaptureWorker" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="../../build/build-window-capture.ps1;../WindowCapture/WindowCapture.cpp;$(MSBuildProjectFullPath)"
+          Outputs="$(CaptureWorkerBinary);$(CaptureWorkerDigest)">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="pwsh -NoProfile -NonInteractive -File &quot;../../build/build-window-capture.ps1&quot; -OutputDirectory &quot;$(CaptureWorkerOutput)&quot;" />
+  </Target>
 </Project>

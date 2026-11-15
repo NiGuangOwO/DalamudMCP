@@ -3,5 +3,6 @@
   <ItemGroup>
     <Compile Include="../../src/DalamudMCP/Tools/ScreenshotPixels.cs" Link="ScreenshotPixels.cs" />
     <Compile Include="../../src/DalamudMCP/Tools/ScreenshotSession.cs" Link="ScreenshotSession.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/WindowCaptureProcess.cs" Link="WindowCaptureProcess.cs" />
   </ItemGroup>
 </Project>

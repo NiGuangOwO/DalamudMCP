@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -6,50 +7,49 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Textures;
-using Dalamud.Interface.Textures.TextureWraps;
-using Dalamud.Plugin.Services;
 using DalamudMCP.Mcp;
 using Newtonsoft.Json.Linq;
 
 namespace DalamudMCP.Tools;
 
-/// <summary>On-demand render-target screenshots, bounded waits/cache and an explicit window-frame mode.</summary>
+/// <summary>On-demand Windows window capture isolated from the game's graphics device.</summary>
 internal sealed class ScreenshotTools : IDisposable
 {
+    private static readonly Lazy<string> WorkerDigest = new(() =>
+    {
+        using var resource = typeof(ScreenshotTools).Assembly.GetManifestResourceStream(WindowCaptureProcess.DigestResource)
+            ?? throw new InvalidDataException("the capture worker digest is missing");
+        using var reader = new StreamReader(resource);
+        return reader.ReadToEnd().Trim();
+    });
     private readonly GameServices svc;
     private readonly IUiBuilder ui;
-    private readonly ITextureProvider textures;
-    private readonly ITextureReadbackProvider readback;
     private readonly ScreenshotSession session;
-    private readonly TaskCompletionSource<uint> viewportReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private uint currentViewport;
-    internal (float X, float Y, float Width, float Height) Viewport { get; private set; }
+    private ScreenshotViewport? viewport;
+    internal ScreenshotViewport? Viewport => Volatile.Read(ref viewport);
 
-    public ScreenshotTools(ToolRegistry registry, GameServices svc, ITextureProvider textures, ITextureReadbackProvider readback)
+    public ScreenshotTools(ToolRegistry registry, GameServices svc)
     {
         this.svc = svc;
-        this.textures = textures;
-        this.readback = readback;
         ui = svc.PluginInterface!.UiBuilder;
         session = new ScreenshotSession(CaptureFrameAsync);
         ui.Draw += ObserveViewport;
         registry.AddAsync("capture_game_screenshot", "Capture game screenshot",
             "Use only when visual pixels are required. For readable native UI text, call read_addon_text first; " +
             "do not screenshot merely to OCR ordinary addon labels, dialogs or lists. " +
-            "Captures PNG pixels from the game's render target using Dalamud texture readback (area=client, default), " +
-            "including native game UI and optionally Dalamud UI. Does not capture other desktop windows or restore/focus the game. " +
-            "Background/minimized capture works when rendering continues; paused rendering times out. " +
+            "Captures only the game window with Windows Graphics Capture in a separate process. " +
+            "Use area=client (default) for client pixels or area=window to include the visible frame. " +
+            "The game must be restored and capturable. There is no desktop fallback, window activation or game texture readback. " +
+            "Plugin UI drawn into the game window is included and cannot be excluded. Windows may show its capture border. " +
             "Only allowCached=true permits a matching bounded-age previous screenshot, explicitly marked cached with ageMs. " +
-            "area=window uses PrintWindow to include borders and requires a restored window; no desktop fallback. " +
             "Returns native MCP image content by default; imageContent=false opts into imageBase64 text. " +
             "includeImage=false with save=true returns metadata/path only. Saved files expire on a later save.",
-            Json.SchemaWithEnum("area", new[] { "client", "window" }, "client=render target, window=window with frame (default client)", false,
+            Json.SchemaWithEnum("area", new[] { "client", "window" }, "client=client area, window=visible window frame (default client)", false,
                 ("save", "boolean", "Also save a PNG in the plugin captures folder (default false)", false),
                 ("ttlSeconds", "integer", "Saved-file lifetime, 60-86400 seconds (default 600)", false),
                 ("maxDimension", "integer", "Long-edge cap, 256-3840 (default 1920); never upscale", false),
-                ("includeDalamudUi", "boolean", "Include Dalamud/ImGui overlays (default true); false requires area=client", false),
-                ("timeoutMs", "integer", "Capture deadline, 100-10000ms (default 3000); does not block the framework thread", false),
+                ("includeDalamudUi", "boolean", "Compatibility option; must be true (the window is already composed)", false),
+                ("timeoutMs", "integer", "Capture deadline, 100-10000ms (default 3000); the first matching request controls the worker", false),
                 ("allowCached", "boolean", "Allow an explicitly marked cached image on timeout/failure (default false)", false),
                 ("maxCacheAgeMs", "integer", "Maximum cache age, 0-60000ms (default 15000); options must match", false),
                 ("includeImage", "boolean", "Include the PNG (default true); false requires save=true for a path-only result", false),
@@ -59,13 +59,12 @@ internal sealed class ScreenshotTools : IDisposable
 
     private void ObserveViewport()
     {
-        var viewport = ImGui.GetMainViewport();
-        Viewport = (viewport.Pos.X, viewport.Pos.Y, viewport.Size.X, viewport.Size.Y);
-        if (viewport.ID != 0)
-        {
-            Volatile.Write(ref currentViewport, viewport.ID);
-            viewportReady.TrySetResult(viewport.ID);
-        }
+        var main = ImGui.GetMainViewport();
+        var window = ui.WindowHandlePtr;
+        var current = Viewport;
+        if (current is null || (current.Id, current.Window, current.X, current.Y, current.Width, current.Height) !=
+            (main.ID, window, main.Pos.X, main.Pos.Y, main.Size.X, main.Size.Y))
+            Volatile.Write(ref viewport, new ScreenshotViewport(main.ID, window, main.Pos.X, main.Pos.Y, main.Size.X, main.Size.Y));
     }
 
     private async Task<object?> CaptureAsync(JObject args)
@@ -83,19 +82,12 @@ internal sealed class ScreenshotTools : IDisposable
         var save = Boolean(args, "save", false);
         var includeImage = Boolean(args, "includeImage", true);
         var imageContent = Boolean(args, "imageContent", true);
-        var includeUi = Boolean(args, "includeDalamudUi", true);
+        if (!Boolean(args, "includeDalamudUi", true)) throw new ToolException("includeDalamudUi=false is unavailable with window capture");
         if (!includeImage && !save) throw new ToolException("includeImage=false requires save=true");
-        if (!includeUi && area == "window") throw new ToolException("includeDalamudUi=false requires area=client");
-        var key = new ScreenshotKey(area, includeUi, cap);
+        var key = new ScreenshotKey(area, true, cap);
         var hwnd = ui.WindowHandlePtr;
         bool? minimized = hwnd == IntPtr.Zero ? null : IsIconic(hwnd);
-        ScreenshotResult result;
-        try { result = await session.GetAsync(key, timeout, Boolean(args, "allowCached", false), maxAge).ConfigureAwait(false); }
-        catch (ToolException) { throw; }
-        catch (TimeoutException ex) { throw new ToolException($"screenshot unavailable: {ex.Message}"); }
-        catch (OperationCanceledException) { throw new ToolException("screenshot cancelled because the plugin is unloading"); }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or ExternalException or IOException)
-        { throw new ToolException($"screenshot unavailable ({ex.GetType().Name}): {ex.Message}"); }
+        var result = await GetAsync(key, timeout, Boolean(args, "allowCached", false), maxAge).ConfigureAwait(false);
         var frame = result.Frame;
         var payload = new JObject
         {
@@ -106,7 +98,7 @@ internal sealed class ScreenshotTools : IDisposable
             ["capturedAtUtc"] = frame.CapturedAtUtc,
             ["timestampBasis"] = "captureStartLowerBound", ["ageIsUpperBound"] = true,
             ["windowMinimizedAtRequest"] = minimized is { } value ? new JValue(value) : JValue.CreateNull(),
-            ["includesDalamudUi"] = includeUi, ["desktopFallback"] = false,
+            ["includesDalamudUi"] = true, ["desktopFallback"] = false,
         };
         if (includeImage && !imageContent) payload["imageBase64"] = Convert.ToBase64String(frame.Png);
         if (save)
@@ -117,110 +109,43 @@ internal sealed class ScreenshotTools : IDisposable
         return includeImage && imageContent ? new McpPngResult(payload, frame.Png) : payload;
     }
 
-    private async Task<ScreenshotFrame> CaptureFrameAsync(ScreenshotKey key, CancellationToken token)
+    internal Task<ScreenshotResult> GetClientFrameAsync(int cap) =>
+        GetAsync(new ScreenshotKey("client", true, cap), 3000, false, 0);
+
+    private async Task<ScreenshotResult> GetAsync(ScreenshotKey key, int timeout, bool allowCached, int maxAge)
     {
-        token.ThrowIfCancellationRequested();
-        if (key.Area == "window") return await Task.Run(() => CaptureWindow(key, token), token).ConfigureAwait(false);
-        // The SDK does not expose the exact copy time. A start-time lower bound cannot
-        // make an old texture appear young if an async continuation is delayed.
-        var copiedAt = DateTimeOffset.UtcNow;
-        var timestamp = Stopwatch.GetTimestamp();
-        _ = await viewportReady.Task.WaitAsync(token).ConfigureAwait(false);
-        var viewportId = Volatile.Read(ref currentViewport);
-        var createTask = textures.CreateFromImGuiViewportAsync(new ImGuiViewportTextureArgs
-        {
-            ViewportId = viewportId, AutoUpdate = false,
-            TakeBeforeImGuiRender = !key.IncludeUi, KeepTransparency = false,
-        }, "DalamudMCP screenshot", token);
-        // The SDK may not finish a queued update until another render. Dispose a late result on unload.
-        IDalamudTextureWrap wrap;
-        try { wrap = await createTask.WaitAsync(token).ConfigureAwait(false); }
-        catch
-        {
-            _ = createTask.ContinueWith(t =>
-            {
-                if (t.Status == TaskStatus.RanToCompletion) t.Result.Dispose();
-                else if (t.IsFaulted) _ = t.Exception;
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            throw;
-        }
-        using (wrap)
-        {
-            var sourceWidth = wrap.Width;
-            var sourceHeight = wrap.Height;
-            var (width, height) = ScreenshotPixels.Fit(sourceWidth, sourceHeight, key.MaxDimension);
-            var raw = await readback.GetRawImageAsync(wrap, new TextureModificationArgs
-            {
-                DxgiFormat = 28, MakeOpaque = true, NewWidth = width, NewHeight = height,
-            }, leaveWrapOpen: true, cancellationToken: token).WaitAsync(token).ConfigureAwait(false);
-            return await Task.Run(() =>
-            {
-                token.ThrowIfCancellationRequested();
-                if (raw.Specification.DxgiFormat != 28) throw new ToolException("unsupported GPU readback format; expected RGBA8");
-                if (raw.Specification.Width != width || raw.Specification.Height != height)
-                    throw new ToolException("GPU readback dimensions do not match the requested capture");
-                var pixels = ScreenshotPixels.ToRgba(raw.RawData, width, height, raw.Specification.Pitch, false, width, height);
-                var png = ScreenshotPixels.EncodePng(pixels, width, height);
-                return new ScreenshotFrame(key, png, width, height, sourceWidth, sourceHeight, "dalamudRenderTarget", copiedAt, timestamp);
-            }, token).ConfigureAwait(false);
-        }
+        try { return await session.GetAsync(key, timeout, allowCached, maxAge).ConfigureAwait(false); }
+        catch (TimeoutException ex) { throw new ToolException($"screenshot unavailable: {ex.Message}"); }
+        catch (OperationCanceledException) { throw new ToolException("screenshot cancelled because the plugin is unloading"); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception or IOException or UnauthorizedAccessException)
+        { throw new ToolException($"screenshot unavailable ({ex.GetType().Name}): {ex.Message}"); }
     }
 
-    private ScreenshotFrame CaptureWindow(ScreenshotKey key, CancellationToken token)
+    private async Task<ScreenshotFrame> CaptureFrameAsync(ScreenshotKey key, int timeoutMs, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        var hwnd = ui.WindowHandlePtr;
-        if (hwnd == IntPtr.Zero) throw new ToolException("the game's window handle is not ready");
+        var hwnd = GameWindowTools.WindowHandle(svc);
         GameWindowTools.Validate(hwnd);
-        if (IsIconic(hwnd)) throw new ToolException("window-frame capture requires a restored window; use area=client for render capture");
-        if (!GetWindowRect(hwnd, out var rect)) throw new ToolException("could not measure the game window");
-        var width = checked(rect.Right - rect.Left);
-        var height = checked(rect.Bottom - rect.Top);
-        var (outWidth, outHeight) = ScreenshotPixels.Fit(width, height, key.MaxDimension);
-        var dc = GetDC(hwnd);
-        if (dc == IntPtr.Zero) throw new ToolException("could not acquire the game window's device context");
-        var memory = CreateCompatibleDC(dc);
-        var bitmap = memory == IntPtr.Zero ? IntPtr.Zero : CreateCompatibleBitmap(dc, width, height);
-        IntPtr previous = IntPtr.Zero;
-        byte[] pixels;
-        var copiedAt = DateTimeOffset.UtcNow;
+        var directory = svc.PluginInterface?.AssemblyLocation?.DirectoryName
+            ?? throw new InvalidOperationException("the plugin install directory is unavailable");
+        var startedAt = DateTimeOffset.UtcNow;
         var timestamp = Stopwatch.GetTimestamp();
-        try
-        {
-            if (memory == IntPtr.Zero || bitmap == IntPtr.Zero) throw new ToolException("could not allocate a capture surface");
-            previous = SelectObject(memory, bitmap);
-            if (previous == IntPtr.Zero || previous == new IntPtr(-1)) throw new ToolException("could not select the capture bitmap");
-            GameWindowTools.Validate(hwnd);
-            if (!PrintWindow(hwnd, memory, 2)) throw new ToolException("PrintWindow failed; no desktop fallback was used. Try area=client.");
-            GameWindowTools.Validate(hwnd);
-            // GetDIBits requires the bitmap NOT to be selected into a device context.
-            SelectObject(memory, previous);
-            previous = IntPtr.Zero;
-            pixels = new byte[checked(width * height * 4)];
-            var info = new BitmapInfo { Header = new BitmapInfoHeader
-            {
-                Size = (uint)Marshal.SizeOf<BitmapInfoHeader>(), Width = width, Height = -height,
-                Planes = 1, BitCount = 32,
-            } };
-            var pinned = GCHandle.Alloc(pixels, GCHandleType.Pinned);
-            try
-            {
-                if (GetDIBits(memory, bitmap, 0, (uint)height, pinned.AddrOfPinnedObject(), ref info, 0) != height)
-                    throw new ToolException("incomplete game window bitmap readback");
-            }
-            finally { pinned.Free(); }
-        }
-        finally
-        {
-            if (previous != IntPtr.Zero && previous != new IntPtr(-1)) SelectObject(memory, previous);
-            if (bitmap != IntPtr.Zero) DeleteObject(bitmap);
-            if (memory != IntPtr.Zero) DeleteDC(memory);
-            ReleaseDC(hwnd, dc);
-        }
+        var atStart = Viewport;
+        var pixels = await WindowCaptureProcess.CaptureAsync(directory, WorkerDigest.Value, hwnd, key, timeoutMs, token).ConfigureAwait(false);
+        GameWindowTools.Validate(hwnd);
+        if (GameWindowTools.WindowHandle(svc) != hwnd)
+            throw new ToolException("the game window changed during capture");
+        // Only client-area images from a stable ImGui viewport can map back to plugin coordinates.
+        var mapping = key.Area == "client" && atStart is { Id: > 0, Width: > 0, Height: > 0 } &&
+            atStart.Window == hwnd && ReferenceEquals(atStart, Viewport) &&
+            Math.Abs((double)pixels.SourceWidth * atStart.Height / pixels.SourceHeight - atStart.Width) <= 2
+            ? atStart : null;
+        var rgba = ScreenshotPixels.ToRgba(pixels.Bgra, pixels.Width, pixels.Height, checked(pixels.Width * 4),
+            true, pixels.Width, pixels.Height);
         token.ThrowIfCancellationRequested();
-        var rgba = ScreenshotPixels.ToRgba(pixels, width, height, checked(width * 4), true, outWidth, outHeight);
-        return new ScreenshotFrame(key, ScreenshotPixels.EncodePng(rgba, outWidth, outHeight), outWidth, outHeight,
-            width, height, "printWindow", copiedAt, timestamp);
+        return new ScreenshotFrame(key, ScreenshotPixels.EncodePng(rgba, pixels.Width, pixels.Height),
+            pixels.Width, pixels.Height, pixels.SourceWidth, pixels.SourceHeight, WindowCaptureProcess.Backend,
+            startedAt, timestamp, mapping);
     }
 
     private static int Integer(JObject args, string name, int min, int max, int fallback)
@@ -299,48 +224,5 @@ internal sealed class ScreenshotTools : IDisposable
         }
     }
 
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Rect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct BitmapInfoHeader
-    {
-        public uint Size;
-        public int Width;
-        public int Height;
-        public ushort Planes;
-        public ushort BitCount;
-        public uint Compression;
-        public uint SizeImage;
-        public int XPelsPerMeter;
-        public int YPelsPerMeter;
-        public uint ClrUsed;
-        public uint ClrImportant;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct BitmapInfo
-    {
-        public BitmapInfoHeader Header;
-        public uint Colors;
-    }
-
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
-    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
-    [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
-    [DllImport("user32.dll")] private static extern IntPtr GetDC(IntPtr hwnd);
-    [DllImport("user32.dll")] private static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
-    [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
-    [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int width, int height);
-    [DllImport("gdi32.dll")] private static extern IntPtr SelectObject(IntPtr hdc, IntPtr obj);
-    [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr obj);
-    [DllImport("gdi32.dll")] private static extern bool DeleteDC(IntPtr hdc);
-    [DllImport("gdi32.dll")] private static extern int GetDIBits(IntPtr hdc, IntPtr bitmap, uint start, uint lines, IntPtr bits, ref BitmapInfo info, uint usage);
 }

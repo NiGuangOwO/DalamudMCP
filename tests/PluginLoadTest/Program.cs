@@ -163,12 +163,17 @@ internal static class Program
 
         var parameters = ctors[0].GetParameters();
         Check("plugin has no hard Harmony assembly dependency", pluginAssembly.GetReferencedAssemblies().All(a => a.Name != "0Harmony"));
-        Check("constructor takes 25 services", parameters.Length == 25, $"found {parameters.Length}");
-        Check("constructor requests SDK texture readback",
-            parameters.Any(p => p.ParameterType.Name == "ITextureReadbackProvider"));
-        Check("independent screenshot implementations are present in the shipped assembly",
-            new[] { "ScreenshotTools", "ScreenshotPixels", "ScreenshotSession" }.All(name =>
-                pluginAssembly.GetType("DalamudMCP.Tools." + name, throwOnError: false) is not null));
+        Check("constructor takes 24 services", parameters.Length == 24, $"found {parameters.Length}");
+        Check("plugin no longer injects game texture readback",
+            !parameters.Any(p => p.ParameterType.Name == "ITextureReadbackProvider"));
+        var captureWorker = Path.Combine(Path.GetDirectoryName(pluginDll)!, "dalamud-mcp-capture.exe");
+        using (var digest = pluginAssembly.GetManifestResourceStream("DalamudMCP.WindowCapture.sha256"))
+        using (var worker = File.Exists(captureWorker) ? File.OpenRead(captureWorker) : null)
+        {
+            using var reader = digest is not null ? new StreamReader(digest) : null;
+            Check("bundled capture worker matches the hash in the plugin DLL", reader is not null && worker is not null &&
+                reader.ReadToEnd().Trim() == Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(worker)));
+        }
 
         var nonInterfaces = parameters.Where(p => !p.ParameterType.IsInterface).Select(p => p.ParameterType.Name).ToArray();
         Check("every constructor parameter is an interface", nonInterfaces.Length == 0, string.Join(", ", nonInterfaces));
@@ -371,7 +376,7 @@ internal static class Program
             services[i] = Proxy(type, Handler);
         }
 
-        Check("all 25 services were synthesized", services.All(s => s is not null));
+        Check("all constructor services were synthesized", services.All(s => s is not null));
 
         if (sqpack is null)
         {

@@ -148,6 +148,7 @@ public static class Program
         Check("initialize instructions prefer addon text and describe independent visual capture",
             instructions.Contains("read_addon_text first", StringComparison.Ordinal) &&
             instructions.Contains("Use capture for visual pixels", StringComparison.Ordinal) &&
+            instructions.Contains("Windows Graphics Capture in a separate process", StringComparison.Ordinal) &&
             instructions.Contains("do not use the DalamudCN MCP endpoint", StringComparison.Ordinal));
         Check("initialize instructions prefer read-only auto-reload readiness and preserve watcher settings",
             instructions.Contains("get_dev_plugin_state", StringComparison.Ordinal) &&

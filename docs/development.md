@@ -5,6 +5,7 @@ English | [简体中文](development.zh-CN.md) · [Back to README](../README.md)
 ## Build
 
 The project uses [`Dalamud.NET.Sdk`](https://www.nuget.org/packages/Dalamud.NET.Sdk).
+Building the plugin on Windows requires PowerShell 7 and Visual Studio 2022 or later with Desktop development with C++ and a Windows SDK (10.0.19041.0 or newer) for the bundled capture worker. The installed plugin does not require the build tools.
 Build the plugin project directly from the repository root:
 
 ```powershell
@@ -42,7 +43,7 @@ Output paths below are relative to `src\DalamudMCP`:
 dotnet build src\DalamudMCP\DalamudMCP.csproj -p:Platform=x64 -c Release
 ```
 
-`latest.zip` contains `DalamudMCP.dll`, `DalamudMCP.json` and `DalamudMCP.deps.json`.
+`latest.zip` contains `DalamudMCP.dll`, `DalamudMCP.json`, `DalamudMCP.deps.json` and `dalamud-mcp-capture.exe`.
 The icon is also copied to `images\icon.png` beside the package and embedded in the plugin assembly.
 The [build workflow](../.github/workflows/build.yml) produces Release artifacts on pushes and pull requests.
 Published packages are distributed through the plugin repository listed above.
@@ -144,7 +145,7 @@ These records describe specific builds and scenarios; test counts are not a comp
   combat, duties and other UI contexts require separate validation for the intended workflow.
 - Navigation requires [vnavmesh](https://github.com/awgil/ffxiv_navmesh) to be installed and loaded.
   A successful dispatch does not establish that movement, a callback or another game action completed.
-- Independent render-target screenshots and runtime exploration are available; see [runtime tools](runtime-explorer.md). Prefer structured native UI text for ordinary labels.
+- Isolated game-window capture and runtime exploration are available; see [runtime tools](runtime-explorer.md). Prefer structured native UI text for ordinary labels.
 - Object queries read the object table before filtering. Event collection is preferable to frequent full-state polling where applicable.
 - Sessions are stored in memory and expire after two idle hours. Clients must reinitialize after expiry or plugin reload.
   Long-duration memory use and listener stability are not fully characterized.

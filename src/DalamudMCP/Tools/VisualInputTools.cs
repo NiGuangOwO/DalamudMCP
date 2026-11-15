@@ -16,7 +16,7 @@ namespace DalamudMCP.Tools;
 internal static class VisualInputTools
 {
     private sealed record Frame(byte[] Rgba,int Width,int Height,int SourceWidth,int SourceHeight,double X,double Y,double ExtentWidth,double ExtentHeight,
-        float ViewportX,float ViewportY,float ViewportWidth,float ViewportHeight,DateTime Captured);
+        ScreenshotViewport? Viewport,DateTime Captured);
     internal static void Register(ToolRegistry registry,GameServices svc,ScreenshotTools screenshots,CancellationToken lifetime)
     {
         var sync=new object();var frames=new Dictionary<string,Frame>();long next=0;
@@ -24,17 +24,16 @@ internal static class VisualInputTools
         {
             lock(sync)return frames.TryGetValue(id,out var frame)&&DateTime.UtcNow-frame.Captured<TimeSpan.FromSeconds(60)?frame:throw new ToolException("Screenshot reference expired or belongs to a previous MCP instance");
         }
-        registry.AddAsync("capture","Capture and crop game pixels","Independent SDK render-target capture including plugin UI. Returns native MCP image content and a screenshot reference. region crops image pixels; screenshot reuses the same cached image without another capture. Cache: 4 images, 64 MiB, 60 seconds. Native addon text should still use read_addon_text first.",
+        registry.AddAsync("capture","Capture and crop game pixels","Captures the restored game window client area in a separate Windows Graphics Capture process, including plugin UI drawn into that window. Returns native MCP image content and a screenshot reference. region crops image pixels; screenshot reuses the same cached image without another capture. Cache: 4 images, 64 MiB, 60 seconds. Native addon text should still use read_addon_text first.",
             Json.Schema(("screenshot","string","Optional cached screenshot reference",false),("region","object","Integer x,y,width,height in image pixels",false),("maxDimension","integer","256..3840, default 1600; never enlarges",false)),async args=>
             {
                 Frame frame;
                 if(args.Value<string>("screenshot") is {} id)frame=Lookup(id);
                 else
                 {
-                    var result=await registry.Find("capture_game_screenshot")!.AsyncHandler!(new JObject{["maxDimension"]=RuntimeCatalog.Int(args,"maxDimension",256,3840,1600),["imageContent"]=true}).ConfigureAwait(false);
-                    if(result is not McpPngResult image||image.Metadata is not JObject metadata)throw new ToolException("Capture did not produce a PNG image");
-                    var w=metadata.Value<int>("width");var h=metadata.Value<int>("height");var sourceW=metadata.Value<int>("sourceWidth");var sourceH=metadata.Value<int>("sourceHeight");var viewport=screenshots.Viewport;
-                    frame=new Frame(DecodeOwnPng(image.Png,w,h),w,h,sourceW,sourceH,0,0,sourceW,sourceH,viewport.X,viewport.Y,viewport.Width,viewport.Height,metadata.Value<DateTimeOffset>("capturedAtUtc").UtcDateTime);
+                    var shot=(await screenshots.GetClientFrameAsync(RuntimeCatalog.Int(args,"maxDimension",256,3840,1600)).ConfigureAwait(false)).Frame;
+                    frame=new Frame(DecodeOwnPng(shot.Png,shot.Width,shot.Height),shot.Width,shot.Height,shot.SourceWidth,shot.SourceHeight,
+                        0,0,shot.SourceWidth,shot.SourceHeight,shot.Viewport,shot.CapturedAtUtc.UtcDateTime);
                 }
                 if(args["region"] is JObject region)
                 {
@@ -50,7 +49,7 @@ internal static class VisualInputTools
                     while(frames.Count>=4||frames.Values.Sum(f=>(long)f.Rgba.Length)+frame.Rgba.Length>64*1024*1024){if(frames.Count==0)throw new ToolException("Image exceeds screenshot cache budget");frames.Remove(frames.Keys.First());}
                     frames.Add(reference,frame);
                 }
-                return new McpPngResult(new{ screenshot=reference,width=frame.Width,height=frame.Height,sourceWidth=frame.SourceWidth,sourceHeight=frame.SourceHeight,capturedAtUtc=frame.Captured,cached=args["screenshot"] is not null,region=new{x=frame.X,y=frame.Y,width=frame.ExtentWidth,height=frame.ExtentHeight},backend="dalamudRenderTarget",independent=true},ScreenshotPixels.EncodePng(frame.Rgba,frame.Width,frame.Height));
+                return new McpPngResult(new{ screenshot=reference,width=frame.Width,height=frame.Height,sourceWidth=frame.SourceWidth,sourceHeight=frame.SourceHeight,capturedAtUtc=frame.Captured,cached=args["screenshot"] is not null,region=new{x=frame.X,y=frame.Y,width=frame.ExtentWidth,height=frame.ExtentHeight},backend=WindowCaptureProcess.Backend,independent=true,inputMappingAvailable=frame.Viewport is not null},ScreenshotPixels.EncodePng(frame.Rgba,frame.Width,frame.Height));
             });
         var actionSchema=new JObject{["type"]="array",["minItems"]=1,["maxItems"]=32,["items"]=new JObject{["type"]="object",["properties"]=new JObject{
             ["action"]=new JObject{["type"]="string",["enum"]=new JArray("move","click","double_click","drag","scroll","key","text","wait")},
@@ -75,16 +74,17 @@ internal static class VisualInputTools
             var copy=(JArray)actions.DeepClone();
             if(args.Value<string>("screenshot") is {} id)
             {
-                var frame=Lookup(id);var current=screenshots.Viewport;
-                if(DateTime.UtcNow-frame.Captured>TimeSpan.FromSeconds(15)||current!=(frame.ViewportX,frame.ViewportY,frame.ViewportWidth,frame.ViewportHeight)||current.Width<=0||current.Height<=0)throw new ToolException("Screenshot is stale or viewport moved/resized; capture again");
+                var frame=Lookup(id);
+                if(DateTime.UtcNow-frame.Captured>TimeSpan.FromSeconds(15)||frame.Viewport is not {} view||!ReferenceEquals(view,screenshots.Viewport))
+                    throw new ToolException("Screenshot is stale or its plugin viewport mapping is unavailable; capture again after the viewport settles");
                 foreach(var step in copy.OfType<JObject>())foreach(var pair in new[]{("x","y"),("endX","endY")})
                 {
                     if(step[pair.Item1] is null&&step[pair.Item2] is null)continue;
                     if(step[pair.Item1] is null||step[pair.Item2] is null)throw new ToolException("Both coordinates are required");
                     var x=step.Value<double>(pair.Item1);var y=step.Value<double>(pair.Item2);
                     if(!double.IsFinite(x)||!double.IsFinite(y)||x<0||x>=frame.Width||y<0||y>=frame.Height)throw new ToolException("Input lies outside referenced screenshot");
-                    step[pair.Item1]=frame.ViewportX+(frame.X+x*frame.ExtentWidth/frame.Width)/frame.SourceWidth*frame.ViewportWidth;
-                    step[pair.Item2]=frame.ViewportY+(frame.Y+y*frame.ExtentHeight/frame.Height)/frame.SourceHeight*frame.ViewportHeight;
+                    step[pair.Item1]=view.X+(frame.X+x*frame.ExtentWidth/frame.Width)/frame.SourceWidth*view.Width;
+                    step[pair.Item2]=view.Y+(frame.Y+y*frame.ExtentHeight/frame.Height)/frame.SourceHeight*view.Height;
                 }
             }
             return await ImGuiInputTools.PlayBatchAsync(copy,args.Value<string>("expectedWindow")).ConfigureAwait(false);

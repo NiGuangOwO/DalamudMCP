@@ -14,7 +14,7 @@ This page groups principal tools and summarizes their arguments. The running ser
 | Agent guidance | `get_agent_guidance` | Read the running build's bundled skill and synchronization materials. See [skill synchronization](agent-guidance.md). |
 | Services and native structs | `service_list`, `object_access`, `ffcs_index`, `ffcs_call` | Discover constructed services, managed members and SDK native wrappers; all `object_access` actions require mutation access. |
 | Memory and observations | `mem_read`, `mem_write`, `mem_scan`, `observe`, `evidence` | Bounded reads/writes, scans and finite observations; clean up observers and references. |
-| Screenshots and input | `capture`, `capture_game_screenshot`, `input` | Game render-target capture, cached crops and structured Dear ImGui input; prefer `read_addon_text` for native text. |
+| Screenshots and input | `capture`, `capture_game_screenshot`, `input` | Isolated Windows game-window capture, cached crops and structured Dear ImGui input; prefer `read_addon_text` for native text. |
 | Data and runtime state | `data`, `control`, `trace` | Game-data routing, thread/state inspection and recent operation summaries. |
 
 See [independent runtime tools](runtime-explorer.md) for arguments, permissions, budgets and validation limits.

@@ -14,7 +14,7 @@
 | Agent 指引 | `get_agent_guidance` | 读取当前构建内置的 Skill 与同步材料。见[技能同步](agent-guidance.md)。 |
 | 服务与结构体发现 | `service_list`、`object_access`、`ffcs_index`、`ffcs_call` | 发现已构造服务、托管成员和 SDK 原生包装；`object_access` 整体受变更门控。 |
 | 内存与观察 | `mem_read`、`mem_write`、`mem_scan`、`observe`、`evidence` | 有界读写、扫描与有限时长观察；完成后清理观察点及引用。 |
-| 截图与输入 | `capture`、`capture_game_screenshot`、`input` | 游戏渲染目标截图、缓存裁剪与 Dear ImGui 结构化输入；原生文字优先使用 `read_addon_text`。 |
+| 截图与输入 | `capture`、`capture_game_screenshot`、`input` | 进程外游戏窗口截图、缓存裁剪与 Dear ImGui 结构化输入；原生文字优先使用 `read_addon_text`。 |
 | 数据与运行状态 | `data`、`control`、`trace` | 数据表入口、线程与状态查询，以及最近操作摘要。 |
 
 通用运行时工具的参数、权限、容量与验证范围见[独立运行时工具](runtime-explorer.md)。

@@ -91,8 +91,7 @@ public sealed class Plugin : IDalamudPlugin
         IGameInteropProvider interop,
         IBuddyList buddyList,
         IDutyState dutyState,
-        ITextureProvider textureProvider,
-        ITextureReadbackProvider textureReadback)
+        ITextureProvider textureProvider)
     {
         this.pluginInterface = pluginInterface;
         this.log = log;
@@ -177,7 +176,7 @@ public sealed class Plugin : IDalamudPlugin
         DevPluginTools.Register(registry, services);
         AgentGuidance.Bundled.Register(registry);
         runtimeTools = new RuntimeTools(registry, services);
-        screenshots = new ScreenshotTools(registry, services, textureProvider, textureReadback);
+        screenshots = new ScreenshotTools(registry, services);
         VisualInputTools.Register(registry, services, screenshots, inputLifetime.Token);
         PluginBridgeTools.Register(registry, services, ipcHub);
         EventTools.Register(registry, services, eventHub);

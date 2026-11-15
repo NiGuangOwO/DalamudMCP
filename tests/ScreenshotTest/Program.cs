@@ -4,6 +4,14 @@ using System.IO.Compression;
 using System.Text;
 using DalamudMCP.Tools;
 
+if (args is ["--block-worker", var pidFile])
+{
+    await File.WriteAllTextAsync(pidFile + ".pending", Environment.ProcessId.ToString());
+    File.Move(pidFile + ".pending", pidFile);
+    await Task.Delay(TimeSpan.FromSeconds(15));
+    return;
+}
+
 var checks = 0;
 void Check(bool ok, string label) { if (!ok) throw new Exception(label); checks++; Console.WriteLine("PASS: " + label); }
 bool Refuses(Action action) { try { action(); return false; } catch (ArgumentException) { return true; } }
@@ -60,7 +68,7 @@ ScreenshotFrame Frame(ScreenshotKey k, int ageMs = 0) => new(k, png, 2, 2, 2560,
 var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 var completion = new TaskCompletionSource<ScreenshotFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
 var calls = 0;
-using (var session = new ScreenshotSession((_, _) => { Interlocked.Increment(ref calls); started.TrySetResult(); return completion.Task; }))
+using (var session = new ScreenshotSession((_, _, _) => { Interlocked.Increment(ref calls); started.TrySetResult(); return completion.Task; }))
 {
     var first = session.GetAsync(key, 1000, false, 15000);
     await started.Task;
@@ -72,25 +80,90 @@ using (var session = new ScreenshotSession((_, _) => { Interlocked.Increment(ref
 }
 var blocked = new TaskCompletionSource<ScreenshotFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
 var n = 0;
-using (var session = new ScreenshotSession((k, _) => ++n == 1 ? Task.FromResult(Frame(k, 1000)) : blocked.Task))
+using (var session = new ScreenshotSession((k, _, _) => ++n == 1 ? Task.FromResult(Frame(k, 1000)) : blocked.Task))
 {
     _ = await session.GetAsync(key, 3000, false, 15000);
     Check(await Fails(() => session.GetAsync(key, 20, false, 15000)), "timeout refuses cache by default");
     var cached = await session.GetAsync(key, 20, true, 15000);
-    Check(cached.Cached && cached.AgeMs >= 1000 && n == 2, "explicit fallback is marked aged cache without starting extra GPU work");
+    Check(cached.Cached && cached.AgeMs >= 1000 && n == 2, "explicit fallback is marked aged cache without starting extra capture work");
     Check(await Fails(() => session.GetAsync(key, 20, true, 1)), "expired cache refused");
     Check(await Fails(() => session.GetAsync(key with { MaxDimension = 960 }, 20, true, 15000)), "cache cannot satisfy different sizing options");
     blocked.SetResult(Frame(key));
 }
-using (var session = new ScreenshotSession((k, _) => Task.FromException<ScreenshotFrame>(new Exception("provider unavailable"))))
+using (var session = new ScreenshotSession((k, _, _) => Task.FromException<ScreenshotFrame>(new Exception("provider unavailable"))))
     Check(await Fails(() => session.GetAsync(key, 1000, true, 15000)), "allowCached cannot invent an image before the first success");
-using (var session = new ScreenshotSession((k, _) => Task.FromResult(Frame(k, 30000))))
+using (var session = new ScreenshotSession((k, _, _) => Task.FromResult(Frame(k, 30000))))
     Check(await Fails(() => session.GetAsync(key, 1000, false, 60000)), "a late readback cannot present a pre-pause frame as fresh");
 var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-var unload = new ScreenshotSession(async (k, token) => { waiting.SetResult(); await Task.Delay(Timeout.Infinite, token); return Frame(k); });
+var unload = new ScreenshotSession(async (k, _, token) => { waiting.SetResult(); await Task.Delay(Timeout.Infinite, token); return Frame(k); });
 var pending = unload.GetAsync(key, 10000, false, 0);
 await waiting.Task;
 unload.Dispose();
 Check(await Fails(() => pending), "plugin unload cancels a pending request promptly");
 Check(await Fails(() => unload.GetAsync(key, 1000, true, 15000)), "disposed session cannot return its cached data");
+
+var budgetCancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+using (var session = new ScreenshotSession(async (k, _, token) =>
+{
+    try { await Task.Delay(Timeout.Infinite, token); }
+    finally { budgetCancelled.TrySetResult(); }
+    return Frame(k);
+}))
+{
+    Check(await Fails(() => session.GetAsync(key, 50, false, 0)), "deadline errors rather than waiting for worker completion");
+    await budgetCancelled.Task.WaitAsync(TimeSpan.FromSeconds(3));
+    Check(budgetCancelled.Task.IsCompleted, "capture deadline also cancels the worker token");
+}
+
+byte[] WireFrame(int width, int height, int sourceWidth, int sourceHeight, byte[] pixels)
+{
+    var header = new byte[20 + pixels.Length];
+    "DMC1"u8.CopyTo(header);
+    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(4), width);
+    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(8), height);
+    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(12), sourceWidth);
+    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(16), sourceHeight);
+    pixels.CopyTo(header, 20);
+    return header;
+}
+var reply = WireFrame(2, 2, 2, 2, expected);
+var read = await WindowCaptureProcess.ReadPixelsAsync(new MemoryStream(reply), 256);
+Check(read.Width == 2 && read.Height == 2 && read.Bgra.SequenceEqual(expected), "read tightly packed worker pixels");
+Check(await Fails(() => WindowCaptureProcess.ReadPixelsAsync(new MemoryStream(reply[..^1]), 256)),
+    "reject a partial frame rather than return partial pixels");
+Check(await Fails(() => WindowCaptureProcess.ReadPixelsAsync(new MemoryStream(WireFrame(2, 2, 16384, 16384, [])), 256)) &&
+      await Fails(() => WindowCaptureProcess.ReadPixelsAsync(new MemoryStream(WireFrame(int.MaxValue, int.MaxValue, 2, 2, [])), 256)),
+    "reject excessive sources and inconsistent output dimensions before allocating pixels");
+
+if (OperatingSystem.IsWindows())
+{
+    var workerPidFile = Path.Combine(Path.GetTempPath(), $"dalamud-capture-test-{Guid.NewGuid():N}.pid");
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+    var child = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+    if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "dotnet")
+        child.ArgumentList.Add(typeof(Program).Assembly.Location);
+    child.ArgumentList.Add("--block-worker");
+    child.ArgumentList.Add(workerPidFile);
+    try
+    {
+        var wait = WindowCaptureProcess.RunAsync(child, 256, deadline.Token);
+        int pid;
+        while (!File.Exists(workerPidFile) || !int.TryParse(await File.ReadAllTextAsync(workerPidFile, deadline.Token), out pid))
+            await Task.Delay(25, deadline.Token);
+        using var worker = Process.GetProcessById(pid);
+        deadline.Cancel();
+        try
+        {
+            _ = await wait.WaitAsync(TimeSpan.FromSeconds(3));
+            throw new Exception("blocked worker unexpectedly returned pixels");
+        }
+        catch (OperationCanceledException) { }
+        Check(worker.HasExited, "cancellation terminates a real process blocked before delivering frame bytes");
+    }
+    finally
+    {
+        deadline.Cancel();
+        File.Delete(workerPidFile);
+    }
+}
 Console.WriteLine($"{checks}/{checks} checks passed");

@@ -107,7 +107,7 @@ def download(url: str, expected: str | None = None) -> bytes:
 
 
 def validate_package(package: bytes, external: bytes, expected_version: str) -> dict:
-    version(expected_version)
+    package_version = version(expected_version)
     manifest = json.loads(external.decode("utf-8-sig"))
     if (manifest.get("InternalName"), manifest.get("Author"), manifest.get("AssemblyVersion")) != (
         "DalamudMCP", "NiGuangOwO", expected_version
@@ -120,6 +120,10 @@ def validate_package(package: bytes, external: bytes, expected_version: str) -> 
             raise ValueError("External and packaged manifests differ")
         if not archive.read("DalamudMCP.dll").startswith(b"MZ"):
             raise ValueError("Plugin DLL is not a PE assembly")
+        if package_version >= (1, 0, 0, 56):
+            worker = "dalamud-mcp-capture.exe"
+            if worker not in archive.namelist() or not archive.read(worker).startswith(b"MZ"):
+                raise ValueError("Package is missing the Windows capture worker executable")
         dependencies = json.loads(archive.read("DalamudMCP.deps.json"))
         if "DalamudMCP/" + expected_version not in dependencies["libraries"]:
             raise ValueError("Dependency manifest version differs")

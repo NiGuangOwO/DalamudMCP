@@ -739,6 +739,7 @@ public sealed class McpServer : IDisposable
                         "When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +
                         "controls or geometry are needed. Use capture for visual pixels and same-frame cached crops, not ordinary native text. " +
+                        "Fresh screenshots use Windows Graphics Capture in a separate process and require the game window to be restored. " +
                         "Independent runtime exploration uses service_list, object_access, ffcs_index/call, mem_read/write/scan and observe/evidence; " +
                         "discover exact member ids before invocation, respect bounded signatures and remove observers/release handles. " +
                         "These tools do not use the DalamudCN MCP endpoint. input playback and imgui_* target Dear ImGui plugin UI only. " +

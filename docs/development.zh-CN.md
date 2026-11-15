@@ -4,7 +4,9 @@
 
 ## 构建
 
-项目使用 [`Dalamud.NET.Sdk`](https://www.nuget.org/packages/Dalamud.NET.Sdk)。在仓库根目录执行：
+项目使用 [`Dalamud.NET.Sdk`](https://www.nuget.org/packages/Dalamud.NET.Sdk)。源码构建截图采集程序需要 PowerShell 7，以及安装「使用 C++ 的桌面开发」工作负载和 Windows SDK（10.0.19041.0 或更高）的 Visual Studio 2022 或更高版本。安装插件不需要这些构建工具。
+
+在仓库根目录执行：
 
 ```powershell
 dotnet build src\DalamudMCP\DalamudMCP.csproj -p:Platform=x64
@@ -41,7 +43,7 @@ DalamudPackager 在构建时根据 `src\DalamudMCP\DalamudMCP.csproj` 生成插�
 dotnet build src\DalamudMCP\DalamudMCP.csproj -p:Platform=x64 -c Release
 ```
 
-`latest.zip` 包含 `DalamudMCP.dll`、`DalamudMCP.json` 和 `DalamudMCP.deps.json`。
+`latest.zip` 包含 `DalamudMCP.dll`、`DalamudMCP.json`、`DalamudMCP.deps.json` 和 `dalamud-mcp-capture.exe`。
 图标另行复制至安装包旁的 `images\icon.png`，并作为资源嵌入插件程序集。
 [构建工作流](../.github/workflows/build.yml)在推送和拉取请求时生成 Release 产物，发布版通过上述插件仓库分发。
 
@@ -135,7 +137,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\McpInterop\run-int
 - 游戏内存布局、签名和原生界面行为依赖客户端及 Dalamud 版本，后续更新可能需要调整结构体映射或工具实现。
 - 游戏内验证仅覆盖部分场景。外部 IPC 副作用、导航、插件生命周期操作、战斗、副本及其他界面上下文，需按实际工作流分别验证。
 - 导航依赖已安装并加载的 [vnavmesh](https://github.com/awgil/ffxiv_navmesh)。请求派发成功不代表移动、回调或其他游戏操作已经完成。
-- 已提供独立渲染目标截图和通用运行时探索；详见[运行时工具](runtime-explorer.md)。普通原生界面文字仍优先结构化读取。
+- 已提供进程外游戏窗口截图和通用运行时探索；详见[运行时工具](runtime-explorer.md)。普通原生界面文字仍优先结构化读取。
 - 对象查询在读取对象表后执行筛选；适用场景中可使用事件采集减少完整状态的高频轮询。
 - 会话保存在内存中，空闲两小时后过期。会话过期或插件重载后需重新初始化，长期运行的内存占用及监听器稳定性尚未充分验证。
 - 请求日志记录方法、工具名称、结果和耗时，不记录参数或结果载荷。
