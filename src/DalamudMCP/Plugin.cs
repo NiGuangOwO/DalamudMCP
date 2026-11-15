@@ -155,6 +155,7 @@ public sealed class Plugin : IDalamudPlugin
         CallbackTools.Register(registry, services);
         ImGuiInputTools.Register(registry, services);
         InventoryTools.Register(registry, services);
+        _ = new ArmouryTools(registry, services, inputLifetime.Token);
         itemHoldings = new ItemHoldingsTools(registry, services);
         BuddyTools.Register(registry, services);
         ControlTools.Register(registry, services, inputLifetime.Token);

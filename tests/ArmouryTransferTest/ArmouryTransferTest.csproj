@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ClientStructsPath Condition="Exists('$(AppData)/XIVLauncherCN/addon/Hooks/dev/FFXIVClientStructs.dll')">$(AppData)/XIVLauncherCN/addon/Hooks/dev</ClientStructsPath>
+    <ClientStructsPath Condition="'$(ClientStructsPath)' == ''">$(AppData)/XIVLauncher/addon/Hooks/dev</ClientStructsPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/DalamudMCP/Tools/ArmouryTransfer.cs" Link="ArmouryTransfer.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/ArmouryInventoryRead.cs" Link="ArmouryInventoryRead.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/InventoryContainerRead.cs" Link="InventoryContainerRead.cs" />
+    <Compile Include="../../src/DalamudMCP/MemoryProbe.cs" Link="MemoryProbe.cs" />
+    <Compile Include="../../src/DalamudMCP/Mcp/Json.cs" Link="Json.cs" />
+    <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />
+    <Reference Include="FFXIVClientStructs"><HintPath>$(ClientStructsPath)/FFXIVClientStructs.dll</HintPath></Reference>
+    <Reference Include="InteropGenerator.Runtime"><HintPath>$(ClientStructsPath)/InteropGenerator.Runtime.dll</HintPath></Reference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

@@ -67,6 +67,8 @@ Image 节点快照提供受保护的图集分片、UV 和资源类型信息，�
 | 工具 | 描述 | 关键参数 |
 | --- | --- | --- |
 | `get_inventory` | 角色随身携带的四个主背包，每个槽位含物品 ID、名称、数量与槽位索引。所有容器合计上限 200 条。 | 无 |
+| `get_armoury_inventory` | 读取实时兵装库容量、物品及背包装备的目标分类；不可用容器保持未知。见[兵装库转移](armoury-transfers.md)。 | 无 |
+| `move_inventory_item_to_armoury` | 用原生 API 将一件背包装备放入匹配分类的空格，检查物品身份并等待稳定库存读回；需要变更权限。 | `container`、`slot`、包含 HQ 编码的 `expectedItemId`；`dryRun` 默认 true |
 | `search_item_holdings` | 查询背包、水晶、装备、兵装库、普通/付费陆行鸟鞍囊及已访问雇员的物品持有量；区分 HQ/NQ、位置与实时/缓存/不可用覆盖，未访问仓库保持未知。见[物品持有量](item-holdings.md)。 | `itemId` 或 `name` 二选一；`contains`、`isHq`、`scopes`、`includeCached`、`offset`、`maxResults` |
 | `get_equipment` | 当前穿戴的装备，按槽位：物品 ID、名称、数量、耐久度（%）与精炼度/收藏品度。 | 无 |
 | `get_buddy_list` | 伙伴列表：陆行鸟与宠物/信任伙伴，含实体 ID、数据 ID、HP/MP，以及存在时解析出的游戏对象。 | 无 |

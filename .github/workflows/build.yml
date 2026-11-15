@@ -53,6 +53,9 @@ jobs:
       - name: Test combat recording and diagnostics
         run: dotnet run --project tests/CombatRecordingTest -c Release
 
+      - name: Test guarded armoury transfers
+        run: dotnet run --project tests/ArmouryTransferTest -c Release
+
       - name: Package agent guidance
         shell: pwsh
         run: |

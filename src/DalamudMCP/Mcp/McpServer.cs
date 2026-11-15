@@ -723,6 +723,8 @@ public sealed class McpServer : IDisposable
                         "poll get_plugin_operation to terminal success with stateVerified=true, and confirm the online instance unloaded before load_dev_plugin. Preserve its installation/configuration. " +
                         "Use search_item_holdings for bags, equipment, armoury, saddlebags and visited retainers; read coverage/source/complete " +
                         "because unloaded or unvisited storage is unknown and session snapshots may be stale. " +
+                        "Use get_armoury_inventory for live armoury capacity. move_inventory_item_to_armoury requires an observed physical source slot " +
+                        "and quality-encoded expectedItemId; dry-run first, submit one item and require confirmed readback before the next. " +
                         "Mutating tools are hidden/refused when AllowMutatingTools is off; follow the user's scope and " +
                         "input restrictions. Tool catalogs support notifications/tools/list_changed; clients must invalidate " +
                         "cached catalogs and refresh every tools/list page. HTTP clients need the GET /mcp SSE channel; " +

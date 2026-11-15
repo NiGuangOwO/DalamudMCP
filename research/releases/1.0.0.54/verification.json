@@ -1,0 +1,65 @@
+{
+  "version": "1.0.0.54",
+  "validationDate": "2026-11-15",
+  "builds": {
+    "Debug": "passed; zero warnings/errors",
+    "Release": "passed; zero warnings/errors"
+  },
+  "tests": {
+    "ArmouryTransferTestDebug": "49/49",
+    "ArmouryTransferTestRelease": "49/49",
+    "PluginLoadTestDebug": "256/256",
+    "PluginLoadTestRelease": "256/256",
+    "ProtocolSmokeTest": "89/89",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "13 passed"
+  },
+  "live": {
+    "region": "CN",
+    "transferBuildMvid": "60dbcbd8-6bb3-443c-ad62-e088356de0aa",
+    "toolCatalogCount": 191,
+    "beforeCarriedItems": 124,
+    "moved": 124,
+    "hqMoved": 30,
+    "afterCarriedItems": 0,
+    "allMovesConfirmed": true,
+    "itemQuantitiesConservedAfterEveryMove": true,
+    "equippedItemsUnchangedAfterEveryMove": true,
+    "dryRunUnchanged": true,
+    "emptySourceSubmissionRefusedWithoutChanges": true,
+    "movedByDestination": {
+      "ArmoryMainHand": 32,
+      "ArmoryOffHand": 12,
+      "ArmoryHead": 9,
+      "ArmoryBody": 9,
+      "ArmoryHands": 9,
+      "ArmoryLegs": 9,
+      "ArmoryFeets": 9,
+      "ArmoryEar": 7,
+      "ArmoryNeck": 7,
+      "ArmoryWrist": 7,
+      "ArmoryRings": 14
+    },
+    "finalRunningBuildVerified": true,
+    "subsequentInventoryChange": {
+      "carriedEquipment": 127,
+      "reason": "user confirmed manually returning equipment for another test",
+      "secondTransferRound": "in progress"
+    }
+  },
+  "limitations": [
+    "Soul crystal reads/classification covered; no live soul crystal transfer",
+    "Full/unavailable storage and changed item identity covered offline",
+    "No live timeout/concurrency fault injection, character switching or global mutation-gate changes",
+    "Global/other client versions not validated live",
+    "Host reload clears session-local unconfirmed operation state"
+  ],
+  "publication": {
+    "status": "pending"
+  },
+  "buildMvids": {
+    "finalDebug": "7c9ed9ab-2224-4dc3-af85-72e61a460424",
+    "finalRelease": "ec946934-5374-4548-93ee-d0ad60d00018"
+  }
+}
