@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0.56",
+  "validationDate": "2026-11-15",
+  "sourceCommit": "fdfdb3ebeaa7940ef5167b40c2447d26feb3abb7",
+  "releaseTag": "v1.0.0.56",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.56",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43706375149",
+  "workflowJobs": {
+    "plan": "success",
+    "build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "distributionCommit": "60187776a1ec1417c94842f4f1d2fa77bc65c660",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/60187776a1ec1417c94842f4f1d2fa77bc65c660/pluginmaster.json",
+  "officialPackageSha256": "5d3f6576e0eafcc0741825ca6a4cfe0890297553127e20931cbc9827e805a68b",
+  "officialCaptureWorkerSha256": "c6ab345ef5235f070112ce1da69cf19fb2d76a1f615affb4f9ce3352f9af660c",
+  "officialReleaseMvid": "375d8622-4273-4983-8f3d-e09207bf480f",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "packagedWorkerMatchesEmbeddedDigest": true,
+  "agentGuidanceRevision": "fe1b8c5a2acf31a4c35ad6720607094271a32a45fef3f8cdcd29148c1324f634",
+  "builds": {
+    "Debug": "passed, no warnings or errors",
+    "Release": "passed, no warnings or errors"
+  },
+  "tests": {
+    "ScreenshotTest": "32/32, including termination of a real blocked child process",
+    "WindowCaptureTestDownloadedWorker": "8/8",
+    "PluginLoadTestDownloadedDll": "256/256",
+    "ProtocolSmokeTest": "89/89",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "14 passed"
+  },
+  "live": {
+    "client": "CN, logged-out client window",
+    "runningDebugMvid": "9800932d-9034-4525-b6ee-a799aeb3ecf2",
+    "runningBuildVerified": true,
+    "backend": "windowsGraphicsCapture",
+    "clientPng": "640x342 from 2560x1369",
+    "sameFrameCachedCrop": "128x72, same capture timestamp",
+    "windowPng": "2560x1392 with maxDimension=3840",
+    "fullSizeClientCaptureWithCrop": "300x168 from 2560x1369 with maxDimension=3840",
+    "frameworkRespondedAfterCapture": true,
+    "viewportMappingAvailable": true,
+    "gameplayAndPluginUiInputTested": false
+  }
+}
