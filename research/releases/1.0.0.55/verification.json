@@ -68,6 +68,20 @@
     "Host reload clears session-local operation state"
   ],
   "publication": {
-    "status": "pending"
+    "status": "verified",
+    "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43691878977",
+    "workflowConclusion": "success",
+    "releaseUrl": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.55",
+    "sourceCommit": "43c1350672abe73aee8a97004010be72f021e877",
+    "tag": "v1.0.0.55",
+    "publishedAt": "2026-11-15T07:53:59Z",
+    "distributionCommit": "4337ac131d14887fe98715a976c2f2a87987ad5c",
+    "indexUrl": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/4337ac131d14887fe98715a976c2f2a87987ad5c/pluginmaster.json",
+    "packageSha256": "fb096b95e163947949a0740e5e226799a15f325cc567b9708cf09950facb4cf6",
+    "allSevenAssetsDownloadedAndHashVerified": true,
+    "packagedAndExternalManifestMatch": true,
+    "fixedCommitIndexVerified": true,
+    "distributionDescriptorMatches": true,
+    "sourceProvenanceAndSkillHashesVerified": true
   }
 }
