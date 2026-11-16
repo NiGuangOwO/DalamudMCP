@@ -751,6 +751,9 @@ public sealed class McpServer : IDisposable
                         "Copy nodeId/componentPath to clicks or node snapshots. " +
                         "Use set_addon_text_input for native TextInput fields " +
                         "and imgui_text for Dear ImGui; inspect actual text/exactMatch and verify search results separately. " +
+                        "For Dear ImGui layout use imgui_windows to find the window ID, then imgui_window_layout for geometry, " +
+                        "children, scroll and draw command clipping; imgui_metrics summarizes the completed frame by viewport. " +
+                        "Both are read-only and draw commands do not identify widgets or recover text. " +
                         "ImGui input uses a virtual pointer without moving the OS cursor. Human input preempts jobs. " +
                         "Read imgui_state.inputScheduler, guard targets with expectedWindow/expectedId, and inspect completed/cancelled. " +
                         "imgui_cancel_input cancels pending input; raw imgui_key down has a bounded holdMs lease. " +

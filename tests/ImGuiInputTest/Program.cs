@@ -6,7 +6,7 @@ using DalamudMCP.Mcp;
 using DalamudMCP.Tools;
 using Newtonsoft.Json.Linq;
 
-internal static class Program
+internal static partial class Program
 {
     private static readonly GameServices Services = new();
     private static readonly ToolRegistry Registry = new() { AllowMutating = () => Services.Config.AllowMutatingTools };
@@ -43,6 +43,7 @@ internal static class Program
             io.Fonts.GetTexDataAsRGBA32(0, &pixels, &width, &height);
             ImGuiInputTools.ObservePhysicalInput = () => physical;
             ImGuiInputTools.Register(Registry, Services);
+            ImGuiMetricsTools.Register(Registry);
             Frame(); Frame();
             Check("installed SDK native context hook runs", State()["frameHookReady"]!.Value<bool>());
             var result = Run("imgui_mouse_click", At("button"));
@@ -177,6 +178,8 @@ internal static class Program
             ImGuiInputTools.Unregister(); Frame(); Frame();
             Check("unload cancels pending jobs and releases owned keys", job.IsCompleted && Error(job.Result) && !ImGui.IsKeyDown(ImGuiKey.LeftCtrl));
             Check("unload removes native callback", ctx.Hooks.ToArray().All(h => h.Type == ImGuiContextHookType.PendingRemoval));
+            ImGuiInputTools.Register(new ToolRegistry(), Services);
+            CheckMetrics();
             for (var cycle = 0; cycle < 5; cycle++)
             {
                 ImGuiInputTools.Register(new ToolRegistry(), Services); Frame(); Frame();
@@ -205,7 +208,7 @@ internal static class Program
         Centers[widget] = (ImGui.GetItemRectMin() + ImGui.GetItemRectMax()) / 2;
         Ids[widget] = ImGui.GetCurrentContext().LastItemData.ID;
     }
-    private static void Frame()
+    private static void Frame(bool render = true)
     {
         var io = ImGui.GetIO();
         io.AddMousePosEvent(physical.ImGuiPosition.X, physical.ImGuiPosition.Y);
@@ -234,6 +237,8 @@ internal static class Program
             ImGui.End();
         }
         Services.PluginInterface.UiBuilder.FireDraw();
-        ImGui.Render();
+        if (showLayoutFixture) DrawLayoutFixture();
+        if (render) ImGui.Render();
+        else ImGui.EndFrame();
     }
 }

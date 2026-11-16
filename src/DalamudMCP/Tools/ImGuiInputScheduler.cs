@@ -30,6 +30,8 @@ internal static partial class ImGuiInputTools
     private static readonly ImGuiContextHookCallback FrameCallback = CreateFrameCallback();
     private static readonly ImGuiContextHookCallback PostCallback = CreatePostCallback();
     private static readonly List<Action> AfterInput = new();
+    private static readonly List<FrameRead> FrameReads = new();
+    private const int FrameReadTimeoutMs = 2000;
     private static unsafe ImGuiContextHookCallback CreateFrameCallback() => OnFrame;
     private static unsafe ImGuiContextHookCallback CreatePostCallback() => OnFramePost;
 
@@ -39,6 +41,47 @@ internal static partial class ImGuiInputTools
         Vector2 ImGuiPosition, HashSet<int> DownKeys);
 
     private static TaskCompletionSource<T> NewCompletion<T>() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private sealed record FrameRead(Func<ImGuiContextPtr, object> Copy, long Deadline)
+    {
+        public TaskCompletionSource<object?> Completion { get; } = NewCompletion<object?>();
+    }
+
+    internal static async Task<object?> ReadRenderedFrame(Func<ImGuiContextPtr, object> copy)
+    {
+        FrameRead read;
+        lock (Sync)
+        {
+            if (!hooked || (hookId == 0 && hookError is not null))
+                return Json.ToolError("Dear ImGui's frame callback is unavailable.");
+            if (FrameReads.Count >= 4) return Json.ToolError("Dear ImGui's frame read queue is full (4 requests).");
+            read = new FrameRead(copy, Environment.TickCount64 + FrameReadTimeoutMs);
+            FrameReads.Add(read);
+        }
+
+        try { return await read.Completion.Task.WaitAsync(TimeSpan.FromMilliseconds(FrameReadTimeoutMs)).ConfigureAwait(false); }
+        catch (TimeoutException) { return Json.ToolError("Timed out waiting for a completed Dear ImGui frame."); }
+        finally { lock (Sync) FrameReads.Remove(read); }
+    }
+
+    // NewFramePre runs on the ImGui thread, before NewFrame clears the previous draw data.
+    // At most one request per frame; no native reads or copies unless a client requested one.
+    private static void CopyRenderedFrame(ImGuiContextPtr context)
+    {
+        if (FrameReads.Count == 0 || context.IsNull || context.WithinFrameScope ||
+            context.FrameCount <= 0 || context.FrameCountRendered != context.FrameCount) return;
+
+        var read = FrameReads[0];
+        FrameReads.RemoveAt(0);
+        if (Environment.TickCount64 >= read.Deadline)
+        {
+            read.Completion.TrySetResult(Json.ToolError("Timed out waiting for a completed Dear ImGui frame."));
+            return;
+        }
+
+        try { read.Completion.TrySetResult(read.Copy(context)); }
+        catch (Exception ex) { read.Completion.TrySetResult(Json.ToolError($"Could not read the Dear ImGui frame: {ex.Message}")); }
+    }
 
     private static void Hook(GameServices svc)
     {
@@ -83,6 +126,9 @@ internal static partial class ImGuiInputTools
         {
             if (hooked && services?.PluginInterface is { } iface) iface.UiBuilder.Draw -= OnDraw;
             hooked = false;
+            foreach (var read in FrameReads)
+                read.Completion.TrySetResult(Json.ToolError("Dear ImGui frame read cancelled: plugin is unloading."));
+            FrameReads.Clear();
             if (!hookContext.IsNull && hookId != 0)
             {
                 var previous = ImGui.GetCurrentContext();
@@ -126,6 +172,7 @@ internal static partial class ImGuiInputTools
         // Never allow a managed exception to cross the native callback boundary.
         lock (Sync)
         {
+            CopyRenderedFrame(new ImGuiContextPtr(context));
             try { Tick(); }
             catch (Exception ex)
             {

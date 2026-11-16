@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 191;
+    private const int ExpectedTools = 193;
 
     private static int checks;
     private static int failures;
@@ -663,10 +663,14 @@ internal static class Program
                 Check("native callback advertises a preflight and a bounded payload",
                     callbackTool.GetProperty("inputSchema").GetProperty("properties").GetProperty("dryRun").GetProperty("type").GetString() == "boolean" &&
                     callbackTool.GetProperty("inputSchema").GetProperty("properties").GetProperty("values").GetProperty("maxItems").GetInt32() == 32);
-                foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin", "get_agent_guidance" })
+                foreach (var name in new[] { "get_dev_plugin_state", "wait_for_dev_plugin", "get_agent_guidance", "imgui_metrics", "imgui_window_layout" })
                     Check(name + " is advertised as read-only",
                         toolsList.Single(t => t.GetProperty("name").GetString() == name)
                             .GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean());
+                var layoutSchema = toolsList.Single(t => t.GetProperty("name").GetString() == "imgui_window_layout").GetProperty("inputSchema");
+                Check("ImGui layout requires an exact window ID and bounds draw command output",
+                    layoutSchema.GetProperty("required")[0].GetString() == "windowId" &&
+                    layoutSchema.GetProperty("properties").GetProperty("drawCommandLimit").GetProperty("maximum").GetInt32() == 64);
                 Check("ImGui input exposes target guards and bounded key leases",
                     new[] { "imgui_mouse_click", "imgui_mouse_scroll", "imgui_key_press", "imgui_key", "imgui_text" }.All(name =>
                         toolsList.Single(t => t.GetProperty("name").GetString() == name).GetProperty("inputSchema")

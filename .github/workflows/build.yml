@@ -62,6 +62,9 @@ jobs:
       - name: Test native inventory popup guards
         run: dotnet run --project tests/NativeUiReadTest -c Release -- src/DalamudMCP/bin/x64/Release/DalamudMCP.dll
 
+      - name: Test ImGui frame diagnostics and input
+        run: dotnet run --project tests/ImGuiInputTest -c Release "-p:DalamudDir=$env:APPDATA/XIVLauncher/addon/Hooks/dev"
+
       - name: Package agent guidance
         shell: pwsh
         run: |

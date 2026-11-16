@@ -3,7 +3,8 @@
     <OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PlatformTarget>x64</PlatformTarget>
-    <DalamudDir>$(APPDATA)/XIVLauncherCN/addon/Hooks/dev</DalamudDir>
+    <DalamudDir Condition="'$(DalamudDir)' == '' and '$(DALAMUD_HOME)' != ''">$(DALAMUD_HOME)</DalamudDir>
+    <DalamudDir Condition="'$(DalamudDir)' == ''">$(APPDATA)/XIVLauncherCN/addon/Hooks/dev</DalamudDir>
   </PropertyGroup>
   <ItemGroup>
     <None Include="$(DalamudDir)/cimgui.dll" Link="cimgui.dll" CopyToOutputDirectory="PreserveNewest" />
@@ -11,6 +12,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Compile Include="../../src/DalamudMCP/Tools/ImGuiInputTools.cs" Link="ImGuiInputTools.cs" />
     <Compile Include="../../src/DalamudMCP/Tools/ImGuiInputScheduler.cs" Link="ImGuiInputScheduler.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/ImGuiMetricsTools.cs" Link="ImGuiMetricsTools.cs" />
     <Compile Include="../../src/DalamudMCP/Mcp/Json.cs" Link="Json.cs" />
     <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />
   </ItemGroup>

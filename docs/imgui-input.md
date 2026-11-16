@@ -4,6 +4,8 @@
 
 `imgui_*` 操作共享的 Dear ImGui 上下文，不移动、拉回或捕获系统鼠标，也不激活系统窗口。原生 Atk 界面使用专用 addon 工具。
 
+For read-only layout and draw command inspection, see [ImGui metrics / 布局与绘制诊断](imgui-metrics.md).
+
 ## Observe and guard / 观察与校验
 
 1. Read `imgui_windows` for the exact window name and its coordinate space. `scroll` and `scrollMax` expose actual window scrolling. Coordinates may be client-relative or desktop-relative depending on the installed ImGui viewport configuration.

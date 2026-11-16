@@ -153,6 +153,7 @@ public sealed class Plugin : IDalamudPlugin
         addonProbe = new AddonProbeTools(registry, services);
         CallbackTools.Register(registry, services);
         ImGuiInputTools.Register(registry, services);
+        ImGuiMetricsTools.Register(registry);
         InventoryTools.Register(registry, services);
         _ = new ArmouryTools(registry, services, inputLifetime.Token);
         itemHoldings = new ItemHoldingsTools(registry, services);
