@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0.57",
+  "validationDate": "2026-11-16",
+  "sourceCommit": "3582022da2a2d01487300d7e3ea827da4c8cef90",
+  "releaseTag": "v1.0.0.57",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.57",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/43877310044",
+  "workflowJobs": {
+    "plan": "success",
+    "build / build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "distributionCommit": "ff1f61b2c56c77aff5d11595fab5145b5813123b",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/ff1f61b2c56c77aff5d11595fab5145b5813123b/pluginmaster.json",
+  "officialPackageSha256": "deca1865a38fa4e7ae80a831f539a668f4d98e02a7f72bbbe434321abf3a25e0",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "agentGuidanceRevision": "8d3113c114c453fb24340a63246e726cce89c752ebfe40224c02eaf335f2863d",
+  "builds": {
+    "Debug": "passed, no warnings or errors",
+    "Release": "passed, no warnings or errors"
+  },
+  "tests": {
+    "ImGuiInputTest_CN": "64/64",
+    "ImGuiInputTest_Global": "64/64",
+    "PluginLoadTest": "259/259",
+    "ProtocolSmokeTest": "89/89",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "14 passed"
+  },
+  "live": {
+    "buildMvid": "7c6280b8-f87c-47f6-9f7a-58a66a8ff2f1",
+    "guidanceRevision": "8d3113c114c453fb24340a63246e726cce89c752ebfe40224c02eaf335f2863d",
+    "client": "CN",
+    "loggedIn": false,
+    "catalogPages": 2,
+    "readOnlyAnnotationsVerified": true,
+    "frame": {
+      "frame": 227082,
+      "imguiVersion": "1.88",
+      "renderWindows": 15,
+      "vertices": 2048,
+      "indices": 7314,
+      "viewportCount": 1,
+      "multiViewportEnabled": false
+    },
+    "layout": {
+      "name": "Sonar###SonarMainWindow",
+      "frame": 227087,
+      "bounds": [
+        1800.0,
+        151.0,
+        2100.0,
+        251.0
+      ],
+      "innerClipRect": [
+        1806.0,
+        151.0,
+        2094.0,
+        251.0
+      ],
+      "children": 2,
+      "commandCount": 2,
+      "meshBoundsRead": 2,
+      "childParentVerified": true,
+      "childScrollMax": [
+        0.0,
+        4.0
+      ]
+    },
+    "unknownIdVerified": true,
+    "gameInputsDispatched": false,
+    "frameworkRespondedAfterRead": true
+  }
+}
