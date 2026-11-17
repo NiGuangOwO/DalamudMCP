@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 193;
+    private const int ExpectedTools = 196;
 
     private static int checks;
     private static int failures;
@@ -451,10 +451,10 @@ internal static class Program
         Check("registry exposes query_events", toolNames.Contains("query_events"));
         Check("registry exposes call_plugin_ipc", toolNames.Contains("call_plugin_ipc"));
         foreach (var name in new[] { "add_plugin_repository", "remove_plugin_repository", "set_plugin_repository_enabled", "refresh_plugin_repositories", "install_plugin", "uninstall_plugin",
-            "move_and_wait", "reload_dev_plugin", "execute_action", "set_dev_plugin_settings", "unload_dev_plugin", "remove_dev_plugin", "disable_repository_plugin", "move_inventory_item_to_armoury" })
+            "move_and_wait", "reload_dev_plugin", "execute_action", "set_dev_plugin_settings", "unload_dev_plugin", "remove_dev_plugin", "disable_repository_plugin", "move_inventory_item_to_armoury", "invoke_addon_action" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
         foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation",
-            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait", "list_dev_plugins", "get_armoury_inventory" })
+            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait", "list_dev_plugins", "get_armoury_inventory", "read_addon_model", "list_addon_actions" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         var holdingsTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "search_item_holdings"));
         Check("item holdings query is read-only", Equals(Prop(holdingsTool, "Mutating"), false));
@@ -585,6 +585,23 @@ internal static class Program
             using (var state = JsonDocument.Parse(holdingsPayload ?? "{}"))
                 Check("read-only holdings query works with mutation gate closed and reports logged-out state before native access",
                     !holdingsError && !state.RootElement.GetProperty("available").GetBoolean() && !state.RootElement.GetProperty("complete").GetBoolean());
+            var offlineModel = UnwrapToolResult(await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc="2.0", id=2361, method="tools/call", @params=new {
+                    name="read_addon_model", arguments=new { addon="Synthesis" } } })).ConfigureAwait(false));
+            using (var modelDoc = JsonDocument.Parse(offlineModel.Payload ?? "{}"))
+                Check("structured addon read is available with mutations closed and refuses native access when logged out",
+                    !offlineModel.IsError && !modelDoc.RootElement.GetProperty("available").GetBoolean());
+            var actionCatalog = UnwrapToolResult(await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc="2.0", id=2362, method="tools/call", @params=new {
+                    name="list_addon_actions", arguments=new { } } })).ConfigureAwait(false));
+            using (var catalogDoc = JsonDocument.Parse(actionCatalog.Payload ?? "{}"))
+                Check("semantic action discovery is read-only and lists only the two explicit adapters",
+                    !actionCatalog.IsError && catalogDoc.RootElement.GetProperty("actions").GetArrayLength() == 2);
+            var blockedSemantic = UnwrapToolResult(await CallAsync(http, baseUrl, sessionId,
+                JsonSerializer.Serialize(new { jsonrpc="2.0", id=2363, method="tools/call", @params=new {
+                    name="invoke_addon_action", arguments=new { dryRun=true } } })).ConfigureAwait(false));
+            Check("semantic action dry-runs are blocked before native access by the mutation gate",
+                blockedSemantic.IsError && blockedSemantic.Payload?.Contains("disabled", StringComparison.Ordinal) == true);
             var noEncounter = await CallAsync(http, baseUrl, sessionId,
                 JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 2322, method = "tools/call", @params = new
                 {

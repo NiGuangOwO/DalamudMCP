@@ -56,6 +56,9 @@ jobs:
       - name: Test guarded armoury transfers
         run: dotnet run --project tests/ArmouryTransferTest -c Release
 
+      - name: Test addon models, semantic action guards and cross-realm rosters
+        run: dotnet run --project tests/AddonModelTest -c Release
+
       - name: Test screenshot deadlines and capture worker cleanup
         run: dotnet run --project tests/ScreenshotTest -c Release
 

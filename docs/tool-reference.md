@@ -21,6 +21,8 @@ See [independent runtime tools](runtime-explorer.md) for arguments, permissions,
 
 ## Specialized tools
 
+`read_addon_model` reads structured crafting, gathering, basic gil shop, retainer-list and repair state. `list_addon_actions` discovers the two explicit adapters; `invoke_addon_action` requires a fresh 15-second single-use snapshot and exact addon ID and defaults to dry-run. See [Addon models and semantic actions](addon-models.md) for fields, guards, provenance and limits.
+
 For `SelectString`, menu selection uses zero-based popup-entry ordinals, not `AtkValue` indices.
 See [menu-selection behavior](menu-selection.md) for dry-run results and validation limits.
 
@@ -56,7 +58,7 @@ Native click parameter discovery preserves exact registered zero and rejects con
 | --- | --- | --- |
 | `get_game_objects` | Objects loaded around the local player: players, NPCs, enemies, minions, mounts, treasure, aetherytes. | `objectKind`, `nameContains`, `maxDistance`, `detailed` (default true), `max` (default 200) |
 | `find_game_object` | One object by id or exact name, plus alternatives sharing the name. | `entityId`, `gameObjectId`, `name` |
-| `get_party` | Party or alliance members with jobs, levels, HP/MP, world, territory and statuses. | none |
+| `get_party` | Local party or active cross-realm groups, with source, completeness and group/slot indices. Remote combat fields stay unknown without a live local object. Same-world alliance groups and replay rosters are not inferred. | `scope`: `auto` (default), `local`, `crossRealm` |
 | `get_targets` | Current, focus, soft, mouseover, mouseover-nameplate, previous and GPose targets. | none |
 | `get_fates` | Active FATEs with level range, progress, time remaining and position. | `fateId` |
 | `get_nearby_enemies` | Battle NPCs within a radius, sorted by distance, alive only. | `radius` (default 30), `max` (default 50) |

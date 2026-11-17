@@ -44,10 +44,13 @@ internal static class ObjectTools
         registry.Add(
             "get_party",
             "Get party",
-            "The current party or alliance: members, their jobs, levels, HP/MP, world, territory, and statuses. " +
-            "Also reports which member is the party leader.",
-            Json.Schema(),
-            _ => Party(svc));
+            "Reads the local party or all current cross-realm groups. scope=auto (default) uses the active cross-realm roster, " +
+            "otherwise the local IPartyList; local preserves the original party-only view. crossRealm explicitly queries the native proxy. " +
+            "Returns source, coverage, complete and native group/slot indices. Remote members without a live local object have unknown " +
+            "HP/MP/status/position, not fabricated zeros. Inactive proxy arrays are ignored. Same-world alliance groups and replay " +
+            "party inference are not expanded. Read crossRealm.unknown before assuming roster completeness.",
+            Json.SchemaWithEnum("scope", new[] { "auto", "local", "crossRealm" }, "Roster source; defaults auto.", false),
+            args => Party(svc, args));
 
         registry.Add(
             "get_targets",
@@ -204,7 +207,7 @@ internal static class ObjectTools
         };
     }
 
-    private static object Party(GameServices svc)
+    private static object Party(GameServices svc, JObject args)
     {
         if (!svc.ClientState.IsLoggedIn)
             return new JObject { ["available"] = false, ["reason"] = "not logged in" };
@@ -254,11 +257,12 @@ internal static class ObjectTools
                 ["territoryId"] = m.Territory.RowId,
                 ["position"] = Conv.Vec3(m.Position),
                 ["address"] = $"0x{m.Address.ToInt64():X}",
+                ["gameObjectLoaded"] = m.GameObject is { } gameObject && gameObject.IsValid(),
                 ["statuses"] = statuses,
             });
         }
 
-        return new JObject
+        return PartyRosterTools.Extend(svc, args, new JObject
         {
             ["available"] = true,
             ["length"] = list.Length,
@@ -269,7 +273,7 @@ internal static class ObjectTools
             ["groupListAddress"] = $"0x{list.GroupListAddress.ToInt64():X}",
             ["allianceListAddress"] = $"0x{list.AllianceListAddress.ToInt64():X}",
             ["members"] = members,
-        };
+        });
     }
 
     private static object Targets(GameServices svc)

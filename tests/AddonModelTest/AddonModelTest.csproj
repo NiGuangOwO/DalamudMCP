@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+    <DalamudDir Condition="'$(DalamudDir)' == '' and '$(DALAMUD_HOME)' != ''">$(DALAMUD_HOME)</DalamudDir>
+    <DalamudDir Condition="'$(DalamudDir)' == '' and Exists('$(APPDATA)/XIVLauncherCN/addon/Hooks/dev/Dalamud.dll')">$(APPDATA)/XIVLauncherCN/addon/Hooks/dev</DalamudDir>
+    <DalamudDir Condition="'$(DalamudDir)' == ''">$(APPDATA)/XIVLauncher/addon/Hooks/dev</DalamudDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dalamud"><HintPath>$(DalamudDir)/Dalamud.dll</HintPath></Reference>
+    <Reference Include="Dalamud.Common"><HintPath>$(DalamudDir)/Dalamud.Common.dll</HintPath></Reference>
+    <Reference Include="Lumina"><HintPath>$(DalamudDir)/Lumina.dll</HintPath></Reference>
+    <Reference Include="Lumina.Excel"><HintPath>$(DalamudDir)/Lumina.Excel.dll</HintPath></Reference>
+    <Reference Include="FFXIVClientStructs"><HintPath>$(DalamudDir)/FFXIVClientStructs.dll</HintPath></Reference>
+    <Reference Include="InteropGenerator.Runtime"><HintPath>$(DalamudDir)/InteropGenerator.Runtime.dll</HintPath></Reference>
+    <Compile Include="../../src/DalamudMCP/Tools/AddonModelRead.cs" Link="AddonModelRead.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/AddonActionGuard.cs" Link="AddonActionGuard.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/AddonSemanticActions.cs" Link="AddonSemanticActions.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/CrossRealmPartyRead.cs" Link="CrossRealmPartyRead.cs" />
+    <Compile Include="../../src/DalamudMCP/MemoryProbe.cs" Link="MemoryProbe.cs" />
+    <Compile Include="../../src/DalamudMCP/Mcp/Json.cs" Link="Json.cs" />
+    <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

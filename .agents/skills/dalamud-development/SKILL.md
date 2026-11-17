@@ -27,6 +27,8 @@ Operate native FFXIV UI only through a verified game callback, registered native
 
 For live game tests, read [gameplay-workflows.md](references/gameplay-workflows.md). Use `move_and_wait` for verified travel (prefer mounted flight outdoors), `interact_with_npc` for known NPC dialogues, and `click_addon_button_and_wait` for verified native arrival or UI. For an authorized opener, `execute_action` can wait briefly on the exact target. Use `combat_recording_wait` with the exact encounter and an optional game outcome guard.
 
+For structured crafting, gathering, basic shop, retainer-list or repair state, use `read_addon_model` and inspect `complete`, `unknown`, `fieldSources` and paging. For a supported semantic action, discover `list_addon_actions`, read a fresh complete model, and pass its exact addon ID and 15-second single-use `snapshotId` to `invoke_addon_action`; dry-run defaults true. Unchanged-state repeat dispatch is refused. A repair request does not itself confirm the dialog. Inspect the actual resulting native UI. `get_party` defaults to the active cross-realm roster when available; `scope=local` retains the local party view. Remote combat fields stay null without a uniquely matched live local object. See [addon models and actions](https://github.com/NiGuangOwO/DalamudMCP/blob/main/docs/addon-models.md).
+
 ## Develop and verify
 
 Gather the smallest observation that distinguishes the behavior being investigated. Implement the plugin change, build against the developer's installed Dalamud SDK, and run checks appropriate to that change.

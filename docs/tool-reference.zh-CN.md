@@ -21,6 +21,8 @@
 
 ## 专用工具
 
+`read_addon_model` 读取制作、采集、普通金币商店、雇员列表与修理界面的结构化状态。`list_addon_actions` 发现首批两个明确适配的动作；`invoke_addon_action` 需要 15 秒内的单次使用快照和确切窗口 ID，默认只预检。字段、校验、来源与限制见[界面模型与语义动作](addon-models.md)。
+
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。
 预览结果和验证范围见[菜单选择说明](menu-selection.md)。
 
@@ -56,7 +58,7 @@ Image 节点快照提供受保护的图集分片、UV 和资源类型信息，�
 | --- | --- | --- |
 | `get_game_objects` | 查询本地玩家周围已加载的对象，包括玩家、NPC、敌人、宠物、坐骑、宝箱和以太之光。 | `objectKind`、`nameContains`、`maxDistance`、`detailed`（默认 true）、`max`（默认 200） |
 | `find_game_object` | 按 ID 或精确名称查询对象，同时返回同名候选项。 | `entityId`、`gameObjectId`、`name` |
-| `get_party` | 小队或联军成员及其职业、等级、HP/MP、世界、领地与状态。 | 无 |
+| `get_party` | 本地小队或当前跨服分组，返回来源、完整性与组/槽位编号；缺少本地对象的远端成员战斗字段保持未知。不推测同服联军的其他分组或回放队伍。 | `scope`：`auto`（默认）、`local`、`crossRealm` |
 | `get_targets` | 当前、焦点、软、鼠标悬停、鼠标悬停名牌、上一个与 GPose 目标。 | 无 |
 | `get_fates` | 活跃 FATE 及其等级范围、进度、剩余时间与位置。 | `fateId` |
 | `get_nearby_enemies` | 半径内的战斗 NPC，按距离排序，只返回存活的。 | `radius`（默认 30）、`max`（默认 50） |

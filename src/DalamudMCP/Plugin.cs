@@ -149,6 +149,7 @@ public sealed class Plugin : IDalamudPlugin
         MemoryTools.Register(registry, services);
         StructTools.Register(registry, services);
         UiTools.Register(registry, services, inputLifetime.Token);
+        AddonModelTools.Register(registry, services, inputLifetime.Token);
         AddonButtonWorkflow.Register(registry, services, inputLifetime.Token);
         addonProbe = new AddonProbeTools(registry, services);
         CallbackTools.Register(registry, services);

@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <PropertyGroup>
-    <Version>1.0.0.57</Version>
+    <Version>1.0.0.58</Version>
     <!--
       Plugin manifest. DalamudPackager (pulled in by the SDK) reads these properties and
       writes DalamudMCP.json next to the assembly on every build:
@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <!-- Local dev-plugin icon; Packager also publishes images beside latest.zip. -->
+    <Content Include="licenses/ECommons.LICENSE" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="images\icon.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- Settings branding does not depend on an HTTP request or an external file. -->
     <EmbeddedResource Include="images\icon.png" LogicalName="DalamudMCP.icon.png" />
