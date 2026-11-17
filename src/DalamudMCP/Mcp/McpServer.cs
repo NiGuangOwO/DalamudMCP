@@ -743,6 +743,11 @@ public sealed class McpServer : IDisposable
                         "list_addon_actions discovers explicit semantic adapters. invoke_addon_action defaults dryRun=true and requires " +
                         "the observed addon ID and a 15-second single-use snapshot; inspect actual UI after dispatch, never assume completion. " +
                         "get_party scope=auto includes active cross-realm groups; remote combat data stays unknown without a live local object. " +
+                        "For read-only map queries use convert_map_coordinates, get_map_flags and find_nearest_aetheryte; " +
+                        "unknown height is not a movement destination and planar distance is not a route. " +
+                        "get_character_tethers preserves full 64-bit object IDs; inspect incomplete/unknown/truncated snapshots, not inferred mechanics. " +
+                        "get_item_stat_breakdown distinguishes unmelded templates from exact live slots and reports unsynced base/HQ/materia/caps, " +
+                        "not the active character panel. Missing inputs stay unknown. " +
                         "Fresh screenshots use Windows Graphics Capture in a separate process and require the game window to be restored. " +
                         "Independent runtime exploration uses service_list, object_access, ffcs_index/call, mem_read/write/scan and observe/evidence; " +
                         "discover exact member ids before invocation, respect bounded signatures and remove observers/release handles. " +

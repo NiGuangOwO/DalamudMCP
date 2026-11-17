@@ -48,7 +48,7 @@ internal static class Program
     /// removed; the count assertions below exist to catch an accidental drop during
     /// registration refactors, not to pin the feature set.
     /// </summary>
-    private const int ExpectedTools = 196;
+    private const int ExpectedTools = 201;
 
     private static int checks;
     private static int failures;
@@ -454,7 +454,8 @@ internal static class Program
             "move_and_wait", "reload_dev_plugin", "execute_action", "set_dev_plugin_settings", "unload_dev_plugin", "remove_dev_plugin", "disable_repository_plugin", "move_inventory_item_to_armoury", "invoke_addon_action" })
             Check(name + " is classified as mutating", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), true));
         foreach (var name in new[] { "list_plugin_repositories", "list_available_plugins", "get_plugin_operation",
-            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait", "list_dev_plugins", "get_armoury_inventory", "read_addon_model", "list_addon_actions" })
+            "get_combat_snapshot", "sample_combat_frames", "analyze_combat_recording", "combat_recording_wait", "list_dev_plugins", "get_armoury_inventory", "read_addon_model", "list_addon_actions",
+            "convert_map_coordinates", "get_map_flags", "find_nearest_aetheryte", "get_character_tethers", "get_item_stat_breakdown" })
             Check(name + " is read-only", Equals(Prop(tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), name)), "Mutating"), false));
         var holdingsTool = tools!.Cast<object>().Single(t => Equals(Prop(t, "Name"), "search_item_holdings"));
         Check("item holdings query is read-only", Equals(Prop(holdingsTool, "Mutating"), false));
@@ -591,6 +592,45 @@ internal static class Program
             using (var modelDoc = JsonDocument.Parse(offlineModel.Payload ?? "{}"))
                 Check("structured addon read is available with mutations closed and refuses native access when logged out",
                     !offlineModel.IsError && !modelDoc.RootElement.GetProperty("available").GetBoolean());
+            foreach (var name in new[] { "get_map_flags", "get_character_tethers", "get_item_stat_breakdown" })
+            {
+                object arguments = name == "get_item_stat_breakdown" ? new { container="EquippedItems", slot=0, expectedItemId=51778 } : new { };
+                var reply = UnwrapToolResult(await CallAsync(http, baseUrl, sessionId,
+                    JsonSerializer.Serialize(new { jsonrpc="2.0", id=2364, method="tools/call", @params=new { name, arguments } })).ConfigureAwait(false));
+                using var document=JsonDocument.Parse(reply.Payload ?? "{}");
+                Check(name + " remains read-only with gate closed and skips native access while logged out",
+                    !reply.IsError && !document.RootElement.GetProperty("available").GetBoolean());
+            }
+            if (usedRealDataManager)
+            {
+                async Task<(string? Payload,bool IsError)> ReadState(string name,object arguments) =>
+                    UnwrapToolResult(await CallAsync(http,baseUrl,sessionId,JsonSerializer.Serialize(new {
+                        jsonrpc="2.0",id=2365,method="tools/call",@params=new {name,arguments} })).ConfigureAwait(false));
+                var converted=await ReadState("convert_map_coordinates",new {mapId=364,sourceSpace="world",position=new {x=0,z=0}});
+                using (var doc=JsonDocument.Parse(converted.Payload ?? "{}"))
+                    Check("explicit map conversion works offline with mutations closed and leaves height unknown",
+                        !converted.IsError && doc.RootElement.GetProperty("texture").GetProperty("x").GetDouble()==1024 &&
+                        !doc.RootElement.GetProperty("heightKnown").GetBoolean());
+                var nearest=await ReadState("find_nearest_aetheryte",new {territoryId=129,position=new {x=0,z=0},includeAethernet=true,maxResults=20});
+                using (var doc=JsonDocument.Parse(nearest.Payload ?? "{}"))
+                {
+                    var candidates=doc.RootElement.GetProperty("candidates").EnumerateArray().ToArray();
+                    Check("static nearest-crystal query includes primary and city shards offline with mutations closed",
+                        !nearest.IsError && candidates.Length>1 && candidates.Any(c=>c.GetProperty("aetheryteId").GetUInt32()==8));
+                    Check("city shard fallback uses texture projection with unknown height and unlock state",
+                        candidates.Any(c=>!c.GetProperty("isPrimary").GetBoolean() && !c.GetProperty("heightKnown").GetBoolean() && c.GetProperty("unlocked").ValueKind==JsonValueKind.Null));
+                    Check("aetheryte output is sorted by planar distance",
+                        candidates.Select(c=>c.GetProperty("distance").GetDouble()).SequenceEqual(candidates.Select(c=>c.GetProperty("distance").GetDouble()).Order()));
+                }
+                var filtered=await ReadState("find_nearest_aetheryte",new {territoryId=129,position=new {x=0,z=0},unlockedOnly=true});
+                using (var doc=JsonDocument.Parse(filtered.Payload ?? "{}"))
+                    Check("unlock filtering stays unavailable without a populated live list",
+                        !filtered.IsError && !doc.RootElement.GetProperty("available").GetBoolean());
+                var stats=await ReadState("get_item_stat_breakdown",new {itemId=47184,isHq=true});
+                using (var doc=JsonDocument.Parse(stats.Payload ?? "{}"))
+                    Check("HQ item template resolves real stat caps offline with mutations closed",
+                        !stats.IsError && doc.RootElement.GetProperty("stats").EnumerateArray().Any(s=>s.GetProperty("paramId").GetUInt32()==71 && s.GetProperty("cap").GetInt32()==629));
+            }
             var actionCatalog = UnwrapToolResult(await CallAsync(http, baseUrl, sessionId,
                 JsonSerializer.Serialize(new { jsonrpc="2.0", id=2362, method="tools/call", @params=new {
                     name="list_addon_actions", arguments=new { } } })).ConfigureAwait(false));

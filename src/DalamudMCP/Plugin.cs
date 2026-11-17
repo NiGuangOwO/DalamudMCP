@@ -156,6 +156,9 @@ public sealed class Plugin : IDalamudPlugin
         ImGuiInputTools.Register(registry, services);
         ImGuiMetricsTools.Register(registry);
         InventoryTools.Register(registry, services);
+        ItemStatTools.Register(registry, services);
+        MapQueryTools.Register(registry, services);
+        TetherTools.Register(registry, services);
         _ = new ArmouryTools(registry, services, inputLifetime.Token);
         itemHoldings = new ItemHoldingsTools(registry, services);
         BuddyTools.Register(registry, services);

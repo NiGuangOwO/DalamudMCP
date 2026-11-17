@@ -21,6 +21,8 @@ See [independent runtime tools](runtime-explorer.md) for arguments, permissions,
 
 ## Specialized tools
 
+`convert_map_coordinates`, `get_map_flags` and `find_nearest_aetheryte` provide read-only coordinate, flag and same-territory crystal queries. `get_character_tethers` preserves current tether slots and full 64-bit object IDs. `get_item_stat_breakdown` distinguishes unmelded templates from exact live slots and separates base, HQ, materia, caps and overflow. Unknown height is not a movement destination, planar distance is not a route, and item stats are not the character panel. See [read-only state queries](read-only-state.md) for inputs and limits.
+
 `read_addon_model` reads structured crafting, gathering, basic gil shop, retainer-list and repair state. `list_addon_actions` discovers the two explicit adapters; `invoke_addon_action` requires a fresh 15-second single-use snapshot and exact addon ID and defaults to dry-run. See [Addon models and semantic actions](addon-models.md) for fields, guards, provenance and limits.
 
 For `SelectString`, menu selection uses zero-based popup-entry ordinals, not `AtkValue` indices.

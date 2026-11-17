@@ -21,6 +21,8 @@
 
 ## 专用工具
 
+`convert_map_coordinates`、`get_map_flags`、`find_nearest_aetheryte` 提供只读坐标转换、旗标及区域内水晶距离查询。`get_character_tethers` 读取当前连线并保留完整 64 位对象 ID。`get_item_stat_breakdown` 区分未镶嵌模板与实际槽位，细分基础、HQ、魔晶石、上限和溢出。未知高度不能作为移动目的地，平面距离不是路径，物品属性不是角色面板。参数与边界见[地图、连线与装备只读查询](read-only-state.md)。
+
 `read_addon_model` 读取制作、采集、普通金币商店、雇员列表与修理界面的结构化状态。`list_addon_actions` 发现首批两个明确适配的动作；`invoke_addon_action` 需要 15 秒内的单次使用快照和确切窗口 ID，默认只预检。字段、校验、来源与限制见[界面模型与语义动作](addon-models.md)。
 
 `SelectString` 菜单选择使用从零开始的原生选项编号，不使用 `AtkValue` 字段索引。

@@ -59,6 +59,9 @@ jobs:
       - name: Test addon models, semantic action guards and cross-realm rosters
         run: dotnet run --project tests/AddonModelTest -c Release
 
+      - name: Test read-only map, tether and equipment snapshots
+        run: dotnet run --project tests/ReadOnlyStateTest -c Release -- --no-data
+
       - name: Test screenshot deadlines and capture worker cleanup
         run: dotnet run --project tests/ScreenshotTest -c Release
 
