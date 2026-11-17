@@ -1,0 +1,156 @@
+{
+  "version": "1.0.0.59",
+  "validationDate": "2026-11-17",
+  "sourceCommit": "1a6e864f15a2286e6bf54d1d6aefa3da368736dc",
+  "releaseTag": "v1.0.0.59",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.59",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/44094620548",
+  "workflowJobs": {
+    "plan": "success",
+    "build / build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "distributionCommit": "793a88b629e6dcba2ce46442626577c1065347a5",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/793a88b629e6dcba2ce46442626577c1065347a5/pluginmaster.json",
+  "officialPackageSha256": "321c798c73b93f1e9e15ad710d63f2e4c8ef1b4e5a3d523fd095d02642d952b6",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "agentGuidanceRevision": "5f3e327b76d4989499c8b0de580a1fc09542b387ba349c2bff2d4bb34fb80bcf",
+  "builds": {
+    "Debug": "passed, no warnings or errors",
+    "Release": "passed, no warnings or errors"
+  },
+  "tests": {
+    "ReadOnlyStateTest_CN": "60/60, including real game data",
+    "ReadOnlyStateTest_Global": "52/52, isolated layouts/math",
+    "PluginLoadTest": "279/279",
+    "ProtocolSmokeTest": "89/89",
+    "NativeUiReadTest": "268/268",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "14 passed",
+    "documentationLinks": "85 local targets validated"
+  },
+  "live": {
+    "client": "CN",
+    "loggedIn": true,
+    "buildMvid": "c9dce10f-5501-41c4-8975-912380dba912",
+    "sourceAndHealthMvidMatched": true,
+    "toolCount": 201,
+    "agentGuidanceRevision": "5f3e327b76d4989499c8b0de580a1fc09542b387ba349c2bff2d4bb34fb80bcf",
+    "checksPassed": 24,
+    "checks": [
+      "logged-in CN client",
+      "running development MVID matches tested DLL",
+      "201-tool catalog and all five read-only annotations",
+      "running bundled skill revision matches local canonical skill",
+      "current map-display inverse round trip",
+      "current 2048 texture inverse round trip",
+      "inverse projections preserve unknown height",
+      "live readable native flags are known empty",
+      "live complete outgoing and incoming tether scan is known empty",
+      "live data ranks four Limsa destinations including primary crystal",
+      "texture fallback does not invent a crystal height",
+      "aethernet shard unlocks remain unknown",
+      "live unlock filter excludes unknown shards",
+      "crystal output truncation retains total coverage",
+      "live NQ equipped stat components",
+      "quality-encoded expected-item mismatch refuses slot use",
+      "live HQ armoury equipment preserves all five materia",
+      "HQ control base, bonus, live materia and rounded cap readback",
+      "HQ CP base, bonus, live materia and cap readback",
+      "template quality does not borrow owned-item melds",
+      "convert_map_coordinates rejects invalid argument shape or range",
+      "find_nearest_aetheryte rejects invalid argument shape or range",
+      "get_character_tethers rejects invalid argument shape or range",
+      "get_item_stat_breakdown rejects invalid argument shape or range"
+    ],
+    "mapId": 257,
+    "flags": {
+      "count": 0,
+      "complete": true
+    },
+    "tethers": {
+      "count": 0,
+      "complete": true,
+      "scannedCharacters": 155,
+      "scannedObjectSlots": 819
+    },
+    "nearestAetherytes": {
+      "territoryId": 129,
+      "count": 4,
+      "primaryFirst": 8,
+      "textureFallback": true,
+      "unknownShardUnlocks": 3,
+      "filteredKnownUnlocked": 1
+    },
+    "currentTerritoryLocations": {
+      "territoryId": 478,
+      "complete": true,
+      "unknownLocationIds": []
+    },
+    "nqEquipped": {
+      "itemId": 51822,
+      "complete": true
+    },
+    "hqArmoury": {
+      "itemId": 47184,
+      "materiaCount": 5,
+      "control": {
+        "paramId": 71,
+        "name": "加工精度",
+        "baseValue": 472,
+        "hqBonus": 62,
+        "innateValue": 534,
+        "knownMateriaRaw": 84,
+        "materiaRaw": 84,
+        "materiaEffective": 84,
+        "materiaWasted": 0,
+        "capApplicable": true,
+        "cap": 629,
+        "effectiveValue": 618,
+        "capInputs": {
+          "itemLevelValue": 5240,
+          "slotPermille": 120,
+          "rolePercent": 100,
+          "roleIndex": 9
+        }
+      },
+      "cp": {
+        "paramId": 11,
+        "name": "制作力",
+        "baseValue": 9,
+        "hqBonus": 1,
+        "innateValue": 10,
+        "knownMateriaRaw": 2,
+        "materiaRaw": 2,
+        "materiaEffective": 2,
+        "materiaWasted": 0,
+        "capApplicable": true,
+        "cap": 12,
+        "effectiveValue": 12,
+        "capInputs": {
+          "itemLevelValue": 400,
+          "slotPermille": 30,
+          "rolePercent": 100,
+          "roleIndex": 9
+        }
+      }
+    },
+    "gameInputsDispatched": false,
+    "observersInstalled": false,
+    "temporaryRuntimeHandlesReleased": true,
+    "limitations": [
+      "Nonempty live flags and tethers were unavailable; positive and protected-boundary cases were tested in isolated memory.",
+      "Ambiguous or missing current-territory crystal positions stay unknown.",
+      "Global SDK was checked offline; only CN was tested live.",
+      "Stats are unsynced item/materia components, not the active character panel."
+    ]
+  },
+  "limitations": [
+    "Nonempty live flags and tethers were unavailable; positive and protected-boundary cases were tested in isolated memory.",
+    "Ambiguous or missing current-territory crystal positions stay unknown.",
+    "Global SDK was checked offline; only CN was tested live.",
+    "Stats are unsynced item/materia components, not the active character panel."
+  ]
+}
