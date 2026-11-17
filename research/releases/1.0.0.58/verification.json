@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0.58",
+  "validationDate": "2026-11-17",
+  "sourceCommit": "a8ecf84798a689a541e2776121a7578491ca6e9a",
+  "releaseTag": "v1.0.0.58",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.58",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/44086521130",
+  "workflowJobs": {
+    "plan": "success",
+    "build / build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "distributionCommit": "9b532d54c30c12ba3bec297a678be43264c2bac4",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/9b532d54c30c12ba3bec297a678be43264c2bac4/pluginmaster.json",
+  "officialPackageSha256": "1e81c1bf86e7391cbaa1b545fddd6298754cb0976a7c9fdc504585d295c6ed83",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "agentGuidanceRevision": "5be33853c73dd05c3752da218ea8cd3cdc7f0d422fa97251567fdac87d3e3f6c",
+  "builds": {
+    "Debug": "passed, no warnings or errors",
+    "Release": "passed, no warnings or errors"
+  },
+  "tests": {
+    "AddonModelTest_CN": "49/49",
+    "AddonModelTest_Global": "49/49",
+    "PluginLoadTest": "265/265",
+    "ProtocolSmokeTest": "89/89",
+    "NativeUiReadTest": "268/268",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "14 passed"
+  },
+  "live": {
+    "client": "CN",
+    "loggedIn": true,
+    "buildMvid": "87842edc-d31d-4dff-86e2-4fc44fa0f478",
+    "catalogPages": 2,
+    "toolCount": 196,
+    "sourceAndHealthMvidMatched": true,
+    "shop": {
+      "entries": 47,
+      "pages": 3,
+      "uniqueRowIndices": 47,
+      "firstItemId": 6486,
+      "firstUnitPrice": 1988,
+      "priceComparedWithNativeText": true
+    },
+    "unopenedModelsReturnUnavailable": true,
+    "soloPartyScopesVerified": [
+      "auto",
+      "local",
+      "crossRealm"
+    ],
+    "retainer": "unverified: game refused summoning while visiting another world",
+    "crafting": "unverified: trial-synthesis dispatch did not produce an observed Synthesis window",
+    "gathering": "unverified live",
+    "repairAction": "unverified live",
+    "multiplayerCrossRealmRoster": "unverified live",
+    "temporaryWindowsClosed": true,
+    "returnedNearOriginalPosition": true,
+    "returnDistanceYalms": 1.13,
+    "itemsPurchased": false,
+    "gameInputsDispatched": true,
+    "desktopOrVirtualKeyInputUsed": false
+  },
+  "limitations": [
+    "Live crafting, gathering, retainer/repair action and multiplayer cross-world behavior remain unverified.",
+    "Semantic outcomes cover expected native UI transitions, not completed repair or inventory transactions.",
+    "Same-world alliance groups and replay roster inference are not expanded."
+  ]
+}
