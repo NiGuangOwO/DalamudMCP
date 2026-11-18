@@ -735,6 +735,8 @@ public sealed class McpServer : IDisposable
                         "one interaction and an optional exact menu choice with addon verification. See references/gameplay-workflows.md. " +
                         "Use click_addon_button_and_wait for an exact labelled native button and an observed UI or destination result. " +
                         "For a planned opener, execute_action can wait briefly on an exact target and then submit once. " +
+                        "For an ordinary striking dummy, reset_striking_dummy_enmity uses the exact live object and the native reset command without opening UI or changing targets. " +
+                        "Dry-run by default. Require confirmed=true to verify the dummy left the local enemy list. " +
                         "Use combat_recording_wait with an exact encounter ID; verify game outcome with a pre-run chat cursor and the exact local system messages. " +
                         "When the question is native UI text, call read_addon_text first; use " +
                         "get_addon_strings(stringsOnly=true) for the raw AtkValue table and list_addon_elements when " +

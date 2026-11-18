@@ -163,6 +163,7 @@ public sealed class Plugin : IDalamudPlugin
         itemHoldings = new ItemHoldingsTools(registry, services);
         BuddyTools.Register(registry, services);
         ControlTools.Register(registry, services, inputLifetime.Token);
+        StrikingDummyTools.Register(registry, services, inputLifetime.Token);
         CooldownTools.Register(registry, services);
         combatFrames = new CombatFrameTools(registry, services);
         GearsetTools.Register(registry, services);

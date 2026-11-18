@@ -27,6 +27,15 @@ unsafe class Program
     static bool listRowDisabled, listRowRecycled, listRowIgnore;
     static bool listRowChangeText;
     static nint listRowText;
+    static int resetCalls;
+    static (int Command, uint EntityId, int Param2, int Param3, int Param4) resetArguments;
+    [UnmanagedCallersOnly]
+    static byte ExecuteResetCommand(int command, int entityId, int param2, int param3, int param4)
+    {
+        resetCalls++;
+        resetArguments = (command, unchecked((uint)entityId), param2, param3, param4);
+        return 0;
+    }
     [UnmanagedCallersOnly] static nint ListRowRenderer(nint list,int index) => index==6?listRowRenderer:0;
     [UnmanagedCallersOnly] static byte ListRowDisabled(nint list,int index) => listRowDisabled?(byte)1:(byte)0;
     [UnmanagedCallersOnly] static void ListRowSelect(nint list,int index,byte dispatch) { listRowSelectCalls++;listRowSelectedArgument=index;if(!listRowIgnore)Marshal.WriteInt32(listRowList,listRowSelectedOffset,index);if(listRowRecycled)Marshal.WriteInt32(listRowRenderer,listRowIndexOffset,7);if(listRowChangeText)Marshal.WriteByte(listRowText,88); }
@@ -67,6 +76,46 @@ unsafe class Program
         nint Allocate(int size){var p=Marshal.AllocHGlobal(size);new Span<byte>((void*)p,size).Clear();allocations.Add(p);return p;}
         try
         {
+            var dummyTools = plugin.GetType("DalamudMCP.Tools.StrikingDummyTools")!;
+            var readEnmity = dummyTools.GetMethod("ReadEnmity", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var haterType = fcs.GetType("FFXIVClientStructs.FFXIV.Client.Game.UI.Hater")!;
+            var entryType = fcs.GetType("FFXIVClientStructs.FFXIV.Client.Game.UI.HaterInfo")!;
+            var haters = Allocate(Size(haterType));
+            var countOffset = Offset(haterType, "HaterCount");
+            var entityOffset = Offset(haterType, "_haters") + Offset(entryType, "EntityId");
+            const uint dummyEntityId = 1073743692;
+            bool? Enmity(nint address) => (bool?)readEnmity.Invoke(null, new object[] { address, dummyEntityId });
+            Check(Enmity(1) is null, "unreadable enmity list stays unknown");
+            Marshal.WriteInt32(haters, entityOffset, (int)dummyEntityId);
+            Check(Enmity(haters) is false, "inactive tail entries do not give the dummy enmity");
+            Marshal.WriteInt32(haters, countOffset, 2);
+            Marshal.WriteInt32(haters, entityOffset + Size(entryType), 456);
+            Check(Enmity(haters) is true, "active exact dummy entity is detected alongside other entries");
+            Marshal.WriteInt32(haters, entityOffset, 123);
+            Check(Enmity(haters) is false, "another enemy does not prevent confirming this dummy's removal");
+            Marshal.WriteInt32(haters, countOffset, 32);
+            Check(Enmity(haters) is null, "missing entity in a saturated enmity list stays unknown");
+            Marshal.WriteInt32(haters, countOffset, 33);
+            Check(Enmity(haters) is null, "invalid enmity count cannot exceed the native array");
+
+            var gameMain = fcs.GetType("FFXIVClientStructs.FFXIV.Client.Game.GameMain")!;
+            var commandAddress = gameMain.GetNestedType("Addresses")!.GetField("ExecuteCommand")!.GetValue(null)!;
+            var addressValue = commandAddress.GetType().GetField("Value")!;
+            var originalCommand = addressValue.GetValue(commandAddress);
+            var submitReset = dummyTools.GetMethod("SubmitReset", BindingFlags.NonPublic | BindingFlags.Static)!;
+            try
+            {
+                addressValue.SetValue(commandAddress, (nint)1);
+                Check(DropRefuses(() => submitReset.Invoke(null, new object[] { dummyEntityId })), "non-executable reset command is refused");
+                addressValue.SetValue(commandAddress, (nint)(delegate* unmanaged<int, int, int, int, int, byte>)&ExecuteResetCommand);
+                Check(DropRefuses(() => submitReset.Invoke(null, new object[] { 0xE0000000u })) && resetCalls == 0, "invalid entity ID never reaches the reset command");
+                const uint fullEntityId = 0xF1234567u;
+                var nativeReturn = (bool)submitReset.Invoke(null, new object[] { fullEntityId })!;
+                Check(!nativeReturn && resetCalls == 1 && resetArguments == (319, fullEntityId, 0, 0, 0),
+                    "native reset makes one call with command 319 and the full entity ID, preserving the raw return");
+            }
+            finally { addressValue.SetValue(commandAddress, originalCommand); }
+
             var textType=T("AtkTextNode");var nodeType=T("AtkResNode");
             var node=Allocate(Size(textType));
             var typeField=nodeType.GetField("Type")!;

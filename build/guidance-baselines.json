@@ -583,5 +583,17 @@
       "references/tool-selection.md": "07ea5c799e971955258366909fc06d6c93539b803845ce1732bfbf47a4be2363",
       "scripts/sync_skill.py": "e5297c872c2278e5911cf0779371e693d290bfab65c8365a5dd1304cf3e58000"
     }
+  },
+  {
+    "revision": "5f3e327b76d4989499c8b0de580a1fc09542b387ba349c2bff2d4bb34fb80bcf",
+    "sourceCommit": "1a6e864f15a2286e6bf54d1d6aefa3da368736dc",
+    "files": {
+      "SKILL.md": "bf3f1feaca9f9852e5333e43c8166b2109bd2012fef0799c0b675383c5a26345",
+      "agents/openai.yaml": "479e010f410ffef858c46f0930f6ab9ddf01b0d5f7010ffdb317c181d7c46367",
+      "references/gameplay-workflows.md": "e9c86d701d569c2984aa7cf635e62242537122a8db6131c8a4de2035283cb4e2",
+      "references/native-debugging.md": "dd406d6afccb7b0d097ec1aba8dd04f112afd4d2f210afb0e5b09ba989975660",
+      "references/tool-selection.md": "4ccddf964e712aa329236d8c108209037982c03b97f64ab92ccb9dc4a5efb732",
+      "scripts/sync_skill.py": "e5297c872c2278e5911cf0779371e693d290bfab65c8365a5dd1304cf3e58000"
+    }
   }
 ]
