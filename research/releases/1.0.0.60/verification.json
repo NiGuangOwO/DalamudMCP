@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0.60",
+  "sourceCommit": "92df3dd168f8020b06ce3c1d4eb1097072536247",
+  "releaseTag": "v1.0.0.60",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.60",
+  "distributionCommit": "b09488eda460948e5285d0e68ecd6709119145f3",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/b09488eda460948e5285d0e68ecd6709119145f3/pluginmaster.json",
+  "officialPackageSha256": "1ebf5e869647bd2eec98409ddab0bcd66e5abd742c81bb9e36b18eaeeb7a47b4",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "agentGuidanceRevision": "ff85b79599bc357b627277272f74ecfd75202e21aeaea674ab1e3d70a8733f64",
+  "validationDate": "2026-11-18",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/44326481291",
+  "workflowJobs": {
+    "plan": "success",
+    "build / build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "builds": {
+    "Debug": "passed",
+    "Release": "passed"
+  },
+  "tests": {
+    "NativeUiReadTest": "277/277 on Debug and Release",
+    "PluginLoadTest": "280/280",
+    "ProtocolSmokeTest": "89/89",
+    "AgentGuidanceTest": "22/22",
+    "PythonSkillSync": "23 passed",
+    "ReleasePipelineTest": "14 passed"
+  },
+  "live": {
+    "client": "CN",
+    "buildMvid": "2989eca7-d506-479d-ae1e-4d5eb54b6d53",
+    "sourceAndHealthMvidMatched": true,
+    "catalogTools": 202,
+    "dryRunDispatched": false,
+    "wrongBaseIdRefused": true,
+    "dummyWasHardTarget": false,
+    "hardTargetChanged": false,
+    "contextMenuOpened": false,
+    "nativeReturn": false,
+    "resetConfirmed": true,
+    "hasEnmityAfter": false,
+    "inCombatAfter": false,
+    "repeatStatus": "already_clear",
+    "repeatDispatched": false,
+    "globalClientTested": false
+  }
+}
