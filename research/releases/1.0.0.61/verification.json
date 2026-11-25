@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0.61",
+  "sourceCommit": "ac4d353fe963249f59fea0c800855a4db4358aa8",
+  "releaseTag": "v1.0.0.61",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.61",
+  "distributionCommit": "a6a66aeac932d3d465c2495960945506b41446f8",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/a6a66aeac932d3d465c2495960945506b41446f8/pluginmaster.json",
+  "officialPackageSha256": "2f8ce242c832b410601479cf7033a965074fdaf5368d950bb61da0b62871f9b9",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "validationDate": "2026-11-25",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/45624751143",
+  "workflowJobs": {
+    "plan": "success",
+    "build / build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "builds": {
+    "Debug": "passed",
+    "Release": "passed"
+  },
+  "tests": {
+    "CombatRecordingTest": "74/74 on Debug and Release",
+    "ProtocolSmokeTest": "89/89",
+    "ReleasePipelineTest": "14 passed"
+  },
+  "live": {
+    "client": "CN",
+    "debugBuildMvid": "173ee764-364c-461a-bb05-37e26e0b9946",
+    "debugBuildAndHealthMvidMatched": true,
+    "backgroundRecorderEnabled": true,
+    "combatSnapshotAvailable": true,
+    "originalDutyPhaseRetested": false,
+    "globalClientTested": false
+  }
+}
