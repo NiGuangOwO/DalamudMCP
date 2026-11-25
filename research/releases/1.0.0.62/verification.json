@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0.62",
+  "sourceCommit": "cab227e3c22af255ecc98d8cbdc129ea0269e88d",
+  "releaseTag": "v1.0.0.62",
+  "release": "https://github.com/NiGuangOwO/DalamudMCP/releases/tag/v1.0.0.62",
+  "distributionCommit": "432f1019110597222fca6e559ce3a9dae2e61182",
+  "verifiedIndex": "https://raw.githubusercontent.com/NiGuangOwO/DalamudPlugins/432f1019110597222fca6e559ce3a9dae2e61182/pluginmaster.json",
+  "officialPackageSha256": "25723c90c9d9cfec867175d1b0e79f8c776b8888568b80695615df602869f2e2",
+  "releaseAssetsRedownloadedAndVerified": 7,
+  "validationDate": "2026-11-25",
+  "workflow": "https://github.com/NiGuangOwO/DalamudMCP/actions/runs/45627047933",
+  "workflowJobs": {
+    "plan": "success",
+    "build / build": "success",
+    "publish": "success",
+    "sync": "success"
+  },
+  "builds": {
+    "Debug": "passed",
+    "Release": "passed"
+  },
+  "tests": {
+    "CombatRecordingTest": "77/77 on Debug and Release",
+    "ProtocolSmokeTest": "89/89",
+    "ReleasePipelineTest": "14 passed"
+  },
+  "live": {
+    "client": "CN",
+    "debugBuildMvid": "a543e50d-e298-43d9-a6c5-dca4bedee3c6",
+    "debugBuildAndHealthMvidMatched": true,
+    "backgroundRecorderEnabled": true,
+    "combatSnapshotStatusesAvailable": true,
+    "battleNpcDetailsQueried": 32,
+    "originalDutyPhaseRetested": false,
+    "globalClientTested": false
+  }
+}
