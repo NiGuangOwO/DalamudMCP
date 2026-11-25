@@ -397,13 +397,17 @@ internal sealed class CombatRecorder : IDisposable
                     recording.Record(now, new JObject { ["type"] = "actor_snapshot", ["sourceId"] = source,
                         ["ownerId"] = actor.OwnerId, ["hp"] = actor.CurrentHp, ["dead"] = actor.IsDead, ["jobId"] = actor.ClassJob.RowId });
                 deaths[source] = actor.IsDead;
-                var cast = actor.IsCasting ? actor.CastActionId : 0;
-                casts.TryGetValue(source, out var oldCast);
-                if (cast != oldCast)
-                    recording.Record(now, new JObject { ["type"] = cast == 0 ? "cast_end_observed" : "cast_start_observed",
-                        ["sourceId"] = source, ["actionId"] = cast == 0 ? oldCast : cast,
-                        ["targetId"] = actor.CastTargetObjectId, ["totalCastTime"] = actor.TotalCastTime });
-                casts[source] = cast;
+                // Missing CastInfo is an unavailable sample. Keep the last observed cast and continue recording this actor.
+                if (CharacterCastRead.Read(actor.Address) is { } cast)
+                {
+                    var action = cast.IsCasting ? cast.ActionId : 0;
+                    casts.TryGetValue(source, out var oldCast);
+                    if (action != oldCast)
+                        recording.Record(now, new JObject { ["type"] = action == 0 ? "cast_end_observed" : "cast_start_observed",
+                            ["sourceId"] = source, ["actionId"] = action == 0 ? oldCast : action,
+                            ["targetId"] = (ulong)cast.TargetId, ["totalCastTime"] = cast.TotalCastTime });
+                    casts[source] = action;
+                }
                 foreach (var status in actor.StatusList)
                 {
                     if (status.StatusId == 0) continue;
@@ -424,7 +428,7 @@ internal sealed class CombatRecorder : IDisposable
             }
             foreach (var id in casts.Keys.Where(id => !actors.ContainsKey(id)).ToArray()) { casts.Remove(id); deaths.Remove(id); }
         }
-        catch (Exception ex) { startFaulted = true; startError = ex.Message; svc.LogError($"Combat recorder stopped: {ex.Message}"); Stop("collector_error"); }
+        catch (Exception ex) { startFaulted = true; startError = ex.Message; svc.LogError($"Combat recorder stopped: {ex}"); Stop("collector_error"); }
     }
 
     private void Drain()

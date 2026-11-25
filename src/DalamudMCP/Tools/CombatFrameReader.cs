@@ -147,7 +147,7 @@ internal static class CombatFrameReader
         result["hp"] = battle.CurrentHp;
         result["maxHp"] = battle.MaxHp;
         result["dead"] = battle.IsDead;
-        result["casting"] = battle.IsCasting;
+        result["casting"] = CharacterCastRead.Read(battle.Address)?.IsCasting;
         if (!includeStatuses) return result;
 
         var entries = new JArray();

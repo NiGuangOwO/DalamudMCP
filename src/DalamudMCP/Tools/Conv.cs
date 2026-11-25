@@ -93,12 +93,13 @@ internal static class Conv
 
         if (obj is IBattleChara bc)
         {
-            o["isCasting"] = bc.IsCasting;
-            o["castActionId"] = bc.CastActionId;
-            o["currentCastTime"] = Round(bc.CurrentCastTime, 3);
-            o["totalCastTime"] = Round(bc.TotalCastTime, 3);
-            o["isCastInterruptible"] = bc.IsCastInterruptible;
-            o["castTargetObjectId"] = bc.CastTargetObjectId;
+            var cast = CharacterCastRead.Read(bc.Address);
+            o["isCasting"] = cast?.IsCasting;
+            o["castActionId"] = cast?.ActionId;
+            o["currentCastTime"] = cast is { } current ? Round(current.CurrentCastTime, 3) : null;
+            o["totalCastTime"] = cast is { } total ? Round(total.TotalCastTime, 3) : null;
+            o["isCastInterruptible"] = cast?.Interruptible;
+            o["castTargetObjectId"] = cast is { } target ? (ulong)target.TargetId : null;
 
             var statuses = new JArray();
             foreach (var st in bc.StatusList)

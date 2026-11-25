@@ -1,7 +1,9 @@
+using System.Runtime.InteropServices;
 using DalamudMCP.Events;
 using DalamudMCP.Mcp;
 using DalamudMCP.Tools;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Newtonsoft.Json.Linq;
 
 internal static class CombatDiagnosticsTests
@@ -11,9 +13,38 @@ internal static class CombatDiagnosticsTests
     public static async Task Run()
     {
         ProjectFrame();
+        ReadOptionalCharacterCast();
         SampleFrames();
         await AnalyzeEncounter();
         Console.WriteLine($"{checks}/{checks} combat diagnostics checks passed");
+    }
+
+    private static unsafe void ReadOptionalCharacterCast()
+    {
+        var missing = new Character.CharacterVirtualTable { GetCastInfo = &MissingCastInfo };
+        var companion = new Character { VirtualTable = &missing };
+        Check(CharacterCastRead.Read((nint)(&companion)) is null, "a valid character without CastInfo reports unknown instead of failing");
+
+        var present = new Character.CharacterVirtualTable { GetCastInfo = &PresentCastInfo };
+        var caster = new CharacterWithCast { Character = new() { VirtualTable = &present } };
+        Check(CharacterCastRead.Read((nint)(&caster)) is { IsCasting: false }, "readable idle cast state remains known");
+        caster.Cast = new() { IsCasting = true, Interruptible = true, ActionId = 43, TargetId = new() { Id = 0x100000002 }, TotalCastTime = 2.5f };
+        var snapshot = CharacterCastRead.Read((nint)(&caster));
+        caster.Cast = default;
+        Check(snapshot is { IsCasting: true, Interruptible: true, ActionId: 43, TotalCastTime: 2.5f }
+              && (ulong)snapshot.Value.TargetId == 0x100000002UL, "the next actor preserves cast fields and full target identity in a copied snapshot");
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe CastInfo* MissingCastInfo(Character* _) => null;
+
+    [UnmanagedCallersOnly]
+    private static unsafe CastInfo* PresentCastInfo(Character* character) => &((CharacterWithCast*)character)->Cast;
+
+    private struct CharacterWithCast
+    {
+        public Character Character;
+        public CastInfo Cast;
     }
 
     private static void ProjectFrame()
