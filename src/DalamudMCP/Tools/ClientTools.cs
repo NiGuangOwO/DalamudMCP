@@ -173,7 +173,7 @@ internal static class ClientTools
         if (player is null)
             return new JObject { ["loggedIn"] = true, ["playerLoaded"] = false, ["reason"] = "character not loaded yet" };
 
-        var obj = Conv.GameObject(player);
+        var obj = Conv.GameObject(svc, player);
 
         // PlayerState carries account-level identity that the object table does not.
         var ps = svc.PlayerState;

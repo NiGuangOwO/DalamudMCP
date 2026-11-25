@@ -16,6 +16,7 @@
     <Compile Include="../../src/DalamudMCP/Events/CombatPacketReader.cs" Link="CombatPacketReader.cs" />
     <Compile Include="../../src/DalamudMCP/Tools/CombatFrameProjection.cs" Link="CombatFrameProjection.cs" />
     <Compile Include="../../src/DalamudMCP/Tools/CharacterCastRead.cs" Link="CharacterCastRead.cs" />
+    <Compile Include="../../src/DalamudMCP/Tools/CharacterStatusRead.cs" Link="CharacterStatusRead.cs" />
     <Compile Include="../../src/DalamudMCP/Mcp/Json.cs" Link="Json.cs" />
     <Compile Include="../../src/DalamudMCP/Mcp/ToolRegistry.cs" Link="ToolRegistry.cs" />
     <Compile Include="../../src/DalamudMCP/MemoryProbe.cs" Link="MemoryProbe.cs" />

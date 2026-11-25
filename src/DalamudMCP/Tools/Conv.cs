@@ -54,7 +54,7 @@ internal static class Conv
     public static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
     /// <summary>Summarises a game object. <paramref name="detailed"/> adds combat fields.</summary>
-    public static JObject GameObject(IGameObject obj, bool detailed = true)
+    public static JObject GameObject(GameServices svc, IGameObject obj, bool detailed = true)
     {
         var o = new JObject
         {
@@ -101,20 +101,27 @@ internal static class Conv
             o["isCastInterruptible"] = cast?.Interruptible;
             o["castTargetObjectId"] = cast is { } target ? (ulong)target.TargetId : null;
 
-            var statuses = new JArray();
-            foreach (var st in bc.StatusList)
+            if (CharacterStatusRead.Read(bc.Address) is not { } manager)
             {
+                o["statuses"] = JValue.CreateNull();
+                return o;
+            }
+
+            var statuses = new JArray();
+            var sheet = svc.Sheet<Status>();
+            foreach (ref readonly var st in manager.Status)
+            {
+                if (st.StatusId == 0) continue;
                 var entry = new JObject
                 {
                     ["statusId"] = st.StatusId,
                     ["param"] = st.Param,
                     ["remainingTime"] = Round(st.RemainingTime, 2),
-                    ["sourceId"] = st.SourceId,
+                    ["sourceId"] = st.SourceObject.ObjectId,
                 };
 
-                if (st.GameData.IsValid)
+                if (sheet.TryGetRow(st.StatusId, out var row))
                 {
-                    var row = st.GameData.Value;
                     entry["name"] = row.Name.ExtractText();
                     entry["description"] = row.Description.ExtractText();
                     entry["isFcBuff"] = row.IsFcBuff;

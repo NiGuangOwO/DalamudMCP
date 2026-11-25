@@ -389,6 +389,7 @@ internal sealed class CombatRecorder : IDisposable
             if (recording.Active == null || now - lastSample < 100) return;
             lastSample = now;
             var current = new HashSet<(uint, uint)>();
+            var unavailable = new HashSet<uint>();
             foreach (var actor in svc.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleChara>().Take(256))
             {
                 if (!allActors && actor.EntityId != localId && actor.OwnerId != localId) continue;
@@ -408,20 +409,27 @@ internal sealed class CombatRecorder : IDisposable
                             ["targetId"] = (ulong)cast.TargetId, ["totalCastTime"] = cast.TotalCastTime });
                     casts[source] = action;
                 }
-                foreach (var status in actor.StatusList)
+                if (CharacterStatusRead.Read(actor.Address) is not { } manager)
+                {
+                    // Preserve previously observed statuses until this actor can be sampled again.
+                    unavailable.Add(source);
+                    continue;
+                }
+                foreach (ref readonly var status in manager.Status)
                 {
                     if (status.StatusId == 0) continue;
                     var key = (source, status.StatusId);
                     current.Add(key);
-                    var value = (status.Param, status.SourceId);
+                    var sourceId = status.SourceObject.ObjectId;
+                    var value = (status.Param, sourceId);
                     if (!statuses.TryGetValue(key, out var previous) || previous != value)
                         recording.Record(now, new JObject { ["type"] = "status_observed", ["targetId"] = source,
-                            ["statusId"] = status.StatusId, ["sourceId"] = status.SourceId,
+                            ["statusId"] = status.StatusId, ["sourceId"] = sourceId,
                             ["param"] = status.Param, ["remainingTime"] = status.RemainingTime });
                     statuses[key] = value;
                 }
             }
-            foreach (var key in statuses.Keys.Where(k => !current.Contains(k)).ToArray())
+            foreach (var key in statuses.Keys.Where(k => !current.Contains(k) && !unavailable.Contains(k.Item1)).ToArray())
             {
                 recording.Record(now, new JObject { ["type"] = "status_removed_observed", ["targetId"] = key.Item1, ["statusId"] = key.Item2 });
                 statuses.Remove(key);

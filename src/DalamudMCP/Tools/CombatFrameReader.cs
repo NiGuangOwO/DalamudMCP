@@ -149,16 +149,22 @@ internal static class CombatFrameReader
         result["dead"] = battle.IsDead;
         result["casting"] = CharacterCastRead.Read(battle.Address)?.IsCasting;
         if (!includeStatuses) return result;
+        if (CharacterStatusRead.Read(battle.Address) is not { } manager)
+        {
+            result["statuses"] = JValue.CreateNull();
+            result["statusesTruncated"] = false;
+            return result;
+        }
 
         var entries = new JArray();
         var truncated = false;
-        foreach (var status in battle.StatusList)
+        foreach (ref readonly var status in manager.Status)
         {
             if (status.StatusId == 0) continue;
             if (entries.Count == MaxStatuses) { truncated = true; break; }
             entries.Add(new JObject
             {
-                ["statusId"] = status.StatusId, ["sourceId"] = status.SourceId, ["param"] = status.Param,
+                ["statusId"] = status.StatusId, ["sourceId"] = status.SourceObject.ObjectId, ["param"] = status.Param,
                 ["remainingSeconds"] = float.IsFinite(status.RemainingTime) ? new JValue(status.RemainingTime) : JValue.CreateNull(),
             });
         }

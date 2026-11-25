@@ -145,7 +145,7 @@ internal static class ObjectTools
                 continue;
             }
 
-            var entry = Conv.GameObject(obj, detailed);
+            var entry = Conv.GameObject(svc, obj, detailed);
             if (player is not null)
                 entry["distance"] = Conv.Round(distance > 0 ? distance : Distance(playerPos, obj.Position));
             results.Add(entry);
@@ -179,7 +179,7 @@ internal static class ObjectTools
             var obj = svc.ObjectTable.SearchByEntityId(eid);
             return obj is null
                 ? new JObject { ["found"] = false, ["reason"] = $"no object with entityId {eid}" }
-                : new JObject { ["found"] = true, ["object"] = Conv.GameObject(obj) };
+                : new JObject { ["found"] = true, ["object"] = Conv.GameObject(svc, obj) };
         }
 
         if (gameObjectId is { } gid)
@@ -187,7 +187,7 @@ internal static class ObjectTools
             var obj = svc.ObjectTable.SearchById(gid);
             return obj is null
                 ? new JObject { ["found"] = false, ["reason"] = $"no object with gameObjectId {gid}" }
-                : new JObject { ["found"] = true, ["object"] = Conv.GameObject(obj) };
+                : new JObject { ["found"] = true, ["object"] = Conv.GameObject(svc, obj) };
         }
 
         var matches = new JArray();
@@ -195,7 +195,7 @@ internal static class ObjectTools
         {
             if (obj is null || !obj.IsValid()) continue;
             if (!string.Equals(Conv.Str(obj.Name), name, StringComparison.OrdinalIgnoreCase)) continue;
-            matches.Add(Conv.GameObject(obj));
+            matches.Add(Conv.GameObject(svc, obj));
         }
 
         return new JObject
@@ -283,7 +283,7 @@ internal static class ObjectTools
 
         var tm = svc.TargetManager;
 
-        JObject? Wrap(IGameObject? obj) => obj is null || !obj.IsValid() ? null : Conv.GameObject(obj);
+        JObject? Wrap(IGameObject? obj) => obj is null || !obj.IsValid() ? null : Conv.GameObject(svc, obj);
 
         return new JObject
         {
@@ -376,7 +376,7 @@ internal static class ObjectTools
         var enemies = new JArray();
         foreach (var (distance, obj) in found.Take(max))
         {
-            var entry = Conv.GameObject(obj);
+            var entry = Conv.GameObject(svc, obj);
             entry["distance"] = Conv.Round(distance, 1);
             enemies.Add(entry);
         }

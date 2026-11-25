@@ -14,6 +14,7 @@ internal static class CombatDiagnosticsTests
     {
         ProjectFrame();
         ReadOptionalCharacterCast();
+        ReadOptionalCharacterStatuses();
         SampleFrames();
         await AnalyzeEncounter();
         Console.WriteLine($"{checks}/{checks} combat diagnostics checks passed");
@@ -45,6 +46,41 @@ internal static class CombatDiagnosticsTests
     {
         public Character Character;
         public CastInfo Cast;
+    }
+
+    private static unsafe void ReadOptionalCharacterStatuses()
+    {
+        var missing = new Character.CharacterVirtualTable { GetStatusManager = &MissingStatusManager };
+        var companion = new Character { VirtualTable = &missing };
+        Check(CharacterStatusRead.Read((nint)(&companion)) is null,
+            "a valid battle actor without a native status manager reports an unavailable sample");
+
+        var present = new Character.CharacterVirtualTable { GetStatusManager = &PresentStatusManager };
+        var actor = new CharacterWithStatuses { Character = new() { VirtualTable = &present } };
+        Check(CharacterStatusRead.Read((nint)(&actor)) is { } empty && empty.Status[0].StatusId == 0,
+            "a readable empty status manager remains available");
+        actor.Statuses.Status[59] = new()
+        {
+            StatusId = 77, Param = 4, RemainingTime = 2.5f, SourceObject = new() { Id = 0x100000007UL }
+        };
+        var snapshot = CharacterStatusRead.Read((nint)(&actor));
+        actor.Statuses = default;
+        Check(snapshot is { } copied && copied.Status[0].StatusId == 0 &&
+              copied.Status[59] is { StatusId: 77, Param: 4, RemainingTime: 2.5f } slot && slot.SourceObject.ObjectId == 7,
+            "a copied status survives an empty leading slot and preserves its source entity");
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe StatusManager* MissingStatusManager(Character* _) => null;
+
+    [UnmanagedCallersOnly]
+    private static unsafe StatusManager* PresentStatusManager(Character* character) =>
+        &((CharacterWithStatuses*)character)->Statuses;
+
+    private struct CharacterWithStatuses
+    {
+        public Character Character;
+        public StatusManager Statuses;
     }
 
     private static void ProjectFrame()
